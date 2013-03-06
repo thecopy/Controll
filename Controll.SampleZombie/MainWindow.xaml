@@ -1,0 +1,20 @@
+﻿<Window x:Class="Controll.SampleZombie.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="350" Width="974">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="5">
+            <Button Content="Anslut" Margin="5" Padding="10 2" Click="Connect"/>
+            <Button Content="Logon" Margin="5" Padding="10 2" Click="LogOn"/>
+            <Button Content="Hämta tillgängliga aktiviteter" Margin="5" Padding="10 2" Click="GetAllActivities"/>
+            <Button Content="Ladda hem Spotify Remote" Margin="5" Padding="10 2" Click="DownloadSpotifyRemote"/>
+            <Button Content="Lista alla installerade aktiviteter" Margin="5" Padding="10 2" Click="ListAllInstalledActivities"/>
+            <Button Content="Status" Margin="5" Padding="10 2" Click="PrintStatus"/>
+        </StackPanel>
+        <TextBox Text="{Binding Log}" Grid.Row="2"/>
+    </Grid>
+</Window>

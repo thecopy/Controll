@@ -1,0 +1,36 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Controll.Hosting.Models;
+using FluentNHibernate.Mapping;
+
+namespace Controll.Hosting.NHibernate.Mappings
+{
+    public class ActivityInvocationQueueItemMap : SubclassMap<ActivityInvocationQueueItem>
+    {
+        public ActivityInvocationQueueItemMap()
+        {
+            References(x => x.Activity);
+            Map(x => x.CommandName);
+            Map(x => x.Responded);
+            Map(x => x.Response);
+
+            HasMany(x => x.Parameters)
+                .AsMap<string>(index => index.Column("ParameterName").Type<string>(),
+                               element => element.Column("ParameterValue").Type<string>())
+                .Table("InvocationParameters")
+                .Cascade.All();
+
+            HasMany(x => x.MessageLog)
+                .Component(c =>
+                    {
+                        c.Map(x => x.Date);
+                        c.Map(x => x.Message);
+                        c.Map(x => x.Type);
+                    }
+                );
+        }
+    }
+}
