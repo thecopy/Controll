@@ -14,7 +14,7 @@ namespace Controll.Hosting.Tests
     {
         private static readonly Mock<IGenericRepository<ActivityInvocationQueueItem>> MockedInvocationQueueItemRepostiory = new Mock<IGenericRepository<ActivityInvocationQueueItem>>();
         private static readonly Mock<IGenericRepository<ActivityDownloadOrderQueueItem>> MockedActivityDownloadQueueItemRepostiory = new Mock<IGenericRepository<ActivityDownloadOrderQueueItem>>();
-        private static readonly Mock<IGenericRepository<QueueItem>> MocketQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
+        private static readonly Mock<IGenericRepository<QueueItem>> MockedQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
 
         [TestMethod]
         public void ShouldBeAbleToInsertActivityInvocationQueueItem()
@@ -22,7 +22,7 @@ namespace Controll.Hosting.Tests
             var messageQueueService = new MessageQueueService(
                 MockedInvocationQueueItemRepostiory.Object,
                 MockedActivityDownloadQueueItemRepostiory.Object, 
-                MocketQueueItemRepostiory.Object);
+                MockedQueueItemRepostiory.Object);
 
             var zombie = new Zombie
                 {
@@ -61,7 +61,7 @@ namespace Controll.Hosting.Tests
             var messageQueueService = new MessageQueueService(
                 MockedInvocationQueueItemRepostiory.Object,
                 MockedActivityDownloadQueueItemRepostiory.Object,
-                MocketQueueItemRepostiory.Object);
+                MockedQueueItemRepostiory.Object);
 
             var zombie = new Zombie
                 {
@@ -97,19 +97,19 @@ namespace Controll.Hosting.Tests
             var messageQueueService = new MessageQueueService(
                 MockedInvocationQueueItemRepostiory.Object,
                 MockedActivityDownloadQueueItemRepostiory.Object,
-                MocketQueueItemRepostiory.Object);
+                MockedQueueItemRepostiory.Object);
             var ticket = Guid.NewGuid();
 
             var queueItem = new Mock<QueueItem>();
             queueItem.SetupAllProperties();
             queueItem.SetupGet(x => x.Ticket).Returns(ticket);
 
-            MocketQueueItemRepostiory.Setup(x => x.Get(ticket)).Returns(queueItem.Object);
-            MocketQueueItemRepostiory.Setup(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue))).Verifiable();
+            MockedQueueItemRepostiory.Setup(x => x.Get(ticket)).Returns(queueItem.Object);
+            MockedQueueItemRepostiory.Setup(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue))).Verifiable();
 
             messageQueueService.MarkQueueItemAsDelivered(ticket);
 
-            MocketQueueItemRepostiory.Verify(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue)), Times.Once());
+            MockedQueueItemRepostiory.Verify(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue)), Times.Once());
         }
     }
 }

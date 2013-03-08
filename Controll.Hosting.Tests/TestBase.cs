@@ -9,7 +9,6 @@ using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
     public class TestBase
     {
         protected ISessionFactory SessionFactory;

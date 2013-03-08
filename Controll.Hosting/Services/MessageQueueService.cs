@@ -111,14 +111,14 @@ namespace Controll.Hosting.Services
             }
         }
 
-        private static void SendActivityInvocation(ActivityInvocationQueueItem item)
+        private void SendActivityInvocation(ActivityInvocationQueueItem item)
         {
             string connectionId = item.Reciever.ConnectionId;
             GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients[connectionId]
                 .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters);
         }
 
-        private static void SendDownloadOrder(ActivityDownloadOrderQueueItem item)
+        private void SendDownloadOrder(ActivityDownloadOrderQueueItem item)
         {
             string connectionId = item.Reciever.ConnectionId;
             GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients[connectionId]

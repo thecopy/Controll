@@ -1,101 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Principal;
-using Controll.Common;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
-using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using NHibernate;
 using SignalR;
 using SignalR.Hubs;
-using ParameterDescriptor = Controll.Common.ParameterDescriptor;
 
 namespace Controll.Hosting.Tests
 {
     [TestClass]
     public class ClientHubTests
     {
-        private static ControllUser _user;
-        private static Activity _activity;
-        private readonly ISessionFactory _sessionFactory = NHibernateHelper.GetSessionFactoryForMockedData();
-        private ControllUserRepository _userRepository;
-        private GenericRepository<Activity> _activityRepository;
-
-        // This will be saved later in some test-env deployment-script of some sort or something. Or this whole class may be refactored. Anyway, keep this for safe storage 
-#if FALSE
-        public static void Init(TestContext context)
-        {
-            Console.WriteLine("Initialize");
-
-            //
-            //    
-            //
-            //var session = NHibernateHelper.GetSessionFactoryForMockedData().OpenSession();
-            //using(session)
-            //using(var trans = session.BeginTransaction())
-            //{
-            //    var _userRepository = new ControllUserRepository(session);
-            //    var _activityRepository = new GenericRepository<Activity>(session);
-            //    _user = new ControllUser
-            //        {
-            //            UserName = "Erik",
-            //            EMail = "mail",
-            //            Password = "password",
-            //            ConnectedClients = new List<ControllClient>(),
-            //            Zombies = new List<Zombie>
-            //                {
-            //                    new Zombie
-            //                        {
-            //                            ConnectionId = "zombie-conn-id",
-            //                            Name = "zombiename",
-            //                            Activities = new List<Activity>
-            //                                {
-            //                                    _activity
-            //                                }
-            //                        }
-            //                }
-            //        };
-
-            //    _activity = new Activity
-            //        {
-            //            Name = "activityname",
-            //            CreatorName = "creatorname",
-            //            Description = "description",
-            //            FilePath = "dummypath.dll",
-            //            LastUpdated = DateTime.UtcNow,
-            //            Version = new Version(1, 0),
-            //            Commands = new List<ActivityCommand>
-            //                {
-            //                    new ActivityCommand
-            //                        {
-            //                            IsQuickCommand = false,
-            //                            Label = "commandlabel",
-            //                            Name = "commandname",
-            //                            ParameterDescriptors = new List<ParameterDescriptor>
-            //                                {
-            //                                    new ParameterDescriptor
-            //                                        {
-            //                                            Description = "parameterdescription",
-            //                                            Label = "parameterlabel",
-            //                                            Name = "parametername"
-            //                                        }
-            //                                }
-            //                        }
-            //                }
-            //        };
-
-            //    _userRepository.Add(_user);
-            //    _activityRepository.Add(_activity);
-                
-            //    trans.Commit();
-            //}
-        }
-#endif
-
         [TestMethod]
         public void ShouldNotBeAbleToAuthenticateWithWrongPassword()
         {
@@ -111,7 +30,7 @@ namespace Controll.Hosting.Tests
         }
 
         [TestMethod]
-        public void ShouldNotBeAbleToAuthenticateWitNonExistantUser()
+        public void ShouldNotBeAbleToAuthenticateWitNonExistingUser()
         {
             var clientState = new TrackingDictionary();
             const string clientId = "1";
@@ -127,10 +46,15 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToAuthenticate()
         {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>() };
+
+            userRepository.Add(user);
+
             var clientState = new TrackingDictionary();
             const string clientId = "1";
 
-            var hub = GetTestableClientHub(clientId, clientState);
+            var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
             hub.Caller.UserName = "Erik";
 
             bool result = hub.LogOn("password");
@@ -141,37 +65,43 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToAddClientWhenLoggingInAndRemoveClientFromUserWhenDisconnecting()
         {
-            _user = _userRepository.GetByUserName(_user.UserName);
-            _user.ConnectedClients.Clear();
-            _userRepository.Update(_user);
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>()};
+
+            userRepository.Add(user);
 
             var clientState = new TrackingDictionary();
             const string connectionId = "conn-id";
 
-            var hub = GetTestableClientHub(connectionId, clientState);
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
             hub.Caller.UserName = "Erik";
 
             hub.LogOn("password");
 
-            _user = _userRepository.GetByUserName(_user.UserName);
+            user = userRepository.GetByUserName(user.UserName);
 
-            Assert.AreEqual(1, _user.ConnectedClients.Count);
-            Assert.AreEqual("conn-id", _user.ConnectedClients[0].ConnectionId);
+            Assert.AreEqual(1, user.ConnectedClients.Count);
+            Assert.AreEqual("conn-id", user.ConnectedClients[0].ConnectionId);
 
             hub.Disconnect();
 
-            _user = _userRepository.GetByUserName(_user.UserName);
+            user = userRepository.GetByUserName(user.UserName);
 
-            Assert.AreEqual(0, _user.ConnectedClients.Count);
+            Assert.AreEqual(0, user.ConnectedClients.Count);
         }
 
         [TestMethod]
         public void ShouldBeAbleToRegisterUser()
         {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>() };
+
+            userRepository.Add(user);
+
             var clientState = new TrackingDictionary();
             const string connectionId = "conn-id";
 
-            var hub = GetTestableClientHub(connectionId, clientState);
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
             hub.Caller.UserName = "username";
             var result = hub.RegisterUser("username", "password", "email");
@@ -188,10 +118,15 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldNotBeAbleToRegisterUser()
         {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser() { UserName = "Erik", Password = "password", EMail = "mail", ConnectedClients = new List<ControllClient>() };
+
+            userRepository.Add(user);
+
             var clientState = new TrackingDictionary();
             const string connectionId = "conn-id";
 
-            var hub = GetTestableClientHub(connectionId, clientState);
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
             hub.Caller.UserName = "username";
             var result = hub.RegisterUser("Erik", "password", "NotSameEmail"); // Samma Username
@@ -206,27 +141,41 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToActivateZombie()
         {
-            var clientState = new TrackingDictionary();
-            const string connectionId = "conn-id";
-            var hub = GetTestableClientHub(connectionId, clientState);
-            hub.Caller.UserName = "Erik";
-
-            hub.LogOn("password");
-            
-            _user.Zombies = new List<Zombie>
+            var activity = new Activity
                 {
-                    new Zombie
+                    Name = "activityname"
+                };
+
+            var activityRepository = new InMemoryRepository<Activity>();
+            activityRepository.Add(activity);
+
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+                {
+                    UserName = "Erik",
+                    Password = "password",
+                    ConnectedClients = new List<ControllClient>(),
+                    Zombies = new List<Zombie>
                         {
-                            ConnectionId = "zombie-conn-id",
-                            Name = "zombiename",
-                            Activities = new List<Activity>
+                            new Zombie
                                 {
-                                    _activity
+                                    ConnectionId = "zombie-conn-id",
+                                    Name = "zombiename",
+                                    Activities = new List<Activity>
+                                        {
+                                            activity
+                                        }
                                 }
                         }
                 };
 
-            _userRepository.Update(_user);
+            userRepository.Add(user);
+            
+            var clientState = new TrackingDictionary();
+            const string connectionId = "conn-id";
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
+            hub.Caller.UserName = "Erik";
+            hub.LogOn("password");
 
             var dictionary = new Dictionary<string, string>
                 {
@@ -241,7 +190,7 @@ namespace Controll.Hosting.Tests
                     It.Is<string>(s => s == "commandname"))
                 ).Verifiable();
 
-            hub.StartActivity("zombiename", _activity.Id, dictionary, "commandname");
+            var ticket = hub.StartActivity("zombiename", activity.Id, dictionary, "commandname");
 
             hub.MockedMessageQueueService
                 .Verify(x => x.InsertActivityInvocation(
@@ -250,31 +199,43 @@ namespace Controll.Hosting.Tests
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
                     It.Is<string>(s => s == "commandname")),
                     Times.Once());
-
-            _user.Zombies[0].Activities.Clear();
-            _userRepository.Update(_user);
-
         }
 
         [TestMethod]
         public void ShouldBeAbleToDownloadActivityAtZombie()
         {
+            var activity = new Activity
+                {
+                    Name = "activityname",
+                    Id = Guid.NewGuid()
+                };
+
+            var activityRepository = new InMemoryRepository<Activity>();
+            activityRepository.Add(activity);
+
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+            {
+                UserName = "Erik",
+                Password = "password",
+                ConnectedClients = new List<ControllClient>(),
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    ConnectionId = "zombie-conn-id",
+                                    Name = "zombiename",
+                                    Activities = new List<Activity>()
+                                }
+                        }
+            };
+            userRepository.Add(user);
             var clientState = new TrackingDictionary();
             const string connectionId = "conn-id";
-            var hub = GetTestableClientHub(connectionId, clientState);
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
             hub.Caller.UserName = "Erik";
 
-            hub.LogOn("password");
-            
-            _user.Zombies = new List<Zombie>{
-                    new Zombie
-                        {
-                            ConnectionId = "zombie-conn-id",
-                            Name = "zombiename",
-                            Activities = new List<Activity>()
-                        }};
-
-            _userRepository.Update(_user);
+            Assert.IsTrue(hub.LogOn("password"), "Login failed");
             
             hub.MockedMessageQueueService
                 .Setup(x => x.InsertActivityDownloadOrder(
@@ -283,7 +244,7 @@ namespace Controll.Hosting.Tests
                 ).Verifiable();
 
 
-            hub.DownloadActivityAtZombie("zombiename", _activity.Id);
+            hub.DownloadActivityAtZombie("zombiename", activity.Id);
             
             hub.MockedMessageQueueService
                 .Verify(x => x.InsertActivityDownloadOrder(
@@ -292,29 +253,24 @@ namespace Controll.Hosting.Tests
                     Times.Once());
         }
 
-        private TestableClientHub GetTestableClientHub(string connectionId, TrackingDictionary clientState, ControllUser user = null, IControllUserRepository clientRepository = null)
+        
+        private TestableClientHub GetTestableClientHub(string connectionId, TrackingDictionary clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null)
         {
             // setup things needed for chat
-            if(clientRepository == null)
-                clientRepository = new ControllUserRepository(NHibernateHelper.GetSessionFactoryForMockedData().OpenSession());
+            if (clientRepository == null)
+                clientRepository = new Mock<IControllUserRepository>().Object;
 
             var connection = new Mock<IConnection>();
-
-            // add user to repository
-            if (user != null)
-                clientRepository.Add(user);
-
-            var genericActivityRepository =
-                new GenericRepository<Activity>(NHibernateHelper.GetSessionFactoryForMockedData().OpenSession());
-            var mockedMessageQueueService =
-                new Mock<IMessageQueueService>();
-
+            
+            if (activityRepository == null)
+                activityRepository = new Mock<IGenericRepository<Activity>>().Object;
+            var mockedMessageQueueService = new Mock<IMessageQueueService>();
             // create testable chat
             var hub = new TestableClientHub(
                 clientRepository,
                 connection,
                 mockedMessageQueueService,
-                genericActivityRepository,
+                activityRepository,
                 new Mock<IActivityService>());
 
             var mockedConnectionObject = hub.MockedConnection.Object;
@@ -335,6 +291,7 @@ namespace Controll.Hosting.Tests
 
             return hub;
         }
+
         private class TestableClientHub : ClientHub
         {
             public TestableClientHub(

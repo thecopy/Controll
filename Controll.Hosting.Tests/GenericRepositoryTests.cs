@@ -3,6 +3,9 @@ using Controll.Hosting.Models;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using FluentNHibernate.Testing;
+using NHibernate;
+
 
 namespace Controll.Hosting.Tests
 {
@@ -14,24 +17,11 @@ namespace Controll.Hosting.Tests
         {
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
-            {
-                var repo = new GenericRepository<ControllUser>(session);
-
-                var user = new ControllUser()
-                    {
-                        EMail = "email",
-                        Password = "password",
-                        UserName = "username"
-                    };
-
-                repo.Add(user);
-
-                var user2 = repo.Get(user.Id);
-
-                Assert.AreEqual(user2.EMail, "email");
-                Assert.AreEqual(user2.Password, "password");
-                Assert.AreEqual(user2.UserName, "username");
-            }
+                new PersistenceSpecification<ControllUser>(session)
+                    .CheckProperty(x => x.EMail, "email")
+                    .CheckProperty(x => x.Password, "password")
+                    .CheckProperty(x => x.UserName, "username")
+                    .VerifyTheMappings();
         }
 
         [TestMethod]
