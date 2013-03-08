@@ -9,10 +9,7 @@ using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-<<<<<<< HEAD
 using NHibernate;
-=======
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 using SignalR;
 using SignalR.Hubs;
 using ParameterDescriptor = Controll.Common.ParameterDescriptor;
@@ -24,7 +21,6 @@ namespace Controll.Hosting.Tests
     {
         private static ControllUser _user;
         private static Activity _activity;
-<<<<<<< HEAD
         private readonly ISessionFactory _sessionFactory = NHibernateHelper.GetSessionFactoryForMockedData();
         private ControllUserRepository _userRepository;
         private GenericRepository<Activity> _activityRepository;
@@ -99,70 +95,6 @@ namespace Controll.Hosting.Tests
             //}
         }
 #endif
-=======
-        private static readonly ControllUserRepository UserRepository = new ControllUserRepository();
-        private static readonly GenericRepository<Activity> ActivityRepository = new GenericRepository<Activity>();
-
-        [ClassInitialize]
-        public static void Init(TestContext context)
-        {
-            Console.WriteLine("Initialize");
-            NHibernateHelper.IsInTesting = true;
-            NHibernateHelper.OpenSession().Dispose();
-            NHibernateHelper.ClearDb();
-
-            _user = new ControllUser
-                {
-                    UserName = "Erik",
-                    EMail = "mail",
-                    Password = "password",
-                    ConnectedClients = new List<ControllClient>(),
-                    Zombies = new List<Zombie>
-                        {
-                            new Zombie
-                                {
-                                    ConnectionId = "zombie-conn-id",
-                                    Name = "zombiename",
-                                    Activities = new List<Activity>
-                                        {
-                                            _activity
-                                        }
-                                }
-                        }
-                };
-
-            _activity = new Activity
-                {
-                    Name = "activityname",
-                    CreatorName = "creatorname",
-                    Description = "description",
-                    FilePath = "dummypath.dll",
-                    LastUpdated = DateTime.UtcNow,
-                    Version = new Version(1, 0),
-                    Commands = new List<ActivityCommand>
-                        {
-                            new ActivityCommand
-                                {
-                                    IsQuickCommand = false,
-                                    Label = "commandlabel",
-                                    Name = "commandname",
-                                    ParameterDescriptors = new List<ParameterDescriptor>
-                                        {
-                                            new ParameterDescriptor
-                                                {
-                                                    Description = "parameterdescription",
-                                                    Label = "parameterlabel",
-                                                    Name = "parametername"
-                                                }
-                                        }
-                                }
-                        }
-                };
-
-            UserRepository.Add(_user);
-            ActivityRepository.Add(_activity);
-        }
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
         [TestMethod]
         public void ShouldNotBeAbleToAuthenticateWithWrongPassword()
@@ -209,15 +141,9 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToAddClientWhenLoggingInAndRemoveClientFromUserWhenDisconnecting()
         {
-<<<<<<< HEAD
             _user = _userRepository.GetByUserName(_user.UserName);
             _user.ConnectedClients.Clear();
             _userRepository.Update(_user);
-=======
-            _user = UserRepository.GetByUserName(_user.UserName);
-            _user.ConnectedClients.Clear();
-            UserRepository.Update(_user);
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
             var clientState = new TrackingDictionary();
             const string connectionId = "conn-id";
@@ -227,22 +153,14 @@ namespace Controll.Hosting.Tests
 
             hub.LogOn("password");
 
-<<<<<<< HEAD
             _user = _userRepository.GetByUserName(_user.UserName);
-=======
-            _user = UserRepository.GetByUserName(_user.UserName);
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
             Assert.AreEqual(1, _user.ConnectedClients.Count);
             Assert.AreEqual("conn-id", _user.ConnectedClients[0].ConnectionId);
 
             hub.Disconnect();
 
-<<<<<<< HEAD
             _user = _userRepository.GetByUserName(_user.UserName);
-=======
-            _user = UserRepository.GetByUserName(_user.UserName);
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
             Assert.AreEqual(0, _user.ConnectedClients.Count);
         }
@@ -308,11 +226,7 @@ namespace Controll.Hosting.Tests
                         }
                 };
 
-<<<<<<< HEAD
             _userRepository.Update(_user);
-=======
-            UserRepository.Update(_user);
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
             var dictionary = new Dictionary<string, string>
                 {
@@ -338,11 +252,7 @@ namespace Controll.Hosting.Tests
                     Times.Once());
 
             _user.Zombies[0].Activities.Clear();
-<<<<<<< HEAD
             _userRepository.Update(_user);
-=======
-            UserRepository.Update(_user);
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
         }
 
@@ -364,11 +274,7 @@ namespace Controll.Hosting.Tests
                             Activities = new List<Activity>()
                         }};
 
-<<<<<<< HEAD
             _userRepository.Update(_user);
-=======
-            UserRepository.Update(_user);
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
             
             hub.MockedMessageQueueService
                 .Setup(x => x.InsertActivityDownloadOrder(
@@ -390,11 +296,7 @@ namespace Controll.Hosting.Tests
         {
             // setup things needed for chat
             if(clientRepository == null)
-<<<<<<< HEAD
                 clientRepository = new ControllUserRepository(NHibernateHelper.GetSessionFactoryForMockedData().OpenSession());
-=======
-                clientRepository = new ControllUserRepository();
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
 
             var connection = new Mock<IConnection>();
 
@@ -403,11 +305,7 @@ namespace Controll.Hosting.Tests
                 clientRepository.Add(user);
 
             var genericActivityRepository =
-<<<<<<< HEAD
                 new GenericRepository<Activity>(NHibernateHelper.GetSessionFactoryForMockedData().OpenSession());
-=======
-                new GenericRepository<Activity>();
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
             var mockedMessageQueueService =
                 new Mock<IMessageQueueService>();
 

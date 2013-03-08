@@ -58,16 +58,6 @@ namespace Controll.Hosting.Tests
             Assert.IsTrue(result);
         }
 
-<<<<<<< HEAD
-=======
-        [TestMethod]
-        public void ShouldBeAbleTo()
-        {
-            var hub = GetTestableZombieHub();
-
-        }
-
->>>>>>> dd2c3d7dfe81074e7c5a73f8e4ca2584481a74f1
         private TestableZombieHub GetTestableZombieHub()
         {
             var mockedActivityService = new Mock<IActivityService>();
