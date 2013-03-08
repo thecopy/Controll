@@ -1,5 +1,6 @@
 Controll
 ========
+Controll is a framework for remote controlling devices.
 
 License
 ========
