@@ -71,14 +71,14 @@ namespace Controll.Hosting.Services
             OnNewActivityLogItem(ticket, messageLogItem);
         }
 
-        public Guid GetLatestStartedActivity(ControllUser user, Zombie zombie, Guid guid)
+        public Guid GetLatestStartedActivity(ControllUser user, Zombie zombie, Guid activityId)
         {
             // SÅ HÄR SKALL EJ!!! GÖRAS I RELEASE!!!!
 #warning Temporär lösning
             var activity = invocationQueuItemRepository.GetAll()
                 .OrderByDescending(s => s.RecievedAtCloud)
                 .FirstOrDefault(a => 
-                    a.Activity.Id == guid &&
+                    a.Activity.Id == activityId &&
                     a.Reciever.Id == zombie.Id);
 
             return activity == null ? Guid.Empty : activity.Ticket;

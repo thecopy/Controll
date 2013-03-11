@@ -9,19 +9,36 @@ namespace Controll.Hosting.Tests
 {
     public static class AssertionHelper
     {
-        public static T Throws<T>(Action action) where T : Exception
+        public static void Throws<T>(Action action) where T : Exception
         {
             try
             {
                 action();
             }
-            catch (T ex)
+            catch (T)
             {
-                return ex;
+                return;
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail("Expected exception of type {0}. But another exception was thrown: {1}", typeof (T), ex.GetType());
             }
 
-            Assert.Fail("Expected exception of type {0}.", typeof(T));
-            return null;
+            Assert.Fail("Expected exception of type {0} but no exception was thrown", typeof(T));
+        }
+
+        public static void AssertEnumerableItemsAreEqual(IEnumerable<object> enumerable1, IEnumerable<object> enumerable2)
+        {
+            var list1 = enumerable1 as IList<object> ?? enumerable1.ToList();
+            var list2 = enumerable2 as IList<object> ?? enumerable2.ToList();
+
+            if(list1.Count != list2.Count)
+                Assert.Fail("Not equal number of list items");
+
+            for (int i = 0; i < list1.Count(); i++)
+            {
+                Assert.AreEqual(list1[i], list2[i]);
+            }
         }
     }
 

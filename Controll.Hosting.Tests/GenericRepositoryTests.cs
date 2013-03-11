@@ -2,6 +2,7 @@
 using Controll.Hosting.Models;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
+using FizzWare.NBuilder;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FluentNHibernate.Testing;
 using NHibernate;
@@ -22,6 +23,29 @@ namespace Controll.Hosting.Tests
                     .CheckProperty(x => x.Password, "password")
                     .CheckProperty(x => x.UserName, "username")
                     .VerifyTheMappings();
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToAddGetAll()
+        {
+            using (var session = SessionFactory.OpenSession())
+            using (session.BeginTransaction())
+            {
+                var objects = Builder<Activity>
+                    .CreateListOfSize(50)
+                    .All()
+                    .With(x => x.Id = Guid.NewGuid())
+                    .Build();
+
+                var repo = new GenericRepository<Activity>(session);
+
+                foreach(var obj in objects)
+                    repo.Add(obj);
+
+                var fetched = repo.GetAll(33);
+
+                Assert.AreEqual(33, fetched.Count);
+            }
         }
 
         [TestMethod]

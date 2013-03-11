@@ -6,6 +6,7 @@ using Controll.Common;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
+using FizzWare.NBuilder;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -117,6 +118,79 @@ namespace Controll.Hosting.Tests
             activityService.UpdateLogWithResponse(invocationTicket, "response");
 
             MockedInvocationQueueItemRepostiory.Verify(x => x.Update(It.Is<ActivityInvocationQueueItem>(a => a.Response == "response")));
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToGetTheLatestStartedActivityForAZombie()
+        {
+            var mockedActivityDownloadQueueItemRepostiory = new Mock<IGenericRepository<ActivityDownloadOrderQueueItem>>();
+            var mockedQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
+
+            var invocationQueueItemRepository = new InMemoryRepository<ActivityInvocationQueueItem>();
+
+            var activityService = new ActivityService(
+                invocationQueueItemRepository,
+                MockedActivityRepository.Object,
+                MockedZombieRepository.Object);
+
+            var invocationTicket = Guid.NewGuid();
+
+            var activity = Builder<Activity>
+                .CreateNew()
+                .With(x => x.Id = Guid.NewGuid())
+                .With(x => x.Commands = Builder<ActivityCommand>.CreateListOfSize(5).Random(1).With(a => a.Name = "command").Build())
+                .Build();
+
+            var zombie = Builder<Zombie>
+                .CreateNew()
+                .With(x => x.Activities = new List<Activity> {activity})
+                .Build();
+
+            var user = Builder<ControllUser>
+                .CreateNew()
+                .With(x => x.Zombies = new List<Zombie> {zombie})
+                .Build();
+
+            var invocation = new ActivityInvocationQueueItem
+                {
+                    Activity = activity,
+                    Ticket = invocationTicket,
+                    Parameters = new Dictionary<string, string>(),
+                    MessageLog = new List<ActivityInvocationLogMessage>(),
+                    RecievedAtCloud = DateTime.Now,
+                    Reciever = zombie,
+                    Delivered = DateTime.Now
+                };
+            var invocationOld = new ActivityInvocationQueueItem
+                {
+                    Activity = activity,
+                    Ticket = Guid.NewGuid(),
+                    Parameters = new Dictionary<string, string>(),
+                    MessageLog = new List<ActivityInvocationLogMessage>(),
+                    RecievedAtCloud = DateTime.Now.AddDays(-5),
+                    Reciever = zombie,
+                    Delivered = DateTime.Now.AddDays(-4)
+                };
+            var invocationAnotherOld = new ActivityInvocationQueueItem
+                {
+                    Activity = activity,
+                    Ticket = Guid.NewGuid(),
+                    Parameters = new Dictionary<string, string>(),
+                    MessageLog = new List<ActivityInvocationLogMessage>(),
+                    RecievedAtCloud = DateTime.Now.AddDays(-35),
+                    Reciever = zombie,
+                    Delivered = DateTime.Now.AddDays(-33)
+                };
+
+            invocationQueueItemRepository.Add(invocationAnotherOld);
+            invocationQueueItemRepository.Add(invocation); // <-- This is the latest
+            invocationQueueItemRepository.Add(invocationOld);
+
+            var fetchedTicket = activityService.GetLatestStartedActivity(user, zombie, activity.Id);
+            var fetchedQueueItem = invocationQueueItemRepository.Get(fetchedTicket);
+            Assert.AreEqual(invocationTicket, fetchedTicket);
+            Assert.AreEqual(invocation.Activity.Id, fetchedQueueItem.Activity.Id);
+            Assert.AreEqual(invocation, fetchedQueueItem);
         }
     }
 }

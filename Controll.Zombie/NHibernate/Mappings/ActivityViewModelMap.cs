@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Controll.Common;
+﻿using Controll.Common;
 using FluentNHibernate.Mapping;
 
-namespace Controll.NHibernate.Mappings
+namespace Controll.Zombie.NHibernate.Mappings
 {
     public class ActivityViewModelMap : ClassMap<ActivityViewModel>
     {
@@ -17,7 +12,6 @@ namespace Controll.NHibernate.Mappings
             Map(x => x.Description);
             Map(x => x.LastUpdated);
             Map(x => x.Name);
-            Map(x => x.Price);
             Map(x => x.Version);
         }
     }

@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
+using System.Security.Authentication;
 using System.Security.Principal;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
+using FizzWare.NBuilder;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SignalR;
@@ -60,6 +63,57 @@ namespace Controll.Hosting.Tests
             bool result = hub.LogOn("password");
 
             Assert.IsTrue(result);
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToDetectUserNameSpoof()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>() };
+
+            userRepository.Add(user);
+
+            var clientState = new TrackingDictionary();
+            const string clientId = "1";
+
+            var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
+            hub.Caller.UserName = "Erik";
+
+            // Not logged in.
+            AssertionHelper.Throws<AuthenticationException>(() => hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: ""));
+        }
+
+       
+        [TestMethod]
+        public void ShouldBeAbleGetAllInstalledPluginsOnZombie()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var activities = Builder<Activity>.CreateListOfSize(10).Build();
+            var user = new ControllUser
+                {
+                    UserName = "Erik",
+                    Password = "password",
+                    ConnectedClients = new List<ControllClient>(),
+                    Zombies = new List<Zombie>
+                        {
+                            new Zombie {Activities = activities, Name = "zombie"}
+                        }
+                };
+
+            userRepository.Add(user);
+
+            var clientState = new TrackingDictionary();
+            const string clientId = "1";
+
+            var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
+            hub.Caller.UserName = "Erik";
+            
+            hub.LogOn("password");
+            var fetchedActivities = hub.GetActivitesInstalledOnZombie("zombie").ToList();
+            
+            Assert.IsNotNull(fetchedActivities);
+            Assert.AreEqual(activities.Count, fetchedActivities.Count);
+            
         }
 
         [TestMethod]

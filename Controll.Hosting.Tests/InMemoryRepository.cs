@@ -11,16 +11,16 @@ namespace Controll.Hosting.Tests
 {
     internal class InMemoryRepository<T> : IGenericRepository<T> where T:class
     {
-        private readonly ICollection<T> _collection;
+        protected readonly ICollection<T> Collection;
  
         public InMemoryRepository() : base()
         {
-            _collection = new Collection<T>();
+            Collection = new Collection<T>();
         } 
 
         public void Add(T entity)
         {
-             _collection.Add(entity);
+             Collection.Add(entity);
         }
 
         public void Update(T entity)
@@ -30,19 +30,19 @@ namespace Controll.Hosting.Tests
 
         public T Get(object identifier)
         {
-            var propertyInfo = typeof (T).GetProperty("Id");
+            var propertyInfo = typeof (T).GetProperty("Id") ?? typeof (T).GetProperty("Ticket");
 
-            return _collection.SingleOrDefault(e => propertyInfo.GetValue(e).Equals(identifier));
+            return Collection.SingleOrDefault(e => propertyInfo.GetValue(e).Equals(identifier));
         }
 
         public void Remove(T entity)
         {
-            _collection.Remove(entity);
+            Collection.Remove(entity);
         }
 
         public IList<T> GetAll(int maxResults = 100)
         {
-            return _collection.Take(maxResults).ToList();
+            return Collection.Take(maxResults).ToList();
         }
     }
 }

@@ -13,7 +13,6 @@ namespace Controll.Common
         public virtual Version Version { get; set; }
         public virtual DateTime LastUpdated { get; set; }
         public virtual string Description { get; set; }
-        public virtual decimal Price { get; set; }
         public virtual Guid Key { get; set; }
 
         public static ActivityViewModel CreateFrom(Activity activity)
@@ -25,8 +24,7 @@ namespace Controll.Common
                     CreatorName = activity.CreatorName,
                     Version = activity.Version,
                     Description = activity.Description,
-                    LastUpdated = activity.LastUpdated,
-                    Price = 10M
+                    LastUpdated = activity.LastUpdated
                 };
 
             return vm;

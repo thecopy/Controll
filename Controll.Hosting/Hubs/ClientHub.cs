@@ -102,15 +102,10 @@ namespace Controll.Hosting.Hubs
                     };
             }
         }
-       
-
-        public IEnumerable<object> GetTenLastLogItems()
-        {
-            throw new NotImplementedException();
-        }
         
         public IEnumerable<ActivityViewModel> GetActivitesInstalledOnZombie(string zombieName)
         {
+            EnsureUserIsLoggedIn();
             var user = GetUser();
 
             return user.GetZombieByName(zombieName).Activities.Select(ActivityViewModel.CreateFrom);
