@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using Controll.Common;
 
-namespace Controll.Common
+namespace Controll.Hosting.Models
 {
     public class ActivityCommand
     {

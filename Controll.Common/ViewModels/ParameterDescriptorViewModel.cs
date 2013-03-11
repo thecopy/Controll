@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace Controll.Common.ViewModels
 {
-    class ParameterDescriptorViewModel
+    public class ParameterDescriptorViewModel
     {
+
+        public IEnumerable<string> PickerValues { get; set; }
+        public string Label { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
     }
 }

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Controll.Common
+namespace Controll.Common.ViewModels
 {
     public class ActivityViewModel
     {
@@ -14,20 +11,6 @@ namespace Controll.Common
         public virtual DateTime LastUpdated { get; set; }
         public virtual string Description { get; set; }
         public virtual Guid Key { get; set; }
-
-        public static ActivityViewModel CreateFrom(Activity activity)
-        {
-            var vm = new ActivityViewModel
-                {
-                    Key = activity.Id,
-                    Name = activity.Name,
-                    CreatorName = activity.CreatorName,
-                    Version = activity.Version,
-                    Description = activity.Description,
-                    LastUpdated = activity.LastUpdated
-                };
-
-            return vm;
-        }
+        public IEnumerable<ActivityCommandViewModel> Commands { get; set; }
     }
 }

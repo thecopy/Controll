@@ -86,9 +86,12 @@
   <ItemGroup>
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="ControllServer.cs" />
+    <Compile Include="Helpers\ViewModelHelper.cs" />
     <Compile Include="Hubs\BaseHub.cs" />
     <Compile Include="Hubs\ClientHub.cs" />
     <Compile Include="Hubs\ZombieHub.cs" />
+    <Compile Include="Models\Activity.cs" />
+    <Compile Include="Models\ActivityCommand.cs" />
     <Compile Include="Models\Queue\ActivityDownloadOrderQueueItem.cs" />
     <Compile Include="Models\Queue\ActivityInvocationQueueItem.cs" />
     <Compile Include="Models\ActivityMessageLogItem.cs" />

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Controll.Common;
 
-namespace Controll
+namespace Controll.Hosting.Models
 {
     public class Activity
     {

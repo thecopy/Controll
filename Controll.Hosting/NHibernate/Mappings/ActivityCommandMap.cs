@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Hosting.Models;
 using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings

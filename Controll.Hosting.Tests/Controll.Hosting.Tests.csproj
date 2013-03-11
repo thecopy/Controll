@@ -77,7 +77,7 @@
     <Compile Include="AssertionHelper.cs" />
     <Compile Include="AssertionHelperTests.cs" />
     <Compile Include="ClientHubTests.cs" />
-    <Compile Include="ControllCommonsTests.cs" />
+    <Compile Include="HelperTests.cs" />
     <Compile Include="ControllUserRepositoryTests.cs" />
     <Compile Include="InMemoryControllUserRepository.cs" />
     <Compile Include="InMemoryRepository.cs" />

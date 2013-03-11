@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Models;
 using FizzWare.NBuilder;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,7 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Controll.Hosting.Tests
 {
     [TestClass]
-    public class ControllCommonsTests
+    public class HelperTests
     {
         [TestMethod]
         public void ShouldBeAbleToCreateActivityViewModel()
@@ -25,13 +26,16 @@ namespace Controll.Hosting.Tests
                                             .And(x => x.LastUpdated = lastUpdate)
                                             .Build();
 
-            var vm = ActivityViewModel.CreateFrom(activity);
+            var vm = ViewModelHelper.CreateViewModel(activity);
 
             Assert.AreEqual(activity.Name, vm.Name);
             Assert.AreEqual(activity.Description, vm.Description);
             Assert.AreEqual(activity.CreatorName, vm.CreatorName);
             Assert.AreEqual(activity.Version, vm.Version);
             Assert.AreEqual(activity.LastUpdated, vm.LastUpdated);
+            Assert.AreEqual(activity.Id, vm.Key);
+
+            Assert.AreEqual(activity.Commands.Count, vm.Commands.Count());
         }
 
         [TestMethod]
@@ -42,11 +46,11 @@ namespace Controll.Hosting.Tests
                                             .With(x => x.Activities = Builder<Activity>.CreateListOfSize(10).Build())
                                             .Build();
 
-            var vm = new ZombieViewModel(zombie.Activities, zombie.Name, true);
+            var vm = ViewModelHelper.CreateViewModel(zombie);
 
             Assert.AreEqual(zombie.Name, vm.Name);
             Assert.AreEqual(true, vm.IsOnline);
-            Assert.AreEqual(zombie.Activities, vm.Activities);
+            Assert.AreEqual(zombie.Activities.Count, vm.Activities.Count());
         }
 
         [TestMethod]

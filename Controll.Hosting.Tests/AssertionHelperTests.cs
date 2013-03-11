@@ -65,6 +65,8 @@ namespace Controll.Hosting.Tests
 
             var list3 = Builder<Zombie>.CreateListOfSize(10).Random(3).Do(z => z.Name = "hurr").Build();
             AssertionHelper.Throws<AssertFailedException>(() => AssertionHelper.AssertEnumerableItemsAreEqual(list1, list3)); // Different items
+
+            AssertionHelper.Throws<AssertFailedException>(() => AssertionHelper.AssertEnumerableItemsAreEqual(list1, list1, (a,b) => a.Name != b.Name)); // Exactly equal lists but different according to custom compare
         }
 
         [TestMethod]
@@ -73,7 +75,9 @@ namespace Controll.Hosting.Tests
             var list1 = Builder<Zombie>.CreateListOfSize(10).Build();
             var list2 = list1.ToList();
 
-            AssertionHelper.AssertEnumerableItemsAreEqual(list1, list2); 
+            AssertionHelper.AssertEnumerableItemsAreEqual(list1, list2);
+            AssertionHelper.AssertEnumerableItemsAreEqual(list1, list2, (zombie, zombie1) => zombie.Name == zombie1.Name);
         }
+
     }
 }

@@ -6,6 +6,8 @@ using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Common.ViewModels;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
@@ -108,7 +110,7 @@ namespace Controll.Hosting.Hubs
             EnsureUserIsLoggedIn();
             var user = GetUser();
 
-            return user.GetZombieByName(zombieName).Activities.Select(ActivityViewModel.CreateFrom);
+            return user.GetZombieByName(zombieName).Activities.Select(ViewModelHelper.CreateViewModel);
         }
 
         public bool RegisterUser(string userName, string password, string email)

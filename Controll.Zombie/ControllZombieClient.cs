@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Common.ViewModels;
 using Controll.NHibernate;
 using SignalR.Client.Hubs;
 

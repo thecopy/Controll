@@ -1,4 +1,5 @@
 ﻿using Controll.Common;
+using Controll.Common.ViewModels;
 using FluentNHibernate.Mapping;
 
 namespace Controll.Zombie.NHibernate.Mappings

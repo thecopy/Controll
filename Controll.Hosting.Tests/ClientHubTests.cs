@@ -3,6 +3,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Authentication;
 using System.Security.Principal;
+using Controll.Common;
+using Controll.Common.ViewModels;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
@@ -88,7 +90,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleGetAllInstalledPluginsOnZombie()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var activities = Builder<Activity>.CreateListOfSize(10).Build();
+            var activities = Builder<Activity>.CreateListOfSize(10).All().Do(a => a.Commands = new List<ActivityCommand>()).Build();
             var user = new ControllUser
                 {
                     UserName = "Erik",
@@ -109,11 +111,16 @@ namespace Controll.Hosting.Tests
             hub.Caller.UserName = "Erik";
             
             hub.LogOn("password");
-            var fetchedActivities = hub.GetActivitesInstalledOnZombie("zombie").ToList();
-            
+            List<ActivityViewModel> fetchedActivities = hub.GetActivitesInstalledOnZombie("zombie").ToList();
+
             Assert.IsNotNull(fetchedActivities);
-            Assert.AreEqual(activities.Count, fetchedActivities.Count);
-            
+            AssertionHelper.AssertEnumerableItemsAreEqual(user.Zombies[0].Activities,
+                                                          fetchedActivities,
+                                                          (a, b) => a.CreatorName == b.CreatorName &&
+                                                                    a.Description == b.Description &&
+                                                                    a.Name == b.Name &&
+                                                                    a.LastUpdated == b.LastUpdated &&
+                                                                    a.Version == b.Version);
         }
 
         [TestMethod]
