@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Security.Authentication;
 using System.Security.Principal;
-using Controll.Common;
 using Controll.Common.ViewModels;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
@@ -26,7 +28,16 @@ namespace Controll.Hosting.Tests
             var clientState = new TrackingDictionary();
             const string clientId = "1";
 
-            var hub = GetTestableClientHub(clientId, clientState);
+            var user = new ControllUser
+                {
+                    UserName = "Erik",
+                    Password = "pass123"
+                };
+
+            var repo = new InMemoryControllUserRepository();
+            repo.Add(user);
+
+            var hub = GetTestableClientHub(clientId, clientState,user, repo);
             hub.Caller.UserName = "Erik";
 
             bool result = hub.LogOn("pass");
@@ -114,13 +125,8 @@ namespace Controll.Hosting.Tests
             List<ActivityViewModel> fetchedActivities = hub.GetActivitesInstalledOnZombie("zombie").ToList();
 
             Assert.IsNotNull(fetchedActivities);
-            AssertionHelper.AssertEnumerableItemsAreEqual(user.Zombies[0].Activities,
-                                                          fetchedActivities,
-                                                          (a, b) => a.CreatorName == b.CreatorName &&
-                                                                    a.Description == b.Description &&
-                                                                    a.Name == b.Name &&
-                                                                    a.LastUpdated == b.LastUpdated &&
-                                                                    a.Version == b.Version);
+            AssertionHelper.AssertEnumerableItemsAreEqual(user.Zombies[0].Activities, fetchedActivities,
+                                                          TestingHelper.ActivityViewModelComparer);
         }
 
         [TestMethod]
@@ -198,6 +204,125 @@ namespace Controll.Hosting.Tests
 
             Assert.IsFalse(result);
         }
+
+        [TestMethod]
+        public void ShouldBeAbleToGetZombieOnlineStatus()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+                {
+                    UserName = "Erik",
+                    Password = "password",
+                    EMail = "mail",
+                    ConnectedClients = new List<ControllClient>(),
+                    Zombies = new List<Zombie> {new Zombie {Name = "zombie", ConnectionId = "connection-id"}}
+                };
+
+            userRepository.Add(user);
+
+            var clientState = new TrackingDictionary();
+            const string connectionId = "conn-id";
+
+            TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+
+            hub.Caller.UserName = "Erik";
+             hub.LogOn("password");
+
+            var result = hub.IsZombieOnline("zombie");
+            Assert.IsTrue(result);
+
+            user.Zombies[0].ConnectionId = null;
+            result = hub.IsZombieOnline("zombie");
+
+            Assert.IsFalse(result);
+        }
+
+
+        [TestMethod]
+        public void ShouldThrowWhenGettingZombieOnlineStatusOnNonExistingZombie()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+            {
+                UserName = "Erik",
+                Password = "password",
+                EMail = "mail",
+                ConnectedClients = new List<ControllClient>(),
+                Zombies = new List<Zombie>()
+            };
+
+            userRepository.Add(user);
+
+            var clientState = new TrackingDictionary();
+            const string connectionId = "conn-id";
+
+            TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+
+            hub.Caller.UserName = "Erik";
+            hub.LogOn("password");
+
+            AssertionHelper.Throws<ArgumentException>(() => hub.IsZombieOnline("some_zombie_name"));
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToGetAllZombiesForUser()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+            {
+                UserName = "Erik",
+                Password = "password",
+                EMail = "mail",
+                ConnectedClients = new List<ControllClient>(),
+                Zombies = TestingHelper.GetListOfZombies()
+            };
+
+            userRepository.Add(user);
+
+            var clientState = new TrackingDictionary();
+            const string connectionId = "conn-id";
+
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+
+            hub.Caller.UserName = "Erik";
+            hub.LogOn("password");
+
+            var result = hub.GetAllZombies().ToList();
+
+            AssertionHelper.AssertEnumerableItemsAreEqual(user.Zombies, result, TestingHelper.ZombieViewModelComparer);
+        }
+
+        [TestMethod]
+        public void ShouldNotBeAbleToStartActivityOnZombieWhichDoesNotExistOrWhereActivityDoesNotExist()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+            {
+                UserName = "Erik",
+                Password = "password",
+                EMail = "mail",
+                ConnectedClients = new List<ControllClient>(),
+                Zombies = TestingHelper.GetListOfZombies().Take(1).ToList()
+            };
+
+            user.Zombies[0].Name = "valid_zombie_name";
+            user.Zombies[0].Activities[0].Name = "activity";
+            user.Zombies[0].Activities[0].Id = Guid.NewGuid();
+
+            userRepository.Add(user);
+
+            var clientState = new TrackingDictionary();
+            const string connectionId = "conn-id";
+
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+
+            hub.Caller.UserName = "Erik";
+            hub.LogOn("password");
+
+            AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null), "Invalid Zombie Name"); // wrong name
+
+            AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null), "Invalid Activity Key"); // wrong guid
+        }
         
         [TestMethod]
         public void ShouldBeAbleToActivateZombie()
@@ -206,7 +331,6 @@ namespace Controll.Hosting.Tests
                 {
                     Name = "activityname"
                 };
-
             var activityRepository = new InMemoryRepository<Activity>();
             activityRepository.Add(activity);
 
@@ -242,16 +366,21 @@ namespace Controll.Hosting.Tests
                 {
                     {"param1", "param1value"}
                 };
-
+            
             hub.MockedMessageQueueService
                 .Setup(x => x.InsertActivityInvocation(
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
                     It.Is<string>(s => s == "commandname"))
-                ).Verifiable();
+                )
+                .Returns(Guid.NewGuid())
+                .Verifiable();
+
 
             var ticket = hub.StartActivity("zombiename", activity.Id, dictionary, "commandname");
+
+            Assert.AreNotEqual(Guid.Empty, ticket);
 
             hub.MockedMessageQueueService
                 .Verify(x => x.InsertActivityInvocation(
@@ -263,59 +392,55 @@ namespace Controll.Hosting.Tests
         }
 
         [TestMethod]
-        public void ShouldBeAbleToDownloadActivityAtZombie()
+        public void ShouldNotBeAbleToInvokeMethodsWhichRequireAuthenticationWhenNotAuthenticated()
         {
-            var activity = new Activity
-                {
-                    Name = "activityname",
-                    Id = Guid.NewGuid()
-                };
+            var clientState = new TrackingDictionary();
+            const string clientId = "1";
 
-            var activityRepository = new InMemoryRepository<Activity>();
-            activityRepository.Add(activity);
-
-            var userRepository = new InMemoryControllUserRepository();
             var user = new ControllUser
             {
                 UserName = "Erik",
-                Password = "password",
-                ConnectedClients = new List<ControllClient>(),
-                Zombies = new List<Zombie>
-                        {
-                            new Zombie
-                                {
-                                    ConnectionId = "zombie-conn-id",
-                                    Name = "zombiename",
-                                    Activities = new List<Activity>()
-                                }
-                        }
+                Password = "pass123",
+                ConnectedClients = new List<ControllClient>()
             };
-            userRepository.Add(user);
-            var clientState = new TrackingDictionary();
-            const string connectionId = "conn-id";
-            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
+
+            var repo = new InMemoryControllUserRepository();
+            repo.Add(user);
+
+            var hub = GetTestableClientHub(clientId, clientState, user, repo);
             hub.Caller.UserName = "Erik";
 
-            Assert.IsTrue(hub.LogOn("password"), "Login failed");
+            var methods = typeof (ClientHub).GetMethods()
+                              .Where(y => y.GetCustomAttributes().OfType<RequiresAuthorization>().Any());
             
-            hub.MockedMessageQueueService
-                .Setup(x => x.InsertActivityDownloadOrder(
-                    It.Is<Zombie>(z => z.Name == "zombiename"),
-                    It.Is<Activity>(a => a.Name == "activityname"))
-                ).Verifiable();
+            foreach (var method in methods)
+            {
+                var parameterInfos = method.GetParameters();
+                var parameters = new object[parameterInfos.Count()];
+                for (int i = 0; i < parameterInfos.Length; i++)
+                {
+                    var paramter = parameterInfos[i];
+                    var value = paramter.GetType().IsValueType ? Activator.CreateInstance(paramter.GetType()) : null;
 
+                    parameters[i] = value;
+                }
+                var closureSafeMethod = method;
+                Console.WriteLine("Testing method " + method.Name + " for ensuring authorization");
 
-            hub.DownloadActivityAtZombie("zombiename", activity.Id);
-            
-            hub.MockedMessageQueueService
-                .Verify(x => x.InsertActivityDownloadOrder(
-                    It.Is<Zombie>(z => z.Name == "zombiename"),
-                    It.Is<Activity>(a => a.Name == "activityname")),
-                    Times.Once());
+                // Checking InnerException because MethodInvocationException would be checked otherwise
+                if (typeof (IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
+                {
+                    AssertionHelper.Throws<AuthenticationException>(() =>
+                        ((IEnumerable<object>) closureSafeMethod.Invoke(hub, parameters)).ToList(), innerException:true); // .ToList() -> forcing enumeration (and therefore execution) for IEnumerable return types
+                }
+                else
+                {
+                    AssertionHelper.Throws<AuthenticationException>(() => closureSafeMethod.Invoke(hub, parameters), innerException:true);
+                }
+            }
         }
 
-        
-        private TestableClientHub GetTestableClientHub(string connectionId, TrackingDictionary clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null)
+        private TestableClientHub GetTestableClientHub(string connectionId, TrackingDictionary clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null, IGenericRepository<QueueItem> queueItemRepository = null)
         {
             // setup things needed for chat
             if (clientRepository == null)
@@ -325,12 +450,13 @@ namespace Controll.Hosting.Tests
             
             if (activityRepository == null)
                 activityRepository = new Mock<IGenericRepository<Activity>>().Object;
-            var mockedMessageQueueService = new Mock<IMessageQueueService>();
+            
+
             // create testable chat
             var hub = new TestableClientHub(
                 clientRepository,
                 connection,
-                mockedMessageQueueService,
+                new Mock<IMessageQueueService>(),
                 activityRepository,
                 new Mock<IActivityService>());
 
@@ -380,5 +506,58 @@ namespace Controll.Hosting.Tests
             public Mock<IActivityService> MockedActivityService { get; set; }
             public IControllUserRepository ControllUserRepository { get; set; }
         }
+
+        /*[TestMethod]
+        public void ShouldBeAbleToDownloadActivityAtZombie()
+        {
+            var activity = new Activity
+                {
+                    Name = "activityname",
+                    Id = Guid.NewGuid()
+                };
+
+            var activityRepository = new InMemoryRepository<Activity>();
+            activityRepository.Add(activity);
+
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+            {
+                UserName = "Erik",
+                Password = "password",
+                ConnectedClients = new List<ControllClient>(),
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    ConnectionId = "zombie-conn-id",
+                                    Name = "zombiename",
+                                    Activities = new List<Activity>()
+                                }
+                        }
+            };
+            userRepository.Add(user);
+            var clientState = new TrackingDictionary();
+            const string connectionId = "conn-id";
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
+            hub.Caller.UserName = "Erik";
+
+            Assert.IsTrue(hub.LogOn("password"), "Login failed");
+            
+            hub.MockedMessageQueueService
+                .Setup(x => x.InsertActivityDownloadOrder(
+                    It.Is<Zombie>(z => z.Name == "zombiename"),
+                    It.Is<Activity>(a => a.Name == "activityname"))
+                ).Verifiable();
+
+
+            hub.DownloadActivityAtZombie("zombiename", activity.Id);
+            
+            hub.MockedMessageQueueService
+                .Verify(x => x.InsertActivityDownloadOrder(
+                    It.Is<Zombie>(z => z.Name == "zombiename"),
+                    It.Is<Activity>(a => a.Name == "activityname")),
+                    Times.Once());
+        }*/
+
     }
 }

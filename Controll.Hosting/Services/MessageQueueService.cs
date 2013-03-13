@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
@@ -9,17 +10,11 @@ namespace Controll.Hosting.Services
 {
     public sealed class MessageQueueService : IMessageQueueService
     {
-        private readonly IGenericRepository<ActivityInvocationQueueItem> activityInvocationQueueItemRepository;
-        private readonly IGenericRepository<ActivityDownloadOrderQueueItem> activityDownloadOrderQueueItem;
         private readonly IGenericRepository<QueueItem> queueItemRepository;
 
         public MessageQueueService(
-            IGenericRepository<ActivityInvocationQueueItem> activityInvocationQueueItemRepository,
-            IGenericRepository<ActivityDownloadOrderQueueItem> activityDownloadOrderQueueItem,
             IGenericRepository<QueueItem> queueItemRepository)
         {
-            this.activityInvocationQueueItemRepository = activityInvocationQueueItemRepository;
-            this.activityDownloadOrderQueueItem = activityDownloadOrderQueueItem;
             this.queueItemRepository = queueItemRepository;
         }
 
@@ -43,29 +38,7 @@ namespace Controll.Hosting.Services
                     RecievedAtCloud = DateTime.UtcNow
                 };
 
-            activityInvocationQueueItemRepository.Add(queueItem);
-
-            ProcessQueueItem(queueItem);
-            return queueItem.Ticket;
-        }
-
-        /// <summary>
-        /// Inserts an zombie-order to download a new activity in the queue
-        /// </summary>
-        /// <param name="zombie">The zombie which will download the activity</param>
-        /// <param name="activity">The activity</param>
-        /// <returns>The queue item ticket</returns>
-        public Guid InsertActivityDownloadOrder(Zombie zombie, Activity activity)
-        {
-            var queueItem = new ActivityDownloadOrderQueueItem
-            {
-                Activity = activity,
-                Reciever = zombie,
-                TimeOut = 20,
-                RecievedAtCloud = DateTime.UtcNow
-            };
-
-            activityDownloadOrderQueueItem.Add(queueItem);
+            queueItemRepository.Add(queueItem);
 
             ProcessQueueItem(queueItem);
             return queueItem.Ticket;
@@ -83,17 +56,6 @@ namespace Controll.Hosting.Services
             queueItemRepository.Update(queueItem);
         }
 
-        public QueueItem GetQueueItem(Guid ticket)
-        {
-            return queueItemRepository.Get(ticket);
-        }
-
-        public IList<ActivityInvocationQueueItem> GetFinishedActivityInvocationLogItems(ControllUser forUser, int maxResult)
-        {
-            Console.WriteLine("WARNING: FIX GetFinishedActivityInvocationLogItems TO FILTER ON USER");
-            return activityInvocationQueueItemRepository.GetAll(maxResult);
-        }
-
         private void ProcessQueueItem(QueueItem queueItem)
         {
             if (string.IsNullOrEmpty(queueItem.Reciever.ConnectionId))
@@ -102,27 +64,18 @@ namespace Controll.Hosting.Services
             var type = queueItem.Type;
             switch (type)
             {
-                case QueueItemType.DownloadOrder:
-                    SendDownloadOrder((ActivityDownloadOrderQueueItem)queueItem);
-                    break;
                 case QueueItemType.ActivityInvocation:
                     SendActivityInvocation((ActivityInvocationQueueItem)queueItem);
                     break;
             }
         }
 
+        [ExcludeFromCodeCoverage]
         private void SendActivityInvocation(ActivityInvocationQueueItem item)
         {
             string connectionId = item.Reciever.ConnectionId;
             GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients[connectionId]
                 .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters);
-        }
-
-        private void SendDownloadOrder(ActivityDownloadOrderQueueItem item)
-        {
-            string connectionId = item.Reciever.ConnectionId;
-            GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients[connectionId]
-                .ActivityDownloadOrder(item.Activity.Id, item.Ticket);
         }
     }
 

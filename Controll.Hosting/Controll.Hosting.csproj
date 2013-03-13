@@ -86,13 +86,13 @@
   <ItemGroup>
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="ControllServer.cs" />
+    <Compile Include="Helpers\RequiresAuthorization.cs" />
     <Compile Include="Helpers\ViewModelHelper.cs" />
     <Compile Include="Hubs\BaseHub.cs" />
     <Compile Include="Hubs\ClientHub.cs" />
     <Compile Include="Hubs\ZombieHub.cs" />
     <Compile Include="Models\Activity.cs" />
     <Compile Include="Models\ActivityCommand.cs" />
-    <Compile Include="Models\Queue\ActivityDownloadOrderQueueItem.cs" />
     <Compile Include="Models\Queue\ActivityInvocationQueueItem.cs" />
     <Compile Include="Models\ActivityMessageLogItem.cs" />
     <Compile Include="Models\ActivityStatus.cs" />
@@ -102,7 +102,6 @@
     <Compile Include="Models\Device.cs" />
     <Compile Include="Models\Queue\QueueItem.cs" />
     <Compile Include="NHibernate\Mappings\ActivityCommandMap.cs" />
-    <Compile Include="NHibernate\Mappings\ActivityDownloadOrderQueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\ParameterDescriberMap.cs" />
     <Compile Include="Models\Zombie.cs" />
     <Compile Include="Models\ZombieExtensions.cs" />

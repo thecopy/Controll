@@ -87,6 +87,7 @@
     <Compile Include="GenericRepositoryTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestBase.cs" />
+    <Compile Include="TestingHelper.cs" />
     <Compile Include="ZombieHubTests.cs" />
   </ItemGroup>
   <ItemGroup>

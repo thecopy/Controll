@@ -16,20 +16,9 @@ namespace Controll.Hosting.Services
         Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string commandName);
 
         /// <summary>
-        /// Inserts an zombie-order to download a new activity
-        /// </summary>
-        /// <param name="zombie">The zombie which will download the activity</param>
-        /// <param name="activity">The activity</param>
-        /// <returns>The queue item ticket</returns>
-        Guid InsertActivityDownloadOrder(Zombie zombie, Activity activity);
-
-        /// <summary>
         /// Marks the QueueItem as delivered
         /// </summary>
         /// <param name="ticket">The ticket of the QueueItem which to mark as delivered</param>
         void MarkQueueItemAsDelivered(Guid ticket);
-
-        QueueItem GetQueueItem(Guid ticket);
-        IList<ActivityInvocationQueueItem> GetFinishedActivityInvocationLogItems(ControllUser forUser, int maxResult);
     }
 }

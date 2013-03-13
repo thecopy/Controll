@@ -15,22 +15,11 @@ namespace Controll.Hosting.Hubs
 {
     public class BaseHub : Hub
     {
-        private readonly IGenericRepository<Activity> activityRepository;
+        private readonly IGenericRepository<Activity> _activityRepository;
 
         public BaseHub(IGenericRepository<Activity> activityRepository)
         {
-            this.activityRepository = activityRepository;
-        }
-
-        public ActivityViewModel GetActivityDetails(Guid activityKey)
-        {
-            var activity = activityRepository.Get(activityKey);
-            return ViewModelHelper.CreateViewModel(activity);
-        }
-
-        public IEnumerable<ActivityViewModel> GetAvaiableActivities()
-        {
-            return activityRepository.GetAll().Select(ViewModelHelper.CreateViewModel);
+            _activityRepository = activityRepository;
         }
     }
 }

@@ -27,6 +27,63 @@ namespace Controll.Hosting.Tests
 
             Assert.Fail("Did not fail when no exception was thrown");
         }
+        [TestMethod]
+        public void ShouldNotAssertFailWhenExpectedExceptionWithCorrectMessageIsThrown()
+        {
+            try
+            {
+                AssertionHelper.Throws<ArgumentException>(() => { throw new ArgumentException("i expect this message"); }, "i expect this message");
+            }
+            catch (AssertFailedException)
+            {
+                Assert.Fail("Did fail when correct exception with correct message was thrown");
+            }
+
+        }
+
+        [TestMethod]
+        public void ShouldNotAssertFailWhenExpectedExceptionIsThrown()
+        {
+            try
+            {
+                AssertionHelper.Throws<ArgumentException>(() => { throw new ArgumentException(); });
+            }
+            catch (AssertFailedException)
+            {
+                Assert.Fail("Did fail when correct exception was thrown");
+            }
+
+        }
+
+        [TestMethod]
+        public void ShouldNotAssertFailWhenExpectedInnerExceptionIsThrown()
+        {
+            try
+            {
+                AssertionHelper.Throws<ArgumentException>(() => { throw new InvalidCastException("", new ArgumentException()); }, innerException:true);
+            }
+            catch (AssertFailedException)
+            {
+                Assert.Fail("Did fail when correct inner exception was thrown");
+            }
+
+        }
+
+        [TestMethod]
+        public void ShouldAssertFailWhenExceptionWithWrongMessageIsThrown()
+        {
+            try
+            {
+                AssertionHelper.Throws<ArgumentException>(() => { throw new ArgumentException("message"); }, "i expect this message");
+            }
+            catch (AssertFailedException)
+            {
+                // OK
+                return;
+            }
+
+            Assert.Fail("Did not fail when exception with wrong message was thrown");
+        }
 
         [TestMethod]
         public void ShouldAssertFailWheWrongExceptionIsThrown()
@@ -46,7 +103,8 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldNotAssertFailWhenCorrectExceptionIsThrown()
         {
-            AssertionHelper.Throws<InvalidCastException>(() => { throw new InvalidCastException();});
+            AssertionHelper.Throws<InvalidCastException>(() => { throw new InvalidCastException(); });
+            AssertionHelper.Throws<InvalidCastException>(() => { throw new ArgumentException("", new InvalidCastException()); }, innerException:true);
         }
 
         [TestMethod]

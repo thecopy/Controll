@@ -16,13 +16,40 @@ namespace Controll.Hosting.Tests
     public class HelperTests
     {
         [TestMethod]
+        public void ShouldBeAbleToCompareConcreteToViewModel()
+        {
+            var parameters =
+                Builder<ParameterDescriptor>.CreateListOfSize(5)
+                                            .All()
+                                            .Do(p => p.PickerValues = new List<string>{"string1", "string2"})
+                                            .Build();
+
+            var commands =
+                Builder<ActivityCommand>.CreateListOfSize(5)
+                                        .All()
+                                        .Do(c => c.ParameterDescriptors = parameters.ToList())
+                                        .Build();
+
+            var zombie = Builder<Zombie>.CreateNew().Build();
+
+            zombie.Activities = Builder<Activity>.CreateListOfSize(5)
+                                                 .All().Do(a => a.Commands = commands.ToList()).Build();
+
+            var zombies = TestingHelper.GetListOfZombies();
+            var zombieVms = zombies.Select(ViewModelHelper.CreateViewModel);
+            Assert.IsTrue(AssertionHelper.IsEnumerableItemsEqual(zombies, zombieVms, TestingHelper.ZombieViewModelComparer));
+        }
+
+        [TestMethod]
         public void ShouldBeAbleToCreateActivityViewModel()
         {
             var lastUpdate = DateTime.Now;
             var activity = Builder<Activity>.CreateNew()
                                             .With(x => x.Id = Guid.NewGuid())
                                             .And(x => x.Version = new Version(1, 1, 1, 1))
-                                            .And(x => x.Commands = Builder<ActivityCommand>.CreateListOfSize(10).Build())
+                                            .And(x => x.Commands = Builder<ActivityCommand>.CreateListOfSize(10)
+                                                .All().Do(a => a.ParameterDescriptors = Builder<ParameterDescriptor>.CreateListOfSize(10).Build())
+                                                .Build())
                                             .And(x => x.LastUpdated = lastUpdate)
                                             .Build();
 
@@ -41,12 +68,16 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToCreateZombieViewModel()
         {
-            var lastUpdate = DateTime.Now;
-            var zombie = Builder<Zombie>.CreateNew()
-                                            .With(x => x.Activities = Builder<Activity>.CreateListOfSize(10).Build())
-                                            .Build();
+            DateTime lastUpdate = DateTime.Now;
+            Zombie zombie = Builder<Zombie>.CreateNew()
+                                           .With(x =>
+                                               x.Activities = Builder<Activity>
+                                               .CreateListOfSize(10)
+                                               .All().Do(a =>a.Commands =Builder<ActivityCommand>.CreateListOfSize(10).Build())
+                                               .Build())
+                                           .Build();
 
-            var vm = ViewModelHelper.CreateViewModel(zombie);
+            ZombieViewModel vm = ViewModelHelper.CreateViewModel(zombie);
 
             Assert.AreEqual(zombie.Name, vm.Name);
             Assert.AreEqual(true, vm.IsOnline);

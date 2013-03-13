@@ -123,9 +123,6 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToGetTheLatestStartedActivityForAZombie()
         {
-            var mockedActivityDownloadQueueItemRepostiory = new Mock<IGenericRepository<ActivityDownloadOrderQueueItem>>();
-            var mockedQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
-
             var invocationQueueItemRepository = new InMemoryRepository<ActivityInvocationQueueItem>();
 
             var activityService = new ActivityService(

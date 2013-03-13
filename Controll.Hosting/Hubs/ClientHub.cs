@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Authentication;
 using System.Text;
@@ -17,10 +18,10 @@ namespace Controll.Hosting.Hubs
 {
     public class ClientHub : BaseHub, IDisconnect, IConnected
     {
-        private readonly IControllUserRepository controllUserRepository;
-        private readonly IMessageQueueService messageQueueService;
-        private readonly IGenericRepository<Activity> activityRepository;
-        private readonly IActivityService activityService;
+        private readonly IControllUserRepository _controllUserRepository;
+        private readonly IMessageQueueService _messageQueueService;
+        private readonly IGenericRepository<Activity> _activityRepository;
+        private readonly IActivityService _activityService;
 
         public ClientHub(
             IControllUserRepository controllUserRepository, 
@@ -28,17 +29,17 @@ namespace Controll.Hosting.Hubs
             IGenericRepository<Activity> activityRepository, 
             IActivityService activityService) : base(activityRepository)
         {
-            this.controllUserRepository = controllUserRepository;
-            this.messageQueueService = messageQueueService;
-            this.activityRepository = activityRepository;
-            this.activityService = activityService;
+            _controllUserRepository = controllUserRepository;
+            _messageQueueService = messageQueueService;
+            _activityRepository = activityRepository;
+            _activityService = activityService;
         }
 
         private ControllUser GetUser()
         {
             string userName = (string)Caller.UserName;
 
-            var user = controllUserRepository.GetByUserName(userName);
+            var user = _controllUserRepository.GetByUserName(userName);
 
             return user;
         }
@@ -65,46 +66,26 @@ namespace Controll.Hosting.Hubs
 
             user.ConnectedClients.Add(client);
 
-            controllUserRepository.Update(user);
+            _controllUserRepository.Update(user);
 
             return true;
         }
 
-        // TODO: Skriv en ViewModel för denna röra så man kan läsa in på PC-klienten också
-        public IEnumerable<object> GetAllZombies()
+        [RequiresAuthorization]
+        public IEnumerable<ZombieViewModel> GetAllZombies()
         {
+            EnsureUserIsLoggedIn();
+
             var user = GetUser();
             Console.WriteLine(user.UserName + " is fetching all zombies");
 
             foreach (Zombie z in user.Zombies)
             {
-                yield return new 
-                    {
-                        Activities = z.Activities.Select(a => new
-                        {
-                            a.Name,
-                            a.Id,
-                            a.CreatorName,
-                            Information = a.Description,
-                            UpdatedWhen = a.LastUpdated,
-                            Commands = a.Commands.Select(c => new
-                            {
-                               c.Label,
-                               c.Name,
-                               Parameters = c.ParameterDescriptors.Select(p => new
-                                   {
-                                       p.Label,
-                                       p.Description,
-                                       p.Name
-                                   })
-                            })
-                        }),
-                        IsOnline = !string.IsNullOrEmpty(z.ConnectionId),
-                        z.Name
-                    };
+                yield return ViewModelHelper.CreateViewModel(z);
             }
         }
-        
+
+        [RequiresAuthorization]
         public IEnumerable<ActivityViewModel> GetActivitesInstalledOnZombie(string zombieName)
         {
             EnsureUserIsLoggedIn();
@@ -115,8 +96,8 @@ namespace Controll.Hosting.Hubs
 
         public bool RegisterUser(string userName, string password, string email)
         {
-            if (controllUserRepository.GetByUserName(userName) != null
-                || controllUserRepository.GetByEMail(email) != null)
+            if (_controllUserRepository.GetByUserName(userName) != null
+                || _controllUserRepository.GetByEMail(email) != null)
                 return false;
 
             var newUser = new ControllUser()
@@ -126,21 +107,11 @@ namespace Controll.Hosting.Hubs
                     Password = password
                 };
 
-            controllUserRepository.Add(newUser);
+            _controllUserRepository.Add(newUser);
             return true;
         }
 
-        public Guid DownloadActivityAtZombie(string zombieName, Guid activityKey)
-        {
-            var user = GetUser();
-
-            var activity = activityRepository.Get(activityKey);
-
-            return activity == null ? 
-                Guid.Empty : 
-                messageQueueService.InsertActivityDownloadOrder(user.GetZombieByName(zombieName), activity);
-        }
-
+        [RequiresAuthorization]
         public bool IsZombieOnline(string zombieName)
         {
             EnsureUserIsLoggedIn();
@@ -148,30 +119,15 @@ namespace Controll.Hosting.Hubs
             var user = GetUser();
             var zombie = user.GetZombieByName(zombieName);
 
+            if(zombie == null)
+                throw new ArgumentException("Zombie does not exist", "zombieName");
+
             Console.WriteLine("Checking online status for zombie " + zombieName + " for user " + user.UserName);
 
-            return zombie != null && zombie.IsOnline();
+            return zombie.IsOnline();
         }
 
-        public IEnumerable<object> GetActivityLogMessages(Guid ticket)
-        {
-            EnsureUserIsLoggedIn();
-
-            return ((ActivityInvocationQueueItem) messageQueueService.GetQueueItem(ticket)).MessageLog;
-        }
-        
-        public Guid GetLatestStartedActivityTicket(string zombieName, Guid activityKey)
-        {
-            EnsureUserIsLoggedIn();
-
-            var user = GetUser();
-            var zombie = user.GetZombieByName(zombieName);
-
-            var ticket = activityService.GetLatestStartedActivity(user, zombie, activityKey);
-            
-            return ticket;
-        }
-
+        [RequiresAuthorization]
         public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
         {
             EnsureUserIsLoggedIn();
@@ -187,7 +143,7 @@ namespace Controll.Hosting.Hubs
             if (activity == null)
                 throw new ArgumentException("Invalid Activity Key");
 
-            var ticket = messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName);
+            var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName);
 
             Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
 
@@ -198,7 +154,7 @@ namespace Controll.Hosting.Hubs
         {
             var claimedUserName = (string) Caller.UserName;
 
-            var user = controllUserRepository.GetByConnectionId(Context.ConnectionId);
+            var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
 
             if(user == null || user.UserName.ToLower() != claimedUserName.ToLower())
                 throw new AuthenticationException();
@@ -206,7 +162,7 @@ namespace Controll.Hosting.Hubs
 
         public Task Disconnect()
         {
-            var user = controllUserRepository.GetByConnectionId(Context.ConnectionId);
+            var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
             var client = user.ConnectedClients.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
 
             Console.Write("One of " + user.UserName + "'s clients disconnected");
@@ -214,18 +170,21 @@ namespace Controll.Hosting.Hubs
             if (client != null)
             {
                 user.ConnectedClients.Remove(client);
-                controllUserRepository.Update(user);
+                _controllUserRepository.Update(user);
             }
 
             return null;
         }
 
+
+        [ExcludeFromCodeCoverage]
         public Task Connect()
         {
-            Console.WriteLine("Zombie connected");
+            Console.WriteLine("Client connected");
             return null;
         }
 
+        [ExcludeFromCodeCoverage]
         public Task Reconnect(IEnumerable<string> groups)
         {
             Console.WriteLine("Reconnected");

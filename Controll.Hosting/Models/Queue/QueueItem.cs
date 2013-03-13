@@ -8,8 +8,7 @@ namespace Controll.Hosting.Models
 {
     public enum QueueItemType
     {
-        ActivityInvocation,
-        DownloadOrder
+        ActivityInvocation
     }
 
     public abstract class QueueItem
@@ -21,6 +20,5 @@ namespace Controll.Hosting.Models
         public virtual DateTime? Delivered { get; set; }
         public virtual int TimeOut { get; set; }
         public abstract QueueItemType Type { get; }
-        public virtual bool IsDelivered { get { return Delivered.HasValue; } }
     }
 }

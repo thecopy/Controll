@@ -15,10 +15,5 @@ namespace Controll.Hosting.Models
         public virtual IList<Device> Devices { get; set; }
         public virtual IList<ControllClient> ConnectedClients { get; set; }
         public virtual IList<Zombie> Zombies { get; set; }
-
-        public virtual Device GetDevice(Guid id)
-        {
-            return Devices.FirstOrDefault(d => d.Id == id);
-        }
     }
 }

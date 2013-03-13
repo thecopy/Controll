@@ -19,7 +19,7 @@ namespace Controll.Hosting.Tests
 
         public ControllUser GetByConnectionId(string connectionId)
         {
-            return Collection.SingleOrDefault(e => e.ConnectedClients.Count(c => c.ConnectionId == connectionId) > 0);
+            return Collection.SingleOrDefault(e => e.ConnectedClients.Count(c => c.ConnectionId == connectionId) == 1);
         }
 
         public ControllUser GetByEMail(string email)

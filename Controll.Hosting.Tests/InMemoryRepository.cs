@@ -12,15 +12,24 @@ namespace Controll.Hosting.Tests
     internal class InMemoryRepository<T> : IGenericRepository<T> where T:class
     {
         protected readonly ICollection<T> Collection;
- 
+        internal bool GenerateIdentityOnAdd;
         public InMemoryRepository() : base()
         {
             Collection = new Collection<T>();
-        } 
+        }
 
         public void Add(T entity)
         {
-             Collection.Add(entity);
+            if (GenerateIdentityOnAdd)
+            {
+                var propertyInfo = typeof (T).GetProperty("Id") ?? typeof (T).GetProperty("Ticket");
+                if (typeof (T) == typeof (int))
+                    propertyInfo.SetValue(entity, Collection.Count);
+                if (typeof (T) == typeof (Guid))
+                    propertyInfo.SetValue(entity, Guid.NewGuid());
+            }
+
+            Collection.Add(entity);
         }
 
         public void Update(T entity)

@@ -12,6 +12,5 @@ namespace Controll.Hosting.Services
         void InsertActivityLogMessage(Guid ticket, ActivityMessageType type, string message);
         void AddActivityToZombie(string zombieName, ControllUser user, Guid key);
         Guid GetLatestStartedActivity(ControllUser user, Zombie zombie, Guid guid);
-        byte[] GetActivityBinaryData(Guid activityKey);
     }
 }
