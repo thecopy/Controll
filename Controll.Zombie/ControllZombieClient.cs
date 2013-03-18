@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.NHibernate;
-using SignalR.Client.Hubs;
+using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll
 {
@@ -26,7 +26,7 @@ namespace Controll
         public ControllZombieClient(string userName, string name)
         {
             hubConnection = new HubConnection("http://localhost:10244");
-            hubProxy = hubConnection.CreateProxy("ZombieHub");
+            hubProxy = hubConnection.CreateHubProxy("ZombieHub");
 
             hubConnection.Start().Wait();
 

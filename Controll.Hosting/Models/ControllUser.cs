@@ -12,7 +12,6 @@ namespace Controll.Hosting.Models
         public virtual string UserName { get; set; }
         public virtual string Password { get; set; }
         public virtual string EMail { get; set; }
-        public virtual IList<Device> Devices { get; set; }
         public virtual IList<ControllClient> ConnectedClients { get; set; }
         public virtual IList<Zombie> Zombies { get; set; }
     }

@@ -9,17 +9,18 @@ using Controll.Hosting.Helpers;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
-using SignalR.Hubs;
+using Microsoft.AspNet.SignalR;
+using NHibernate;
 
 namespace Controll.Hosting.Hubs
 {
     public class BaseHub : Hub
     {
-        private readonly IGenericRepository<Activity> _activityRepository;
+        protected readonly ISession Session;
 
-        public BaseHub(IGenericRepository<Activity> activityRepository)
+        public BaseHub(ISession session)
         {
-            _activityRepository = activityRepository;
+            this.Session = session;
         }
     }
 }

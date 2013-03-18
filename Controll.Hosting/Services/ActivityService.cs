@@ -13,24 +13,23 @@ using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate.Criterion;
 using Remotion.Linq.Collections;
-using SignalR;
 
 namespace Controll.Hosting.Services
 {
     public class ActivityService : IActivityService
     {
-        private readonly IGenericRepository<ActivityInvocationQueueItem> invocationQueueItemRepository;
-        private readonly IGenericRepository<Activity> activityRepository;
-        private readonly IGenericRepository<Zombie> zombieRepository;
+        private readonly IGenericRepository<ActivityInvocationQueueItem> _invocationQueueItemRepository;
+        private readonly IGenericRepository<Activity> _activityRepository;
+        private readonly IGenericRepository<Zombie> _zombieRepository;
 
         public ActivityService(
             IGenericRepository<ActivityInvocationQueueItem> invocationQueuItemRepository,
             IGenericRepository<Activity> activityRepository,
             IGenericRepository<Zombie> controllUserRepository)
         {
-            this.invocationQueueItemRepository = invocationQueuItemRepository;
-            this.activityRepository = activityRepository;
-            this.zombieRepository = controllUserRepository;
+            this._invocationQueueItemRepository = invocationQueuItemRepository;
+            this._activityRepository = activityRepository;
+            this._zombieRepository = controllUserRepository;
         }
 
         public event EventHandler<Tuple<Guid, ActivityInvocationLogMessage>> NewActivityLogItem;
@@ -45,17 +44,17 @@ namespace Controll.Hosting.Services
         
         public void UpdateLogWithResponse(Guid ticket, string response)
         {
-            var queueItem = invocationQueueItemRepository.Get(ticket);
+            var queueItem = _invocationQueueItemRepository.Get(ticket);
 
             queueItem.Responded = DateTime.Now;
             queueItem.Response = response;
 
-            invocationQueueItemRepository.Update(queueItem);
+            _invocationQueueItemRepository.Update(queueItem);
         }
 
         public void InsertActivityLogMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            var invocationQueueItem = invocationQueueItemRepository.Get(ticket);
+            var invocationQueueItem = _invocationQueueItemRepository.Get(ticket);
 
             var messageLogItem = new ActivityInvocationLogMessage
                 {
@@ -66,7 +65,7 @@ namespace Controll.Hosting.Services
 
             invocationQueueItem.MessageLog.Add(messageLogItem);
 
-            invocationQueueItemRepository.Update(invocationQueueItem);
+            _invocationQueueItemRepository.Update(invocationQueueItem);
 
             OnNewActivityLogItem(ticket, messageLogItem);
         }
@@ -75,7 +74,7 @@ namespace Controll.Hosting.Services
         {
             // SÅ HÄR SKALL EJ!!! GÖRAS I RELEASE!!!!
 #warning Temporär lösning
-            var activity = invocationQueueItemRepository.GetAll()
+            var activity = _invocationQueueItemRepository.GetAll()
                 .OrderByDescending(s => s.RecievedAtCloud)
                 .FirstOrDefault(a => 
                     a.Activity.Id == activityId &&
@@ -91,9 +90,9 @@ namespace Controll.Hosting.Services
             if (zombie == null)
                 return;
 
-            zombie.Activities.Add(activityRepository.Get(key));
+            zombie.Activities.Add(_activityRepository.Get(key));
 
-            zombieRepository.Update(zombie);
+            _zombieRepository.Update(zombie);
         }
     }
 

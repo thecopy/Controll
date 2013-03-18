@@ -3,35 +3,32 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Authentication;
-using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
-using Controll.Hosting.Repositories;
 using Controll.Hosting.Models;
+using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
-using SignalR;
-using SignalR.Hubs;
+using NHibernate;
 
 namespace Controll.Hosting.Hubs
 {
-    public class ZombieHub : BaseHub, IDisconnect, IConnected
+    public class ZombieHub : BaseHub
     {
-        private readonly IControllUserRepository userRepository;
-        private readonly IActivityService activityService;
-        private readonly IGenericRepository<Activity> activityRepository;
-        private readonly IMessageQueueService messageQueueService;
+        private readonly IControllUserRepository _controllUserRepository;
+        private IActivityService _activityService;
+        private IGenericRepository<Activity> _genericRepository;
+        private readonly IMessageQueueService _messageQueueService;
 
-        public ZombieHub(
-            IControllUserRepository userRepository, 
-            IActivityService activityService,
-            IGenericRepository<Activity> activityRepository, 
-            IMessageQueueService messageQueueService)
-            : base(activityRepository)
+        public ZombieHub(IControllUserRepository controllUserRepository,
+                         IActivityService activityService,
+                         IGenericRepository<Activity> genericRepository,
+                         IMessageQueueService messageQueueService,
+                         ISession session) : base(session)
         {
-            this.userRepository = userRepository;
-            this.activityService = activityService;
-            this.activityRepository = activityRepository;
-            this.messageQueueService = messageQueueService;
+            _controllUserRepository = controllUserRepository;
+            _activityService = activityService;
+            _genericRepository = genericRepository;
+            _messageQueueService = messageQueueService;
         }
 
         private ZombieState GetZombieState()
@@ -39,8 +36,8 @@ namespace Controll.Hosting.Hubs
             // TODO: Gör UserName:string -> User:ControllUser
             var state = new ZombieState
                 {
-                    Name = (string) Caller.ZombieName, 
-                    UserName = (string) Caller.BelongsToUser
+                    Name = (string) Clients.Caller.ZombieName,
+                    UserName = (string) Clients.Caller.BelongsToUser
                 };
 
             return state;
@@ -48,14 +45,16 @@ namespace Controll.Hosting.Hubs
 
         private void EnsureZombieAuthentication()
         {
-            var claimedBelongingToUserName = (string)Caller.BelongsToUser;
-            var claimedZombieName = (string) Caller.ZombieName;
+            var claimedBelongingToUserName = (string) Clients.Caller.BelongsToUser;
+            var claimedZombieName = (string) Clients.Caller.ZombieName;
 
-            var user = userRepository.GetByUserName(claimedBelongingToUserName);
+            var user = _controllUserRepository.GetByUserName(claimedBelongingToUserName);
 
-            if (user == null 
+            if (user == null
                 || user.UserName.ToLower() != claimedBelongingToUserName.ToLower()
-                || user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) == null)
+                ||
+                user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
+                null)
             {
                 throw new AuthenticationException();
             }
@@ -64,7 +63,7 @@ namespace Controll.Hosting.Hubs
         public bool LogOn(string password)
         {
             var state = GetZombieState();
-            var user = userRepository.GetByUserName(state.UserName);
+            var user = _controllUserRepository.GetByUserName(state.UserName);
 
             if (user == null)
                 throw new AuthenticationException();
@@ -73,12 +72,16 @@ namespace Controll.Hosting.Hubs
                 throw new AuthenticationException();
 
             var zombie = user.GetZombieByName(state.Name);
-            if(zombie == null)
+            if (zombie == null)
                 throw new ArgumentException("Zombie " + state.Name + " does not exist");
 
             zombie.ConnectionId = Context.ConnectionId;
-            
-            userRepository.Update(user);
+
+            using (var transaction = Session.BeginTransaction())
+            {
+                _controllUserRepository.Update(user);
+                transaction.Commit();
+            }
 
             return true;
         }
@@ -86,15 +89,19 @@ namespace Controll.Hosting.Hubs
         public bool QueueItemDelivered(Guid ticket)
         {
             EnsureZombieAuthentication();
-            messageQueueService.MarkQueueItemAsDelivered(ticket);
-            return true;
+            using (var transaction = Session.BeginTransaction())
+            {
+                _messageQueueService.MarkQueueItemAsDelivered(ticket);
+                transaction.Commit();
+                return true;
+            }
         }
-        
+
         public bool RegisterAsZombie(string password)
         {
             var state = GetZombieState();
 
-            var user = userRepository.GetByUserName(state.UserName);
+            var user = _controllUserRepository.GetByUserName(state.UserName);
 
             if (user == null || user.Password != password)
                 throw new AuthenticationException();
@@ -103,33 +110,42 @@ namespace Controll.Hosting.Hubs
                 throw new ArgumentException();
 
             var zombie = new Zombie
-            {
-                ConnectionId = Context.ConnectionId,
-                Name = state.Name,
-                Activities = new List<Activity>()
-            };
+                {
+                    ConnectionId = Context.ConnectionId,
+                    Name = state.Name,
+                    Activities = new List<Activity>()
+                };
 
-            user.Zombies.Add(zombie);
-            userRepository.Update(user);
+            using (var transaction = Session.BeginTransaction())
+            {
+                user.Zombies.Add(zombie);
+                _controllUserRepository.Update(user);
+
+                transaction.Commit();
+            }
 
             return true;
         }
 
-        public Task Disconnect()
+        public Task OnDisconnect()
         {
             var state = GetZombieState();
-            var user = userRepository.GetByUserName(state.UserName);
+
+
+            var user = _controllUserRepository.GetByUserName(state.UserName);
             var zombie = user.Zombies.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
-            
+
             Console.Write("Zombie ");
 
-            if(zombie != null)
+            if (zombie != null)
             {
-                zombie.ConnectionId = null;
-                
-                userRepository.Update(user);
+                using (var transaction = Session.BeginTransaction())
+                {
+                    zombie.ConnectionId = null;
+                    _controllUserRepository.Update(user);
 
-                Console.Write(zombie.Name + " ");
+                    transaction.Commit();
+                }
             }
 
             Console.WriteLine("disconnected.");
@@ -138,14 +154,14 @@ namespace Controll.Hosting.Hubs
         }
 
         [ExcludeFromCodeCoverage]
-        public Task Connect()
+        public Task OnConnect()
         {
             Console.WriteLine("Zombie connected");
             return null;
         }
 
         [ExcludeFromCodeCoverage]
-        public Task Reconnect(IEnumerable<string> groups)
+        public Task OnReconnect(IEnumerable<string> groups)
         {
             Console.WriteLine("Reconnected");
             return null;

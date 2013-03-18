@@ -5,14 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
-using SignalR.Client.Hubs;
+using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll
 {
     public class ControllClient
     {
-        private readonly HubConnection hubConnection;
-        private readonly IHubProxy hubProxy;
+        private readonly HubConnection _hubConnection;
+        private readonly IHubProxy _hubProxy;
 
         public event EventHandler<ActivityLogMessageEventArgs> NewActivityLogMessage;
         public event EventHandler<ActivityDownloadedAtZombieEventArgs> ActivityDownloadedAtZombie;
@@ -32,40 +32,40 @@ namespace Controll
 
         public ControllClient(string url)
         {
-            hubConnection = new HubConnection(url);
-            hubProxy = hubConnection.CreateProxy("ClientHub");
+            _hubConnection = new HubConnection(url);
+            _hubProxy = _hubConnection.CreateHubProxy("clientHub");
             
             SetupEvents();
         }
 
         public IEnumerable<ActivityViewModel> GetAvaiableActivities()
         {
-            return hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetAvaiableActivities").Result;
+            return _hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetAvaiableActivities").Result;
         } 
 
         public ActivityViewModel GetActivityDetails(Guid activityKey)
         {
-            return hubProxy.Invoke<ActivityViewModel>("GetActivityDetails", activityKey).Result;
+            return _hubProxy.Invoke<ActivityViewModel>("GetActivityDetails", activityKey).Result;
         }
 
         public ControllClient(HubConnection connection, IHubProxy proxy)
         {
-            this.hubProxy = proxy;
-            this.hubConnection = connection;
+            this._hubProxy = proxy;
+            this._hubConnection = connection;
         }
 
         public IEnumerable<ActivityViewModel>GetActivitesInstalledOnZombie(string zombieName)
         {
-            return hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetActivitesInstalledOnZombie", zombieName).Result;
+            return _hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetActivitesInstalledOnZombie", zombieName).Result;
         } 
 
         private void SetupEvents()
         {
-            this.hubProxy.On<Guid, DateTime, string, ActivityMessageType>("NewActivityMessage",
+            this._hubProxy.On<Guid, DateTime, string, ActivityMessageType>("NewActivityMessage",
                             (ticket, time, message, type) =>
                                 OnNewActivityLogMessage(new ActivityLogMessageEventArgs(ticket, time, message, type)));
 
-            this.hubProxy.On<Guid>("ActivityDownloadCompleted", guid =>
+            this._hubProxy.On<Guid>("ActivityDownloadCompleted", guid =>
                 {
                     Console.WriteLine("hehe - FICK NOTIFIKATION!!!!!11111");
                     OnActivityDownloadedAtZombie(guid);
@@ -74,39 +74,49 @@ namespace Controll
         
         public IEnumerable<ZombieViewModel> GetAllZombies()
         {
-            return hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
+            return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
         } 
 
         public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
         {
-            return hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
+            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
         }
 
         public Guid DownloadActivityAtZombie(string zombieName, Guid activityKey)
         {
-            return hubProxy.Invoke<Guid>("DownloadActivityAtZombie", zombieName, activityKey).Result;
+            return _hubProxy.Invoke<Guid>("DownloadActivityAtZombie", zombieName, activityKey).Result;
         }
 
         public void Connect()
         {
-            hubConnection.Start().Wait();
+            _hubConnection.Start().Wait();
         }
 
-        public void LogOn(string userName, string password)
+        public bool LogOn(string userName, string password)
         {
-            hubProxy["UserName"] = userName;
+            //Temporary try-catch
+            // TODO fix
+            try
+            {
+                _hubProxy["UserName"] = userName;
 
-            hubProxy.Invoke("LogOn", password).Wait();
+                _hubProxy.Invoke<bool>("LogOn", password).Wait();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         public void RegisterUser(string username, string password, string email)
         {
-            hubProxy.Invoke("RegisterUser", username, password, email).Wait();
+            _hubProxy.Invoke("RegisterUser", username, password, email).Wait();
         }
 
         public IEnumerable<Tuple<string,string>>GetConnectedClients(string userName)
         {
-            return hubProxy.Invoke<IEnumerable<Tuple<string, string>>>("GetConnectedClients", userName).Result;
+            return _hubProxy.Invoke<IEnumerable<Tuple<string, string>>>("GetConnectedClients", userName).Result;
         }
     }
 }

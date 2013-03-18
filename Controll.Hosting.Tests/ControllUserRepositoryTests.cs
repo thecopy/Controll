@@ -14,7 +14,7 @@ namespace Controll.Hosting.Tests
     public class ControllUserRepositoryTests : TestBase
     {
         [TestMethod]
-        public void ShouldBeAbleToAddAndGetFromUserName()
+        public void ShouldBeAbleToAddAndGetFromConnectionId()
         {
             using(var session = SessionFactory.OpenSession())
             using(session.BeginTransaction())

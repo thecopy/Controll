@@ -16,7 +16,7 @@ namespace Controll.Hosting.Tests
         [TestInitialize]
         public void InitializeTestBase()
         {
-            SessionFactory = NHibernateHelper.GetSessionFactoryForMockedData();
+            SessionFactory = NHibernateHelper.GetSessionFactoryForTesting();
         }
     }
 }

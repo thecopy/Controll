@@ -12,10 +12,11 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using FizzWare.NBuilder;
+using Microsoft.AspNet.SignalR;
+using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SignalR;
-using SignalR.Hubs;
+using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
@@ -25,7 +26,7 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldNotBeAbleToAuthenticateWithWrongPassword()
         {
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string clientId = "1";
 
             var user = new ControllUser
@@ -38,25 +39,12 @@ namespace Controll.Hosting.Tests
             repo.Add(user);
 
             var hub = GetTestableClientHub(clientId, clientState,user, repo);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
 
-            bool result = hub.LogOn("pass");
+            Assert.IsFalse(hub.LogOn("pass")); // Wrong password
+            hub.Clients.Caller.UserName = "Erika123";
+            Assert.IsFalse(hub.LogOn("pass123")); // Wrong username
 
-            Assert.IsFalse(result);
-        }
-
-        [TestMethod]
-        public void ShouldNotBeAbleToAuthenticateWitNonExistingUser()
-        {
-            var clientState = new TrackingDictionary();
-            const string clientId = "1";
-
-            var hub = GetTestableClientHub(clientId, clientState);
-            hub.Caller.UserName = "AnotherUser";
-
-            bool result = hub.LogOn("pass");
-
-            Assert.IsFalse(result);
         }
 
         [TestMethod]
@@ -67,15 +55,13 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string clientId = "1";
 
             var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
 
-            bool result = hub.LogOn("password");
-
-            Assert.IsTrue(result);
+            hub.LogOn("password");
         }
 
         [TestMethod]
@@ -86,11 +72,11 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string clientId = "1";
 
             var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
 
             // Not logged in.
             AssertionHelper.Throws<AuthenticationException>(() => hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: ""));
@@ -115,11 +101,11 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string clientId = "1";
 
             var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
             
             hub.LogOn("password");
             List<ActivityViewModel> fetchedActivities = hub.GetActivitesInstalledOnZombie("zombie").ToList();
@@ -137,11 +123,11 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
 
             hub.LogOn("password");
 
@@ -150,7 +136,7 @@ namespace Controll.Hosting.Tests
             Assert.AreEqual(1, user.ConnectedClients.Count);
             Assert.AreEqual("conn-id", user.ConnectedClients[0].ConnectionId);
 
-            hub.Disconnect();
+            hub.OnDisconnect();
 
             user = userRepository.GetByUserName(user.UserName);
 
@@ -165,12 +151,12 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
-            hub.Caller.UserName = "username";
+            hub.Clients.Caller.UserName = "username";
             var result = hub.RegisterUser("username", "password", "email");
 
             Assert.IsTrue(result);
@@ -190,12 +176,12 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
-            hub.Caller.UserName = "username";
+            hub.Clients.Caller.UserName = "username";
             var result = hub.RegisterUser("Erik", "password", "NotSameEmail"); // Samma Username
 
             Assert.IsFalse(result);
@@ -220,12 +206,12 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
              hub.LogOn("password");
 
             var result = hub.IsZombieOnline("zombie");
@@ -253,12 +239,12 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
             AssertionHelper.Throws<ArgumentException>(() => hub.IsZombieOnline("some_zombie_name"));
@@ -279,12 +265,12 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
             var result = hub.GetAllZombies().ToList();
@@ -311,12 +297,12 @@ namespace Controll.Hosting.Tests
 
             userRepository.Add(user);
 
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
 
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
             AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null), "Invalid Zombie Name"); // wrong name
@@ -355,11 +341,11 @@ namespace Controll.Hosting.Tests
                 };
 
             userRepository.Add(user);
-            
-            var clientState = new TrackingDictionary();
+
+            var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
             var dictionary = new Dictionary<string, string>
@@ -394,7 +380,7 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldNotBeAbleToInvokeMethodsWhichRequireAuthenticationWhenNotAuthenticated()
         {
-            var clientState = new TrackingDictionary();
+            var clientState = new StateChangeTracker();
             const string clientId = "1";
 
             var user = new ControllUser
@@ -408,7 +394,7 @@ namespace Controll.Hosting.Tests
             repo.Add(user);
 
             var hub = GetTestableClientHub(clientId, clientState, user, repo);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
 
             var methods = typeof (ClientHub).GetMethods()
                               .Where(y => y.GetCustomAttributes().OfType<RequiresAuthorization>().Any());
@@ -440,7 +426,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        private TestableClientHub GetTestableClientHub(string connectionId, TrackingDictionary clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null, IGenericRepository<QueueItem> queueItemRepository = null)
+        private TestableClientHub GetTestableClientHub(string connectionId, StateChangeTracker clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null, IGenericRepository<QueueItem> queueItemRepository = null)
         {
             // setup things needed for chat
             if (clientRepository == null)
@@ -451,6 +437,9 @@ namespace Controll.Hosting.Tests
             if (activityRepository == null)
                 activityRepository = new Mock<IGenericRepository<Activity>>().Object;
             
+            //mocked session
+            var mockedSession = new Mock<ISession>();
+            mockedSession.Setup(s => s.BeginTransaction()).Returns(new Mock<ITransaction>().Object);
 
             // create testable chat
             var hub = new TestableClientHub(
@@ -458,12 +447,11 @@ namespace Controll.Hosting.Tests
                 connection,
                 new Mock<IMessageQueueService>(),
                 activityRepository,
-                new Mock<IActivityService>());
+                new Mock<IActivityService>(),
+                mockedSession);
 
             var mockedConnectionObject = hub.MockedConnection.Object;
 
-            // setup client agent
-            hub.Clients = new ClientAgent(mockedConnectionObject, "PcHub");
 
             // setup signal agent
             var prinicipal = new Mock<IPrincipal>();
@@ -471,7 +459,9 @@ namespace Controll.Hosting.Tests
             var request = new Mock<IRequest>();
             request.Setup(m => m.User).Returns(prinicipal.Object);
 
-            hub.Caller = new StatefulSignalAgent(mockedConnectionObject, connectionId, "PcHub", clientState);
+            // setup client agent
+            var mockPipeline = new Mock<IHubPipelineInvoker>();
+            hub.Clients = new HubConnectionContext(mockPipeline.Object, mockedConnectionObject, "ClientHub", connectionId, clientState);
 
             // setup context
             hub.Context = new HubCallerContext(request.Object, connectionId);
@@ -486,24 +476,28 @@ namespace Controll.Hosting.Tests
                 Mock<IConnection> connection,
                 Mock<IMessageQueueService> messageQueueService,
                 IGenericRepository<Activity> activityRepository,
-                Mock<IActivityService> activityService)
+                Mock<IActivityService> activityService,
+                Mock<ISession> mockedSession)
                 : base(
                     controllUserRepository,
                     messageQueueService.Object,
                     activityRepository,
-                    activityService.Object)
+                    activityService.Object,
+                    mockedSession.Object)
             {
                 ControllUserRepository = controllUserRepository;
                 MockedConnection = connection;
                 MockedMessageQueueService = messageQueueService;
                 ActivityRepository = activityRepository;
                 MockedActivityService = activityService;
+                MockedSession = mockedSession;
             }
 
             public Mock<IConnection> MockedConnection { get; set; }
             public Mock<IMessageQueueService> MockedMessageQueueService { get; set; }
             public IGenericRepository<Activity> ActivityRepository { get; set; }
             public Mock<IActivityService> MockedActivityService { get; set; }
+            public Mock<ISession> MockedSession { get; set; }
             public IControllUserRepository ControllUserRepository { get; set; }
         }
 
@@ -539,7 +533,7 @@ namespace Controll.Hosting.Tests
             var clientState = new TrackingDictionary();
             const string connectionId = "conn-id";
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
-            hub.Caller.UserName = "Erik";
+            hub.Clients.Caller.UserName = "Erik";
 
             Assert.IsTrue(hub.LogOn("password"), "Login failed");
             

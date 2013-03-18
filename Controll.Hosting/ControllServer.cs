@@ -8,26 +8,39 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Ninject;
-using SignalR;
-using SignalRServer = SignalR.Hosting.Self.Server;
+using Microsoft.AspNet.SignalR;
+using Microsoft.Owin.Hosting;
+using Owin;
 
 namespace Controll.Hosting 
 {
     public class ControllServer
     {
-        private readonly SignalRServer signalRServer;
-
+        private readonly string url;
         public ControllServer(string url)
         {
+            this.url = url;
             Bootstrapper.StrapTheBoot();
-
-            signalRServer = new SignalRServer(url, Bootstrapper.NinjectDependencyResolver);
-            signalRServer.MapHubs();
+            GlobalHost.DependencyResolver = Bootstrapper.NinjectDependencyResolver;
         }
 
-        public void Start()
+        public IDisposable Start()
         {
-            signalRServer.Start();
+            return WebApplication.Start<Startup>(url);
+        }
+
+        class Startup
+        {
+            public void Configuration(IAppBuilder app)
+            {
+                // Turn cross domain on 
+                var config = new HubConfiguration { EnableCrossDomain = true, Resolver = Bootstrapper.NinjectDependencyResolver };
+
+                // This will map out to http://localhost:8080/signalr by default
+                
+                app.MapHubs(config);
+            }
         }
     }
 }
+ 

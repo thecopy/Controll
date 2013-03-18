@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
-using SignalR;
+using Microsoft.AspNet.SignalR;
 
 namespace Controll.Hosting.Services
 {
@@ -74,7 +74,7 @@ namespace Controll.Hosting.Services
         private void SendActivityInvocation(ActivityInvocationQueueItem item)
         {
             string connectionId = item.Reciever.ConnectionId;
-            GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients[connectionId]
+            GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
                 .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters);
         }
     }
