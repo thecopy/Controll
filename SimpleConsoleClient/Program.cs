@@ -58,8 +58,11 @@ namespace SimpleConsoleClient
                 {
                     case "help":
                     case "h":
-                        Console.WriteLine("auth user password\t\tif no user or password is passed default will be used");
-                        Console.WriteLine("list zombies\t\tlist all your zombies");
+                        Console.WriteLine("* auth <[user] [password]>\t\tIf no user or password is passed: username:password will be used");
+                        Console.WriteLine("* register [username] [password] <email>\tRegister user");
+                        Console.WriteLine("* list [zombies|activities <zombieName>]\t\tList all your zombies or a specified zombies installed activities");
+                        Console.WriteLine("* ping [zombieName]\t\tSend a ping to the zombie name <zombieName>");
+                        Console.WriteLine("* status\t\t\tDispays session status");
                         break;
                     case "auth":
                         if (results.Count() == 1)
@@ -68,6 +71,14 @@ namespace SimpleConsoleClient
                             Authenticate(results[1], results[2]);
                         else
                             Console.WriteLine("What?");
+                        break;
+                    case "register":
+                        if (results.Count() == 3)
+                            RegisterUser(results[1], results[2]);
+                        else if (results.Count() == 4)
+                            RegisterUser(results[1], results[2], results[3]);
+                        else
+                            Console.WriteLine("Parameter syntax error");
                         break;
                     case "run":
                         string zombieName = results[1];
@@ -86,6 +97,9 @@ namespace SimpleConsoleClient
                     case "ping":
                         Ping(results[1]);
                         break;
+                    case "status":
+                        PrintStatus();
+                        break;
                     default:
                         Console.WriteLine("Unkown command " + results[0]);
                         break;
@@ -95,6 +109,27 @@ namespace SimpleConsoleClient
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        private static void RegisterUser(string username, string password, string email = "")
+        {
+            var result = _client.RegisterUser(username, password, email);
+            if(result)
+                Console.WriteLine("Successfully registered user " + username + "!");
+            else
+                Console.WriteLine("Could now register user! Username or mail already in use.");
+        }
+
+        private static void PrintStatus()
+        {
+            Console.WriteLine("Connected to: {0}", _client.HubConnection.Url);
+            Console.WriteLine("Using transport: {0}", _client.HubConnection.Transport.Name);
+            Console.WriteLine("Connection Id: {0}", _client.HubConnection.ConnectionId);
+            Console.WriteLine("Authenticated: {0}", string.IsNullOrEmpty(_user) ? "No" : "Yes");
+            if (!string.IsNullOrEmpty(_user))
+            {
+                Console.WriteLine("User: {0}", _user);
+            }
         }
 
         private static void Ping(string zombieName)
@@ -138,7 +173,7 @@ namespace SimpleConsoleClient
             {
                 if (parameters.Count() != 1)
                 {
-                    Console.WriteLine("Syntax: list zombies <name>");
+                    Console.WriteLine("Syntax: list activities <zombieName>");
                     return;
                 }
 

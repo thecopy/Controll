@@ -42,7 +42,7 @@ namespace Controll.Hosting.Tests
 
             hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectionId == hub.Context.ConnectionId))).Verifiable();
 
-            bool result = hub.LogOn("password");
+            bool result = hub.LogOn("username", "password", "zombie");
             Assert.IsTrue(result);
 
             // Verify that connection-id was set
@@ -70,14 +70,11 @@ namespace Controll.Hosting.Tests
 
             hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
 
-            hub.Clients.Caller.ZombieName = "wrong_zombie";
-            hub.Clients.Caller.BelongsToUser = "wrong_username";
-            AssertionHelper.Throws<AuthenticationException>(() => hub.LogOn("password")); // Username wrong but correct password
-            AssertionHelper.Throws<AuthenticationException>(() => hub.LogOn("wrong_password")); // Username wrong and incorrect password
+            Assert.IsFalse(hub.LogOn("wrong_username", "password", "zombie")); // Username wrong but correct password
+            Assert.IsFalse(hub.LogOn("wrong_username", "wrong_password", "zombie")); // Username wrong and incorrect password
 
-            hub.Clients.Caller.BelongsToUser = "username";
-            AssertionHelper.Throws<AuthenticationException>(() => hub.LogOn("wrong_password")); // Username correct but incorrect password
-            AssertionHelper.Throws<ArgumentException>(() => hub.LogOn("password"));       // Username correct and correct password but zombie name wrong
+            Assert.IsFalse(hub.LogOn("username", "wrong_password", "zombie")); // Username correct but incorrect password
+            Assert.IsFalse(hub.LogOn("username", "password", "wrong_zombie"));       // Username correct and correct password but zombie name wrong
         }
 
         [TestMethod]
@@ -106,7 +103,7 @@ namespace Controll.Hosting.Tests
             hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
             hub.MockedMessageQueueService.Setup(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket)))).Verifiable();
 
-            hub.LogOn("password");
+            hub.LogOn("username", "password", "zombie");
             hub.QueueItemDelivered(ticket);
 
             hub.MockedMessageQueueService.Verify(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket))));
@@ -137,21 +134,21 @@ namespace Controll.Hosting.Tests
             hub.MockedMessageQueueService.Setup(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket)))).Verifiable();
 
 
-            AssertionHelper.Throws<AuthenticationException>(() => hub.QueueItemDelivered(ticket)); // Not Logged On
+            Assert.IsFalse(hub.QueueItemDelivered(ticket)); // Not Logged On
             hub.Clients.Caller.BelongsToUser = "username";
             hub.Clients.Caller.ZombieName = "zombie";
-            hub.LogOn("password");
+            hub.LogOn("username", "password", "zombie");
 
             hub.Clients.Caller.BelongsToUser = "someone_else"; // Spoofing username
-            AssertionHelper.Throws<AuthenticationException>(() => hub.QueueItemDelivered(ticket)); // Spoofing username
+            Assert.IsFalse(hub.QueueItemDelivered(ticket)); // Spoofing username
 
             hub.Clients.Caller.BelongsToUser = "username"; // Correct Username
             hub.Clients.Caller.ZombieName = "another_zombie"; // Spoofing zombie
-            AssertionHelper.Throws<AuthenticationException>(() => hub.QueueItemDelivered(ticket)); // Spoofing zombie
+            Assert.IsFalse(hub.QueueItemDelivered(ticket)); // Spoofing zombie
 
             hub.Clients.Caller.ZombieName = "zombie"; // Correct Zombie
             user.Zombies[0].ConnectionId = "another_connection_id"; // Wrong Connection-ID
-            AssertionHelper.Throws<AuthenticationException>(() => hub.QueueItemDelivered(ticket)); // Wrong Connection-ID
+            Assert.IsFalse(hub.QueueItemDelivered(ticket)); // Wrong Connection-ID
         }
 
         [TestMethod]
@@ -207,7 +204,7 @@ namespace Controll.Hosting.Tests
             
             hub.MockedUserRepository.Setup(x => x.Update(It.Is<ControllUser>(u => u.Zombies.Any(z => z.Name == "ZombieName")))).Verifiable();
 
-            var result = hub.RegisterAsZombie("password");
+            var result = hub.RegisterAsZombie("Erik", "password", "ZombieName");
 
             hub.MockedUserRepository.Verify(x => x.Update(It.Is<ControllUser>(u => u.Zombies.Any(z => z.Name == "ZombieName"))));
 
@@ -233,14 +230,11 @@ namespace Controll.Hosting.Tests
 
             hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
 
-            hub.Clients.Caller.ZombieName = "existing_zombie";
-            hub.Clients.Caller.BelongsToUser = "wrong_username";
-            AssertionHelper.Throws<AuthenticationException>(() => hub.RegisterAsZombie("password")); // Username wrong but correct password
-            AssertionHelper.Throws<AuthenticationException>(() => hub.RegisterAsZombie("wrong_password")); // Username wrong and incorrect password
+            Assert.IsFalse(hub.RegisterAsZombie("wrong_username", "password", "zombie")); // Username wrong but correct password
+            Assert.IsFalse(hub.RegisterAsZombie("wrong_username", "wrong_password", "zombie")); // Username wrong and incorrect password
 
-            hub.Clients.Caller.BelongsToUser = "username";
-            AssertionHelper.Throws<AuthenticationException>(() => hub.RegisterAsZombie("wrong_password")); // Username correct but incorrect password
-            AssertionHelper.Throws<ArgumentException>(() => hub.RegisterAsZombie("password"));             // Username correct and correct password but zombie name already existing
+            Assert.IsFalse(hub.RegisterAsZombie("username", "wrong_password", "zombie")); // Username correct but incorrect password
+            Assert.IsFalse(hub.RegisterAsZombie("username", "wrong_password", "existing_zombie"));    // Username correct and correct password but zombie name already existing
         }
 
         private TestableZombieHub GetTestableZombieHub()

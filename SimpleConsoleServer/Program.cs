@@ -22,7 +22,8 @@ namespace SimpleConsoleServer
             using (server.Start())
             {
                 Console.WriteLine("Listening...");
-                while (true) ;
+                while (true)
+                    Console.WriteLine(Console.ReadLine());
             }
         }
     }

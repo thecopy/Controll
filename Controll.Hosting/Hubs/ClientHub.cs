@@ -46,7 +46,7 @@ namespace Controll.Hosting.Hubs
         {
             Console.Write("Client trying to logon ");
 
-            ControllUser user = GetUser();
+            var user = GetUser();
 
             if (user == null)
                 return false;
@@ -109,7 +109,7 @@ namespace Controll.Hosting.Hubs
                     Password = password
                 };
 
-            using (ITransaction transaction = Session.BeginTransaction())
+            using (var transaction = Session.BeginTransaction())
             {
                 _controllUserRepository.Add(newUser);
                 transaction.Commit();

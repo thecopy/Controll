@@ -7,61 +7,51 @@ using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.NHibernate;
+using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll
 {
     public class ZombieService
     {
-        private readonly string userName;
-        private readonly string zombieName;
-        private readonly string activitiesPath;
-        private ControllZombieClient client;
+        private readonly string _url;
+        private string _userName;
+        private string _zombieName;
+        private ControllZombieClient _client;
 
-        public event EventHandler<ActivityStartedEventArgs> ActivityStarted;
+        public HubConnection HubConnection { get { return _client.HubConnection; } }
 
         public string UserName
         {
-            get { return userName; }
+            get { return _userName; }
         }
         public string ZombieName
         {
-            get { return zombieName; }
+            get { return _zombieName; }
         }
-
-        private List<ActivityDownloadOrderEventArgs> DownloadRequests { get; set; }   
-
-        public void OnActivityStarted(ActivityStartedEventArgs e)
+        
+        public ZombieService(string url)
         {
-            EventHandler<ActivityStartedEventArgs> handler = ActivityStarted;
-            if (handler != null) handler(this, e);
+            _url = url;
         }
 
-
-        public ZombieService(string userName, string zombieName, string activitiesPath = ".")
+        public void Connect()
         {
-            this.userName = userName;
-            this.zombieName = zombieName;
-            this.activitiesPath = activitiesPath;
-            this.DownloadRequests = new List<ActivityDownloadOrderEventArgs>();
+            _client = new ControllZombieClient(_url);
         }
 
-        public bool Start(string password)
+        public bool Authenticate(string username, string password, string zombieName)
         {
-            client = new ControllZombieClient(userName, zombieName);
-            client.ActivateZombie += ActivateZombie;
-            client.ActivityDownloadOrder += client_ActivityDownloadOrder;
+            var result = _client.LogOn(username, password, zombieName);
+            if (result)
+            {
+                _userName = username;
+                _zombieName = zombieName;
+            }
 
-            return client.LogOn(password);
+            return result;
         }
 
-        void client_ActivityDownloadOrder(object sender, ActivityDownloadOrderEventArgs e)
-        {
-            Console.WriteLine("Downloading activity on behalf of client");
-            this.DownloadRequests.Add(e);
-            this.DownloadActivity(e.ActivityKey);
-            // TODO: Find out if ticket is needed here
-        }
-
+        /*
         private void ActivateZombie(object sender, ActivityStartedEventArgs e)
         {
             var activityRepo = new GenericRepository<ActivityViewModel>();
@@ -71,7 +61,7 @@ namespace Controll
 
             // Start the actual activity
             var plugin = PluginService.Instance.GetActivityInstance(activity.Key);
-            var context = new DelegatePluginContext(e.ActivityTicket, e.Parameter, this.client);
+            var context = new DelegatePluginContext(e.ActivityTicket, e.Parameter, this._client);
             plugin.Execute(context);
 
             //Create a log post
@@ -85,12 +75,7 @@ namespace Controll
 
             // Notify subscribers of the started activity
             OnActivityStarted(e);
-        }
-        
-        public IEnumerable<ActivityViewModel> GetAvaiableActivities()
-        {
-            return client.GetAvaiableActivities();
-        }
+        }*/
 
         public IEnumerable<ActivityViewModel> GetInstalledActivities()
         {
@@ -98,54 +83,9 @@ namespace Controll
             return activityRepo.GetAll();
         }
 
-        public long DownloadActivity(Guid key)
+        public bool Register(string userName, string password, string zombieName)
         {
-            var repo = new GenericRepository<ActivityViewModel>();
-
-            // Download the activity
-            var bytes = client.DownloadActivity(key);
-            if (bytes.Length > 0)
-            {
-                //Save it
-                File.WriteAllBytes(Path.Combine(activitiesPath, key.ToString() + ".activity"), bytes);
-
-                //Add the details of the activity in the database
-                var details = repo.Get(key);
-                if (details == null)
-                {
-                    repo.Add(GetActivityDetails(key));
-                }
-                else
-                {
-                    details = GetActivityDetails(key);
-                    repo.Update(details);
-                }
-            }
-            Console.WriteLine("Downloaded activity successfully");
-            ActivityDownloadOrderEventArgs request = this.DownloadRequests.SingleOrDefault(dr => dr.ActivityKey == key);
-            if(request != null)
-            {
-                client.NotifyActivityDownloadComplete(request.Ticket);
-                this.DownloadRequests.Remove(request);
-            }
-
-            return bytes.Length;
+            return _client.Register(userName, password, zombieName);
         }
-
-        public long DownloadActivity(ActivityViewModel activity)
-        {
-            return this.DownloadActivity(activity.Key);
-        }
-
-        public ActivityViewModel GetActivityDetails(Guid key)
-        {
-            return client.GetActivityDetails(key);
-        }
-
-        public IDictionary<Guid, bool> CheckIfSyncingActivitiesIsNeeded()
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }

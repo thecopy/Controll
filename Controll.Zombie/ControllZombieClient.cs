@@ -21,19 +21,19 @@ namespace Controll
         public event EventHandler<ActivityCompletedEventArgs> ZombieActivityCompleted;
         public event EventHandler<ActivityDownloadOrderEventArgs> ActivityDownloadOrder;
 
-
-
-        public ControllZombieClient(string userName, string name)
+        public ControllZombieClient(string url)
         {
-            hubConnection = new HubConnection("http://localhost:10244");
+            hubConnection = new HubConnection(url);
             hubProxy = hubConnection.CreateHubProxy("ZombieHub");
 
             hubConnection.Start().Wait();
 
-            hubProxy["BelongsToUser"] = userName;
-            hubProxy["ZombieName"] = name;
-
             SetupEvents();
+        }
+
+        public HubConnection HubConnection      
+        {
+            get { return hubConnection; }
         }
 
         #region Events & Event Invocators
@@ -63,34 +63,31 @@ namespace Controll
         }
         #endregion
 
-        public bool LogOn(string userPassword)
+        public bool Register(string userName, string password, string zombieName)
         {
-            return hubProxy.Invoke<bool>("LogOn", userPassword).Result;
+            var result = hubProxy.Invoke<bool>("RegisterAsZombie", userName, password, zombieName).Result;
+            if (result)
+            {
+                hubProxy["BelongsToUser"] = userName;
+                hubProxy["ZombieName"] = zombieName;
+            }
+
+            return result;
+
         }
 
-        public IEnumerable<ActivityViewModel> GetAvaiableActivities()
+        public bool LogOn(string userName, string password, string zombieName)
         {
-            return hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetAvaiableActivities").Result;
-        }
+            var result = hubProxy.Invoke<bool>("LogOn", userName, password, zombieName).Result; 
+            if (result)
+            {
+                hubProxy["BelongsToUser"] = userName;
+                hubProxy["ZombieName"] = zombieName;
+            }
 
-        public byte[] DownloadActivity(Guid activityKey)
-        {
-            return hubProxy.Invoke<byte[]>("DownloadActivityBinary", activityKey).Result;
+            return result;
         }
-
-        public ActivityViewModel GetActivityDetails(Guid key)
-        {
-            return hubProxy.Invoke<ActivityViewModel>("GetActivityDetails", key).Result;
-        }
-
-        public IDictionary<Guid, bool> CheckIfSyncingActivitiesIsNeeded(IEnumerable<ActivityViewModel> activities)
-        {
-            return
-                hubProxy.Invoke<IDictionary<Guid, bool>>("IsSyncingActivitiesNeeded",
-                    activities.Select(a => new {a.Key, a.Version}))
-                        .Result;
-        }
-
+        
         public void OnPing(Guid ticket)
         {
             hubProxy.Invoke("QueueItemDelivered", ticket);
@@ -119,11 +116,5 @@ namespace Controll
             hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Started, "Started yes indeed").Wait();
         }
         #endregion
-
-        public void NotifyActivityDownloadComplete(Guid ticket)
-        {
-            Console.WriteLine("Notifying cliens about a finished download");
-            hubProxy.Invoke("NotifyActivityDownloadComplete", ticket).Wait();
-        }
     }
 }

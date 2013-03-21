@@ -43,7 +43,7 @@ namespace Controll.Hosting.Hubs
             return state;
         }
 
-        private void EnsureZombieAuthentication()
+        private bool EnsureZombieAuthentication()
         {
             var claimedBelongingToUserName = (string) Clients.Caller.BelongsToUser;
             var claimedZombieName = (string) Clients.Caller.ZombieName;
@@ -56,24 +56,25 @@ namespace Controll.Hosting.Hubs
                 user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
                 null)
             {
-                throw new AuthenticationException();
+                return false;
             }
+
+            return true;
         }
 
-        public bool LogOn(string password)
+        public bool LogOn(string usernName, string password, string zombieName)
         {
-            var state = GetZombieState();
-            var user = _controllUserRepository.GetByUserName(state.UserName);
+            var user = _controllUserRepository.GetByUserName(usernName);
 
             if (user == null)
-                throw new AuthenticationException();
+                return false;
 
             if (user.Password != password)
-                throw new AuthenticationException();
+                return false;
 
-            var zombie = user.GetZombieByName(state.Name);
+            var zombie = user.GetZombieByName(zombieName);
             if (zombie == null)
-                throw new ArgumentException("Zombie " + state.Name + " does not exist");
+                return false;
 
             zombie.ConnectionId = Context.ConnectionId;
 
@@ -88,7 +89,9 @@ namespace Controll.Hosting.Hubs
 
         public bool QueueItemDelivered(Guid ticket)
         {
-            EnsureZombieAuthentication();
+            if (!EnsureZombieAuthentication())
+                return false;
+
             using (var transaction = Session.BeginTransaction())
             {
                 Console.WriteLine("A Zombie confirms delivery of ticket " + ticket);
@@ -98,22 +101,20 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        public bool RegisterAsZombie(string password)
+        public bool RegisterAsZombie(string userName, string password, string zombieName)
         {
-            var state = GetZombieState();
-
-            var user = _controllUserRepository.GetByUserName(state.UserName);
+            var user = _controllUserRepository.GetByUserName(userName);
 
             if (user == null || user.Password != password)
-                throw new AuthenticationException();
+                return false;
 
-            if (user.Zombies.SingleOrDefault(z => z.Name == state.Name) != null)
-                throw new ArgumentException();
+            if (user.Zombies.SingleOrDefault(z => z.Name == zombieName) != null)
+                return false;
 
             var zombie = new Zombie
                 {
                     ConnectionId = Context.ConnectionId,
-                    Name = state.Name,
+                    Name = zombieName,
                     Activities = new List<Activity>()
                 };
 
@@ -131,7 +132,6 @@ namespace Controll.Hosting.Hubs
         public Task OnDisconnect()
         {
             var state = GetZombieState();
-
 
             var user = _controllUserRepository.GetByUserName(state.UserName);
             var zombie = user.Zombies.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);

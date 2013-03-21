@@ -19,6 +19,8 @@ namespace Controll
 
         private readonly ICollection<Guid> _pings;
 
+        public HubConnection HubConnection { get { return _hubConnection; } }
+
         public ICollection<Guid> Pings
         {
             get { return _pings; }
@@ -96,24 +98,20 @@ namespace Controll
 
         public bool LogOn(string userName, string password)
         {
-            //Temporary try-catch
-            // TODO fix
-            try
-            {
-                _hubProxy["UserName"] = userName;
+            _hubProxy["UserName"] = userName;
 
-                _hubProxy.Invoke<bool>("LogOn", password).Wait();
-                return true;
-            }
-            catch (Exception ex)
+            var result = _hubProxy.Invoke<bool>("LogOn", password).Result;
+            if (!result)
             {
-                return false;
+                _hubProxy["UserName"] = "";
             }
+
+            return result;
         }
 
-        public void RegisterUser(string username, string password, string email)
+        public bool RegisterUser(string username, string password, string email)
         {
-            _hubProxy.Invoke("RegisterUser", username, password, email).Wait();
+            return _hubProxy.Invoke<bool>("RegisterUser", username, password, email).Result;
         }
         
     }
