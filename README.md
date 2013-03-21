@@ -1,5 +1,7 @@
 Controll
 ========
+Note: Controll is under heavy developement and is prone to undergo major architecture rehauls
+
 Controll is a framework for remote controlling devices.
 
 Developement
