@@ -187,7 +187,7 @@ namespace Controll.Hosting.Tests
             hub.MockedUserRepository.Verify(x => x.GetByUserName(It.Is<string>(s => s == "username")), Times.Once());
             hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectionId == null)), Times.Once());
         }
-
+        
         [TestMethod]
         public void ShouldBeAbleToRegisterAsZombie()
         {

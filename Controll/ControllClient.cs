@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,20 +15,19 @@ namespace Controll
         private readonly HubConnection _hubConnection;
         private readonly IHubProxy _hubProxy;
 
-        public event EventHandler<ActivityLogMessageEventArgs> NewActivityLogMessage;
-        public event EventHandler<ActivityDownloadedAtZombieEventArgs> ActivityDownloadedAtZombie;
+        public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
 
-        public void OnActivityDownloadedAtZombie(Guid ticket)
+        private readonly ICollection<Guid> _pings;
+
+        public ICollection<Guid> Pings
         {
-            Console.WriteLine("Recoeved notification of downloaded activity:" + ticket);
-            EventHandler<ActivityDownloadedAtZombieEventArgs> handler = ActivityDownloadedAtZombie;
-            if (handler != null) handler(this, new ActivityDownloadedAtZombieEventArgs(ticket));
+            get { return _pings; }
         }
 
-        public void OnNewActivityLogMessage(ActivityLogMessageEventArgs e)
+        private void OnMessageDelivered(Guid ticket)
         {
-            EventHandler<ActivityLogMessageEventArgs> handler = NewActivityLogMessage;
-            if (handler != null) handler(this, e);
+            EventHandler<MessageDeliveredEventArgs> handler = MessageDelivered;
+            if (handler != null) handler(this, new MessageDeliveredEventArgs(ticket));
         }
 
         public ControllClient(string url)
@@ -35,6 +35,8 @@ namespace Controll
             _hubConnection = new HubConnection(url);
             _hubProxy = _hubConnection.CreateHubProxy("clientHub");
             
+            _pings = new Collection<Guid>();
+
             SetupEvents();
         }
 
@@ -61,17 +63,9 @@ namespace Controll
 
         private void SetupEvents()
         {
-            this._hubProxy.On<Guid, DateTime, string, ActivityMessageType>("NewActivityMessage",
-                            (ticket, time, message, type) =>
-                                OnNewActivityLogMessage(new ActivityLogMessageEventArgs(ticket, time, message, type)));
-
-            this._hubProxy.On<Guid>("ActivityDownloadCompleted", guid =>
-                {
-                    Console.WriteLine("hehe - FICK NOTIFIKATION!!!!!11111");
-                    OnActivityDownloadedAtZombie(guid);
-                });
+            _hubProxy.On<Guid>("MessageDelivered", OnMessageDelivered);
         }
-        
+
         public IEnumerable<ZombieViewModel> GetAllZombies()
         {
             return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
@@ -80,6 +74,14 @@ namespace Controll
         public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
         {
             return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
+        }
+
+        public Guid Ping(string zombieName)
+        {
+            var ticket = _hubProxy.Invoke<Guid>("PingZombie", zombieName).Result;
+            Pings.Add(ticket);
+
+            return ticket;
         }
 
         public Guid DownloadActivityAtZombie(string zombieName, Guid activityKey)
@@ -113,10 +115,6 @@ namespace Controll
         {
             _hubProxy.Invoke("RegisterUser", username, password, email).Wait();
         }
-
-        public IEnumerable<Tuple<string,string>>GetConnectedClients(string userName)
-        {
-            return _hubProxy.Invoke<IEnumerable<Tuple<string, string>>>("GetConnectedClients", userName).Result;
-        }
+        
     }
 }

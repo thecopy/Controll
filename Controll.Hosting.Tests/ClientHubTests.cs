@@ -9,6 +9,7 @@ using Controll.Common.ViewModels;
 using Controll.Hosting.Helpers;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
+using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using FizzWare.NBuilder;
@@ -79,7 +80,8 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
 
             // Not logged in.
-            AssertionHelper.Throws<AuthenticationException>(() => hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: ""));
+            var ticket =  hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: "");
+            Assert.AreEqual(default(Guid), ticket);
         }
 
        
@@ -189,6 +191,37 @@ namespace Controll.Hosting.Tests
             result = hub.RegisterUser("NotErik", "password", "mail"); // Samma mail
 
             Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToPingZombie()
+        {
+            var userRepository = new InMemoryControllUserRepository();
+            var user = new ControllUser
+            {
+                UserName = "Erik",
+                Password = "password",
+                EMail = "mail",
+                ConnectedClients = new List<ControllClient>(),
+                Zombies = new List<Zombie> { new Zombie { Name = "zombie", ConnectionId = "connection-id" } }
+            };
+
+            userRepository.Add(user);
+
+            var clientState = new StateChangeTracker();
+            const string connectionId = "conn-id";
+
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+
+            hub.Clients.Caller.UserName = "Erik";
+            hub.LogOn("password");
+
+            hub.MockedMessageQueueService.Setup(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId))).Returns(Guid.NewGuid).Verifiable("InsertPingMessage was not called by hub");
+
+            var ticket = hub.PingZombie("zombie");
+
+            Assert.AreNotEqual(Guid.Empty, ticket, "Ping Ticket was emtpy");
+            hub.MockedMessageQueueService.Verify(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)), Times.Once());
         }
 
         [TestMethod]
@@ -358,8 +391,8 @@ namespace Controll.Hosting.Tests
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
-                    It.Is<string>(s => s == "commandname"))
-                )
+                    It.Is<string>(s => s == "commandname"),
+                    It.Is<string>(s => s == hub.Context.ConnectionId)))
                 .Returns(Guid.NewGuid())
                 .Verifiable();
 
@@ -373,7 +406,8 @@ namespace Controll.Hosting.Tests
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
-                    It.Is<string>(s => s == "commandname")),
+                    It.Is<string>(s => s == "commandname"),
+                    It.Is<string>(s => s == hub.Context.ConnectionId)),
                     Times.Once());
         }
 
@@ -411,8 +445,22 @@ namespace Controll.Hosting.Tests
                     parameters[i] = value;
                 }
                 var closureSafeMethod = method;
-                Console.WriteLine("Testing method " + method.Name + " for ensuring authorization");
 
+                if (typeof(IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
+                {
+                    IList<object> returned = ((IEnumerable<object>)closureSafeMethod.Invoke(hub, parameters)).ToList(); // .ToList() -> forcing enumeration (and therefore execution) for IEnumerable return types
+                    Assert.AreEqual(0, returned.Count);
+                }
+                else
+                {
+                    var returned = closureSafeMethod.Invoke(hub, parameters);
+                    var expected = closureSafeMethod.ReturnType.IsValueType ? Activator.CreateInstance(returned.GetType()) : null;
+                    Assert.AreEqual(expected, returned);
+                }
+
+                #region This Should Be Used when SignalR implements exception bubbling
+
+                /*
                 // Checking InnerException because MethodInvocationException would be checked otherwise
                 if (typeof (IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
                 {
@@ -423,6 +471,9 @@ namespace Controll.Hosting.Tests
                 {
                     AssertionHelper.Throws<AuthenticationException>(() => closureSafeMethod.Invoke(hub, parameters), innerException:true);
                 }
+ * */
+
+                #endregion
             }
         }
 

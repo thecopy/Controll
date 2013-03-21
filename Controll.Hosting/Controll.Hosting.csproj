@@ -97,6 +97,7 @@
     <Compile Include="Hubs\ZombieHub.cs" />
     <Compile Include="Models\Activity.cs" />
     <Compile Include="Models\ActivityCommand.cs" />
+    <Compile Include="Models\Queue\PingQueueItem.cs" />
     <Compile Include="Models\Queue\ActivityInvocationQueueItem.cs" />
     <Compile Include="Models\ActivityMessageLogItem.cs" />
     <Compile Include="Models\ActivityStatus.cs" />
@@ -106,12 +107,13 @@
     <Compile Include="Models\Device.cs" />
     <Compile Include="Models\Queue\QueueItem.cs" />
     <Compile Include="NHibernate\Mappings\ActivityCommandMap.cs" />
-    <Compile Include="NHibernate\Mappings\ParameterDescriberMap.cs" />
+    <Compile Include="NHibernate\Mappings\ParameterDescriptorMap.cs" />
     <Compile Include="Models\Zombie.cs" />
     <Compile Include="Models\ZombieExtensions.cs" />
     <Compile Include="NHibernate\Mappings\ActivityInvocationQueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\ControllUserMap.cs" />
     <Compile Include="NHibernate\Mappings\ActivityMap.cs" />
+    <Compile Include="NHibernate\Mappings\PingQueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\QueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\ZombieMap.cs" />
     <Compile Include="NHibernate\NHibernateHelper.cs" />

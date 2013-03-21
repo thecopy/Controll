@@ -10,8 +10,31 @@ using FizzWare.NBuilder;
 
 namespace Controll.Hosting.Tests
 {
-    public static class TestingHelper
+    public class TestingHelper
     {
+        public class Comparer<T> : IEqualityComparer<T>
+        {
+            private readonly Func<T, T, bool> _comparer;
+
+            public Comparer(Func<T, T, bool> comparer)
+            {
+                if (comparer == null)
+                    throw new ArgumentNullException("comparer");
+
+                _comparer = comparer;
+            }
+
+            public bool Equals(T x, T y)
+            {
+                return _comparer(x, y);
+            }
+
+            public int GetHashCode(T obj)
+            {
+                return obj.ToString().ToLower().GetHashCode();
+            }
+        }
+
         public static IList<Zombie> GetListOfZombies()
         {
             IList<ParameterDescriptor> parameters =
@@ -33,6 +56,7 @@ namespace Controll.Hosting.Tests
                                                                                                       a =>
                                                                                                       a.Commands =
                                                                                                       commands.ToList())
+                                                                                                      .And(a => a.Id = Guid.NewGuid())
                                                                                                   .Build()).Build();
             return zombies;
         } 

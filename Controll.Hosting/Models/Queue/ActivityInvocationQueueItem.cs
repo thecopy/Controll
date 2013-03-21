@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Hosting.Models.Queue;
 
 namespace Controll.Hosting.Models
 {

@@ -91,6 +91,7 @@ namespace Controll.Hosting.Hubs
             EnsureZombieAuthentication();
             using (var transaction = Session.BeginTransaction())
             {
+                Console.WriteLine("A Zombie confirms delivery of ticket " + ticket);
                 _messageQueueService.MarkQueueItemAsDelivered(ticket);
                 transaction.Commit();
                 return true;

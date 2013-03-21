@@ -34,8 +34,10 @@ namespace Controll.Hosting.NHibernate
                                                MsSqlConfiguration.MsSql2008.ConnectionString(
                                                    mockedConnectionString.ConnectionString))
                                            .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
+                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ParameterDescriptor>())
                                            .BuildConfiguration();
 
+            //new SchemaExport(config).Drop(false, true);
             //new SchemaExport(config).Execute(false, true,false); //Kör endast om nödvändigt
 
             new SchemaValidator(config).Validate();
@@ -57,8 +59,12 @@ namespace Controll.Hosting.NHibernate
                                            .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
                                            .BuildConfiguration();
 
-            //new SchemaExport(config).Execute(false, true,false); //Kör endast om nödvändigt
-
+            //Kör endast om nödvändigt
+            {
+                //var export = new SchemaExport(config);
+                //export.Drop(true, true);
+                //export.Create(true, true);
+            }
             new SchemaValidator(config).Validate();
 
 

@@ -41,6 +41,7 @@ namespace Controll
         {
             hubProxy.On<Guid, Guid, Dictionary<string, string>>("InvokePlugin", OnActivateZombie);
             hubProxy.On<Guid, Guid>("ActivityDownloadOrder", OnActivityDownloadOrder);
+            hubProxy.On<Guid>("Ping", OnPing);
         }
 
         public void OnZombieActivityCompleted(ActivityCompletedEventArgs e)
@@ -88,6 +89,12 @@ namespace Controll
                 hubProxy.Invoke<IDictionary<Guid, bool>>("IsSyncingActivitiesNeeded",
                     activities.Select(a => new {a.Key, a.Version}))
                         .Result;
+        }
+
+        public void OnPing(Guid ticket)
+        {
+            hubProxy.Invoke("QueueItemDelivered", ticket);
+            Console.WriteLine("Ping!");
         }
 
         #region Zombie Activity Messages

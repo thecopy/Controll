@@ -13,7 +13,6 @@ namespace SimpleConsoleClient
     {
         static void Main(string[] args)
         {
-
             Console.WriteLine("Simple Console Client for Controll");
             Console.WriteLine("https://github.com/thecopy/controll");
             Console.WriteLine();
@@ -26,12 +25,21 @@ namespace SimpleConsoleClient
             }
         }
 
+        static void _client_MessageDelivered(object sender, MessageDeliveredEventArgs e)
+        {
+            if (_client.Pings.Contains(e.DeliveredTicket))
+            {
+                Console.WriteLine("\nPong!");
+            }
+        }
+
         private static ControllClient _client;
         private static string _user = "";
         static private void Connect(string host)
         {
             Console.WriteLine("Connecting to " + host);
             _client = new ControllClient(host);
+            _client.MessageDelivered += _client_MessageDelivered;
             _client.Connect();
 
             Console.WriteLine("Connected");
@@ -75,12 +83,24 @@ namespace SimpleConsoleClient
                     case "list":
                         List(results[1], results.Skip(2).ToArray());
                         break;
+                    case "ping":
+                        Ping(results[1]);
+                        break;
+                    default:
+                        Console.WriteLine("Unkown command " + results[0]);
+                        break;
                 }
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.Write(_user + "> ");
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        private static void Ping(string zombieName)
+        {
+            var ticket = _client.Ping(zombieName);
+            Console.WriteLine("Sent ping to " + zombieName + ". Ticket: " + ticket);
         }
 
         private static void Run(string zombie, Guid activity, Dictionary<string,string> paramters, string commandName)
@@ -122,11 +142,12 @@ namespace SimpleConsoleClient
                     return;
                 }
 
-                var activities = _client.GetActivitesInstalledOnZombie(parameters[0]);
+                var activities = _client.GetActivitesInstalledOnZombie(parameters[0]).ToList();
                 foreach (var activity in activities)
                 {
                     Console.WriteLine(" * " + activity.Name + " " + activity.Key);
                 }
+                Console.WriteLine("Total: " + activities.Count() + " zombies");
             }
             else
             {

@@ -76,22 +76,22 @@ namespace Controll.Hosting.Hubs
         [RequiresAuthorization]
         public IEnumerable<ZombieViewModel> GetAllZombies()
         {
-            EnsureUserIsLoggedIn();
+            if (!EnsureUserIsLoggedIn())
+                return Enumerable.Empty<ZombieViewModel>();
 
-            ControllUser user = GetUser();
+            var user = GetUser();
             Console.WriteLine(user.UserName + " is fetching all zombies");
 
-            foreach (var z in user.Zombies)
-            {
-                yield return ViewModelHelper.CreateViewModel(z);
-            }
+            return user.Zombies.Select(ViewModelHelper.CreateViewModel);
         }
 
         [RequiresAuthorization]
         public IEnumerable<ActivityViewModel> GetActivitesInstalledOnZombie(string zombieName)
         {
-            EnsureUserIsLoggedIn();
-            ControllUser user = GetUser();
+            if (!EnsureUserIsLoggedIn())
+                return Enumerable.Empty<ActivityViewModel>();
+
+            var user = GetUser();
 
             return user.GetZombieByName(zombieName).Activities.Select(ViewModelHelper.CreateViewModel);
         }
@@ -121,10 +121,11 @@ namespace Controll.Hosting.Hubs
         [RequiresAuthorization]
         public bool IsZombieOnline(string zombieName)
         {
-            EnsureUserIsLoggedIn();
+            if (!EnsureUserIsLoggedIn())
+                return false;
 
-            ControllUser user = GetUser();
-            Zombie zombie = user.GetZombieByName(zombieName);
+            var user = GetUser();
+            var zombie = user.GetZombieByName(zombieName);
 
             if (zombie == null)
                 throw new ArgumentException("Zombie does not exist", "zombieName");
@@ -138,22 +139,24 @@ namespace Controll.Hosting.Hubs
         public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters,
                                   string commandName)
         {
-            EnsureUserIsLoggedIn();
-            ControllUser user = GetUser();
+            if (!EnsureUserIsLoggedIn())
+                return default(Guid);
+
+            var user = GetUser();
 
             Console.WriteLine("User '{0}' is requesting to start activity", user.UserName);
 
-            Zombie zombie = user.GetZombieByName(zombieName);
+            var zombie = user.GetZombieByName(zombieName);
             if (zombie == null)
                 throw new ArgumentException("Invalid Zombie Name");
 
-            Activity activity = zombie.GetActivity(activityKey);
+            var activity = zombie.GetActivity(activityKey);
             if (activity == null)
                 throw new ArgumentException("Invalid Activity Key");
 
             using (ITransaction transaction = Session.BeginTransaction())
             {
-                Guid ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName);
+                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
@@ -161,14 +164,36 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        private void EnsureUserIsLoggedIn()
+        [RequiresAuthorization]
+        public Guid PingZombie(string zombieName)
+        {
+            if (!EnsureUserIsLoggedIn())
+                return default(Guid);
+
+            var zombie = GetUser().GetZombieByName(zombieName);
+
+            if (zombie == null)
+                return default(Guid);
+
+            using(var transaction = Session.BeginTransaction())
+            {
+                var ticket = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
+                transaction.Commit();
+                
+                return ticket;
+            }
+        }
+
+        private bool EnsureUserIsLoggedIn()
         {
             var claimedUserName = (string) Clients.Caller.UserName;
 
             var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
 
             if (user == null || user.UserName.ToLower() != claimedUserName.ToLower())
-                throw new AuthenticationException();
+                return false;
+
+            return true;
         }
 
         public Task OnDisconnect()
@@ -180,7 +205,7 @@ namespace Controll.Hosting.Hubs
 
             if (client != null)
             {
-                using (ITransaction transaction = Session.BeginTransaction())
+                using (var transaction = Session.BeginTransaction())
                 {
                     user.ConnectedClients.Remove(client);
                     _controllUserRepository.Update(user);
