@@ -4,6 +4,9 @@ Note: Controll is under heavy developement and is prone to undergo major archite
 
 Controll is a framework for remote controlling devices.
 
+For a demonstration of Controll, see this screenshot of the sample projects:
+http://i.imgur.com/rnEhjQn.png
+
 Developement
 ========
 See Documents/developement-plan.pdf for more information
