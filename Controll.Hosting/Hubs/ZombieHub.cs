@@ -83,6 +83,12 @@ namespace Controll.Hosting.Hubs
                 _controllUserRepository.Update(user);
                 transaction.Commit();
             }
+            
+            using (var transaction = Session.BeginTransaction())
+            {
+                _messageQueueService.ProcessUndeliveredMessagesForZombie(zombie);
+                transaction.Commit();
+            }
 
             return true;
         }

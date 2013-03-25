@@ -6,15 +6,16 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Microsoft.AspNet.SignalR;
+using NHibernate.Criterion;
 
 namespace Controll.Hosting.Services
 {
     public sealed class MessageQueueService : IMessageQueueService
     {
-        private readonly IGenericRepository<QueueItem> _queueItemRepository;
+        private readonly QueueItemRepostiory _queueItemRepository;
 
         public MessageQueueService(
-            IGenericRepository<QueueItem> queueItemRepository)
+            QueueItemRepostiory queueItemRepository)
         {
             this._queueItemRepository = queueItemRepository;
         }
@@ -76,6 +77,16 @@ namespace Controll.Hosting.Services
 
             ProcessQueueItem(queueItem);
             return queueItem.Ticket;
+        }
+
+        public void ProcessUndeliveredMessagesForZombie(Zombie zombie)
+        {
+            var queueItems = _queueItemRepository.GetUndeliveredQueueItemsForZombie(zombie.Id);
+
+            foreach (var queueItem in queueItems)
+            {
+                ProcessQueueItem(queueItem);
+            }
         }
 
         private void ProcessQueueItem(QueueItem queueItem)

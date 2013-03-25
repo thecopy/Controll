@@ -16,7 +16,7 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToInsertActivityInvocationQueueItem()
         {
-            var mockedQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
+            var mockedQueueItemRepostiory = new Mock<QueueItemRepostiory>();
             var messageQueueService = new MessageQueueService(
                 mockedQueueItemRepostiory.Object);
 
@@ -63,7 +63,7 @@ namespace Controll.Hosting.Tests
        [TestMethod]
         public void ShouldBeAbleToMarkQueueItemAsDelivered()
         {
-            var mockedQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
+            var mockedQueueItemRepostiory = new Mock<QueueItemRepostiory>();
             var messageQueueService = new MessageQueueService(
                 mockedQueueItemRepostiory.Object);
             var ticket = Guid.NewGuid();

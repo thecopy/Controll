@@ -29,5 +29,7 @@ namespace Controll.Hosting.Services
         /// </summary>
         /// <returns>The ping items queue ticket</returns>
         Guid InsertPingMessage(Zombie zombie, string senderConnectionId);
+
+        void ProcessUndeliveredMessagesForZombie(Zombie zombie);
     }
 }

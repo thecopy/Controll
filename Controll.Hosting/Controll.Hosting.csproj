@@ -121,6 +121,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\ControllUserRepository.cs" />
     <Compile Include="Repositories\GenericRepository.cs" />
+    <Compile Include="Repositories\QueueItemRepostiory.cs" />
     <Compile Include="Services\ActivityService.cs" />
     <Compile Include="Services\IActivityService.cs" />
     <Compile Include="Services\IMessageQueueService.cs" />
