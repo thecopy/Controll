@@ -13,7 +13,6 @@ namespace Controll.Hosting.NHibernate.Mappings
     {
         public ActivityMap()
         {
-            // TODO: GeneratedBy skall inte vara assigned såklart...
             Id(x => x.Id).GeneratedBy.Assigned();
             Map(x => x.Name);
             Map(x => x.CreatorName);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Authentication;
+using Controll.Common.ViewModels;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
@@ -107,6 +108,120 @@ namespace Controll.Hosting.Tests
             hub.QueueItemDelivered(ticket);
 
             hub.MockedMessageQueueService.Verify(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket))));
+        }
+
+
+
+        [TestMethod]
+        public void ShouldBeAbleToAddWhenSynchronizingActivityList()
+        {
+            var hub = GetTestableZombieHub();
+           
+            hub.Clients.Caller.ZombieName = "zombie";
+            hub.Clients.Caller.BelongsToUser = "username";
+
+            var user = new ControllUser
+            {
+                UserName = "username",
+                Password = "password",
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    Name = "zombie",
+                                    Id = 1,
+                                    Activities = new List<Activity>(),
+                                    ConnectionId = hub.Context.ConnectionId
+                                }
+                        }
+            };
+
+            var activityKey = Guid.NewGuid();
+
+            var activities = new List<ActivityViewModel>
+                {
+                    new ActivityViewModel
+                        {
+                            Name = "TestActivity",
+                            Key = activityKey,
+                            Commands = new List<ActivityCommandViewModel>()
+                        }
+                };
+
+            hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
+
+            hub.MockedUserRepository
+                .Setup(x => x.Update(It.IsAny<ControllUser>()))
+                .Callback((ControllUser u) =>
+                    {
+                        Assert.AreEqual(1, u.Zombies[0].Activities.Count);
+                        Assert.AreEqual(activityKey, u.Zombies[0].Activities[0].Id);
+                    });
+
+            hub.SynchronizeActivities(activities);
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToRemoveWhenSynchronizingActivityList()
+        {
+            var hub = GetTestableZombieHub();
+
+            hub.Clients.Caller.ZombieName = "zombie";
+            hub.Clients.Caller.BelongsToUser = "username";
+
+            var activityKey = Guid.NewGuid();
+            var activityKey2 = Guid.NewGuid();
+            var user = new ControllUser
+            {
+                UserName = "username",
+                Password = "password",
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    Name = "zombie",
+                                    Id = 1,
+                                    Activities = new List<Activity>
+                                        {
+                                            new Activity
+                                                {
+                                                    Id = activityKey,
+                                                    Name = "TestActivity",
+                                                    Commands = new List<ActivityCommand>()
+                                                },
+                                            new Activity
+                                                {
+                                                    Id = activityKey2,
+                                                    Name = "TestActivity2",
+                                                    Commands = new List<ActivityCommand>()
+                                                }
+                                        },
+                                    ConnectionId = hub.Context.ConnectionId
+                                }
+                        }
+            };
+
+            var activities = new List<ActivityViewModel>
+                {
+                    new ActivityViewModel
+                        {
+                            Name = "TestActivity2",
+                            Key = activityKey2,
+                            Commands = new List<ActivityCommandViewModel>()
+                        }
+                };
+
+            hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
+
+            hub.MockedUserRepository
+                .Setup(x => x.Update(It.IsAny<ControllUser>()))
+                .Callback((ControllUser u) =>
+                    {
+                        Assert.AreEqual(1, u.Zombies[0].Activities.Count);
+                        Assert.AreEqual(activityKey2, u.Zombies[0].Activities[0].Id);
+                    });
+
+            hub.SynchronizeActivities(activities);
         }
 
         [TestMethod]

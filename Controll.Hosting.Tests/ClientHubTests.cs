@@ -223,7 +223,7 @@ namespace Controll.Hosting.Tests
             Assert.AreNotEqual(Guid.Empty, ticket, "Ping Ticket was emtpy");
             hub.MockedMessageQueueService.Verify(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)), Times.Once());
         }
-
+        
         [TestMethod]
         public void ShouldBeAbleToGetZombieOnlineStatus()
         {

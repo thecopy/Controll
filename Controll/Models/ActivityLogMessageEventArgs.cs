@@ -10,14 +10,12 @@ namespace Controll
     public  class ActivityLogMessageEventArgs : EventArgs
     {
         public Guid Ticket { get; set; }
-        public DateTime Time { get; set; }
         public ActivityMessageType Type { get; set; }
         public string Message { get; set; }
 
-        public ActivityLogMessageEventArgs(Guid ticket, DateTime time, string message, ActivityMessageType type)
+        public ActivityLogMessageEventArgs(Guid ticket, string message, ActivityMessageType type)
         {
             Ticket = ticket;
-            Time = time;
             Type = type;
             Message = message;
         }

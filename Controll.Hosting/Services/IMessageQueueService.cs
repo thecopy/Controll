@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Controll.Common;
 using Controll.Hosting.Models;
 
 namespace Controll.Hosting.Services
@@ -31,5 +32,6 @@ namespace Controll.Hosting.Services
         Guid InsertPingMessage(Zombie zombie, string senderConnectionId);
 
         void ProcessUndeliveredMessagesForZombie(Zombie zombie);
+        void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message);
     }
 }

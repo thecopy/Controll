@@ -27,10 +27,7 @@ namespace SimpleConsoleClient
 
         static void _client_MessageDelivered(object sender, MessageDeliveredEventArgs e)
         {
-            if (_client.Pings.Contains(e.DeliveredTicket))
-            {
-                Console.WriteLine("\nPong!");
-            }
+            Console.WriteLine("Message delivered: " + e.DeliveredTicket);
         }
 
         private static ControllClient _client;
@@ -40,6 +37,7 @@ namespace SimpleConsoleClient
             Console.WriteLine("Connecting to " + host);
             _client = new ControllClient(host);
             _client.MessageDelivered += _client_MessageDelivered;
+            _client.ActivityMessageRecieved += _client_ActivityMessageRecieved;
             _client.Connect();
 
             Console.WriteLine("Connected");
@@ -53,11 +51,13 @@ namespace SimpleConsoleClient
             do
             {
                 if (result == null) continue;
-                var results = result.Split(' ');
+                var results = result.Split(' ').ToList();
                 switch (results[0].ToLower())
                 {
                     case "help":
                     case "h":
+                        Console.WriteLine("* run\t\t\tRun SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
+                        Console.WriteLine("* run <zombieName> <activity-key> <commandName> <parameters>\tRun activity with id <activity-key>");
                         Console.WriteLine("* auth <[user] [password]>\t\tIf no user or password is passed: username:password will be used");
                         Console.WriteLine("* register [username] [password] <email>\tRegister user");
                         Console.WriteLine("* list [zombies|activities <zombieName>]\t\tList all your zombies or a specified zombies installed activities");
@@ -81,15 +81,27 @@ namespace SimpleConsoleClient
                             Console.WriteLine("Parameter syntax error");
                         break;
                     case "run":
-                        string zombieName = results[1];
-                        string activity = results[2];
-                        string commandName = results[3];
-                        string test = results.Skip(4).Aggregate((i, j) => i + " " + j);
+                        if (results.Count == 1)
+                        {
+                            Console.WriteLine("Activating SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
+                            Run("zombieName", Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA6"), new Dictionary<string, string> { {"param1", "param2"} }, "");
+                        }
+                        else if (results.Count >= 4)
+                        {
+                            string zombieName = results[1];
+                            string activity = results[2];
+                            string commandName = results[3];
+                            string test = results.Skip(4).Aggregate((i, j) => i + " " + j);
 
-                        string[] t = test.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        var dictionary = t.ToDictionary(s => s.Split('=')[0], s => s.Split('=')[1]);
-                        
-                        Run(zombieName, Guid.NewGuid(), dictionary, commandName);
+                            string[] t = test.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+                            var dictionary = t.ToDictionary(s => s.Split('=')[0], s => s.Split('=')[1]);
+
+                            Run(zombieName, Guid.NewGuid(), dictionary, commandName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Errornous number of parameters. Please provide at least 4. Run help for more information");
+                        }
                         break;
                     case "list":
                         List(results[1], results.Skip(2).ToArray());
@@ -109,6 +121,11 @@ namespace SimpleConsoleClient
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        static void _client_ActivityMessageRecieved(object sender, ActivityLogMessageEventArgs e)
+        {
+            Console.WriteLine("Message from activity with invocation ticket " + e.Ticket + " recieved: " + e.Message);
         }
 
         private static void RegisterUser(string username, string password, string email = "")
@@ -186,7 +203,7 @@ namespace SimpleConsoleClient
             }
             else
             {
-                Console.WriteLine("Avaiable enumerables: zombies");
+                Console.WriteLine("Avaiable enumerables: zombies, activities");
             }
         }
 

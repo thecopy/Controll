@@ -38,7 +38,7 @@ namespace Controll
 
         public string PluginPath { get; set; }
 
-        public IPlugin GetActivityInstance(Guid activityKey)
+        public IControllPlugin GetActivityInstance(Guid activityKey)
         {
             var activityType = GetAllActivityTypes().SingleOrDefault(p =>
                                    p.GetCustomAttribute<ActivityAttribute>().Key == activityKey);
@@ -46,18 +46,18 @@ namespace Controll
             if (activityType == null)
                 throw new ArgumentException("There exists no activities with the specified key", "activityKey");
 
-            var activity = (IPlugin)Activator.CreateInstance(activityType);
+            var activity = (IControllPlugin)Activator.CreateInstance(activityType);
 
             return activity;
         }
 
         public IEnumerable<Type> GetAllActivityTypes()
         {
-            var assemblies = new DirectoryInfo(".\\").GetFiles("*.activity");
+            var assemblies = new DirectoryInfo(".\\").GetFiles("*.plugin.dll");
             foreach (var assembly in assemblies)
             {
                 var a = Assembly.LoadFrom(assembly.FullName);
-                foreach (Type type in a.GetTypes().Where(type => type.GetInterfaces().Contains(typeof(IPlugin))))
+                foreach (Type type in a.GetTypes().Where(type => type.GetInterfaces().Contains(typeof(IControllPlugin))))
                 {
                     yield return type;
                 }

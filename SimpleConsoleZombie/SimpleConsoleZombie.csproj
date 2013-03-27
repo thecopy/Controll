@@ -52,12 +52,20 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Controll.Common\Controll.Common.csproj">
+      <Project>{ACD1BF70-B936-4F32-BC70-BE93A4787E41}</Project>
+      <Name>Controll.Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Controll.Zombie\Controll.Zombie.csproj">
       <Project>{56a82bcb-f5a7-45b6-9731-f99f415d7864}</Project>
       <Name>Controll.Zombie</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

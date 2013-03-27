@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Controll.Common;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
@@ -89,6 +90,13 @@ namespace Controll.Hosting.Services
             }
         }
 
+        public void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message)
+        {
+            var queueItem = _queueItemRepository.Get(ticket);
+
+            SendActivityMessage(queueItem.SenderConnectionId, ticket, type, message);
+        }
+
         private void ProcessQueueItem(QueueItem queueItem)
         {
             if (string.IsNullOrEmpty(queueItem.Reciever.ConnectionId))
@@ -107,6 +115,13 @@ namespace Controll.Hosting.Services
                     Console.WriteLine("FATAL ERROR IN DELIVERY QUEUE: Unkown queue item type: " + queueItem.Type);
                     break;
             }
+        }
+
+        [ExcludeFromCodeCoverage]
+        private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
+        {
+            GlobalHost.ConnectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+                      .ActivityMessage(ticket, type, message);
         }
 
         [ExcludeFromCodeCoverage]

@@ -148,11 +148,11 @@ namespace Controll.Hosting.Hubs
 
             var zombie = user.GetZombieByName(zombieName);
             if (zombie == null)
-                throw new ArgumentException("Invalid Zombie Name");
+                return default(Guid);
 
             var activity = zombie.GetActivity(activityKey);
             if (activity == null)
-                throw new ArgumentException("Invalid Activity Key");
+                return default(Guid);
 
             using (ITransaction transaction = Session.BeginTransaction())
             {

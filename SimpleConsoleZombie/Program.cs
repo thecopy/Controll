@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll;
+using Controll.Common;
+using Controll.Common.ViewModels;
 
 namespace SimpleConsoleZombie
 {
@@ -48,6 +50,10 @@ namespace SimpleConsoleZombie
                     case "help":
                     case "h":
                         Console.WriteLine("status\t\tPrint status");
+                        Console.WriteLine("auth\t\tAuthenticate");
+                        Console.WriteLine("list\t\tDisplay list of different types");
+                        Console.WriteLine("register\t\tRegister as zombie to user");
+                        Console.WriteLine("sync\t\tSync server activity list for this zombie");
                         break;
                     case "auth":
                         Authenticate();
@@ -58,6 +64,13 @@ namespace SimpleConsoleZombie
                             Register(results[1], results[2], results[3]);
                         }
                         break;
+                    case "list":
+                        if(results.Count() >= 2)
+                        List(results[1], results.Skip(2).ToArray());
+                        break;
+                    case "sync":
+                        Sync();
+                        break;
                     case "status":
                         PrintStatus();
                         break;
@@ -67,6 +80,40 @@ namespace SimpleConsoleZombie
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        private static void Sync()
+        {
+            var activitiyTypes = PluginService.Instance.GetAllActivityTypes().ToList();
+            var activitiyVms = new List<ActivityViewModel>(activitiyTypes.Count);
+            activitiyVms.AddRange(activitiyTypes.Select(activity => (IControllPlugin) Activator.CreateInstance(activity)).Select(activityInstance => new ActivityViewModel
+                {
+                    Key = activityInstance.Key, 
+                    Name = activityInstance.Name,
+                    CreatorName = activityInstance.CreatorName,
+                    Description = activityInstance.Description,
+                    LastUpdated = activityInstance.LastUpdated
+                }));
+
+            service.Synchronize(activitiyVms);
+            Console.WriteLine("Ok. Synchronized!");
+        }
+
+        static private void List(string what, params string[] parameters)
+        {
+            if (what == "activities")
+            {
+                var activities = PluginService.Instance.GetAllActivityTypes().ToList();
+                foreach (var activity in activities)
+                {
+                    Console.WriteLine(activity.FullName);
+                }
+                Console.WriteLine("Total: {0} activities avaiable.", activities.Count);
+            }
+            else
+            {
+                Console.WriteLine("Avaiable enumerables: activities");
+            }
         }
 
         private static void PrintStatus()

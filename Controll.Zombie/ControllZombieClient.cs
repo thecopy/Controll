@@ -5,43 +5,38 @@ using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
-using Controll.NHibernate;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll
 {
-    public class ControllZombieClient : IControllPluginClient
+    public class ControllZombieClient : IControllPluginDelegator
     {
-        private ZombieState state;
-
-        private readonly HubConnection hubConnection;
-        private readonly IHubProxy hubProxy;
+        private readonly HubConnection _hubConnection;
+        private readonly IHubProxy _hubProxy;
 
         public event EventHandler<ActivityStartedEventArgs> ActivateZombie;
         public event EventHandler<ActivityCompletedEventArgs> ZombieActivityCompleted;
-        public event EventHandler<ActivityDownloadOrderEventArgs> ActivityDownloadOrder;
 
         public ControllZombieClient(string url)
         {
-            hubConnection = new HubConnection(url);
-            hubProxy = hubConnection.CreateHubProxy("ZombieHub");
+            _hubConnection = new HubConnection(url);
+            _hubProxy = _hubConnection.CreateHubProxy("ZombieHub");
 
-            hubConnection.Start().Wait();
+            _hubConnection.Start().Wait();
 
             SetupEvents();
         }
 
         public HubConnection HubConnection      
         {
-            get { return hubConnection; }
+            get { return _hubConnection; }
         }
 
         #region Events & Event Invocators
         private void SetupEvents()
         {
-            hubProxy.On<Guid, Guid, Dictionary<string, string>>("InvokePlugin", OnActivateZombie);
-            hubProxy.On<Guid, Guid>("ActivityDownloadOrder", OnActivityDownloadOrder);
-            hubProxy.On<Guid>("Ping", OnPing);
+            _hubProxy.On<Guid, Guid, IDictionary<string, string>>("InvokeActivity", OnActivatePlugin);
+            _hubProxy.On<Guid>("Ping", OnPing);
         }
 
         public void OnZombieActivityCompleted(ActivityCompletedEventArgs e)
@@ -50,14 +45,9 @@ namespace Controll
             if (handler != null) handler(this, e);
         }
 
-        public void OnActivityDownloadOrder(Guid activityKey, Guid ticket)
+        private void OnActivatePlugin(Guid activityId, Guid ticket, IDictionary<string, string> parameters)
         {
-            EventHandler<ActivityDownloadOrderEventArgs> handler = ActivityDownloadOrder;
-            if (handler != null) handler(this, new ActivityDownloadOrderEventArgs(activityKey, ticket));
-        }
-
-        private void OnActivateZombie(Guid activityId, Guid ticket, Dictionary<string, string> parameters)
-        {
+            _hubProxy.Invoke("QueueItemDelivered", ticket);
             EventHandler<ActivityStartedEventArgs> handler = ActivateZombie;
             if (handler != null) handler(this, new ActivityStartedEventArgs(activityId, ticket, parameters));
         }
@@ -65,11 +55,11 @@ namespace Controll
 
         public bool Register(string userName, string password, string zombieName)
         {
-            var result = hubProxy.Invoke<bool>("RegisterAsZombie", userName, password, zombieName).Result;
+            var result = _hubProxy.Invoke<bool>("RegisterAsZombie", userName, password, zombieName).Result;
             if (result)
             {
-                hubProxy["BelongsToUser"] = userName;
-                hubProxy["ZombieName"] = zombieName;
+                _hubProxy["BelongsToUser"] = userName;
+                _hubProxy["ZombieName"] = zombieName;
             }
 
             return result;
@@ -78,11 +68,11 @@ namespace Controll
 
         public bool LogOn(string userName, string password, string zombieName)
         {
-            var result = hubProxy.Invoke<bool>("LogOn", userName, password, zombieName).Result; 
+            var result = _hubProxy.Invoke<bool>("LogOn", userName, password, zombieName).Result; 
             if (result)
             {
-                hubProxy["BelongsToUser"] = userName;
-                hubProxy["ZombieName"] = zombieName;
+                _hubProxy["BelongsToUser"] = userName;
+                _hubProxy["ZombieName"] = zombieName;
             }
 
             return result;
@@ -90,31 +80,36 @@ namespace Controll
         
         public void OnPing(Guid ticket)
         {
-            hubProxy.Invoke("QueueItemDelivered", ticket);
+            _hubProxy.Invoke("QueueItemDelivered", ticket);
             Console.WriteLine("Ping!");
         }
 
         #region Zombie Activity Messages
         public virtual void ActivityCompleted(Guid ticket, string result)
         {
-            hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Completed, result).Wait();
+            _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Completed, result).Wait();
             OnZombieActivityCompleted(new ActivityCompletedEventArgs(ticket, result));
         }
 
         public void ActivityError(Guid ticket, string errorMessage)
         {
-            hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Failed, errorMessage).Wait();
+            _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Failed, errorMessage).Wait();
         }
 
         public void ActivityNotify(Guid ticket, string notificationMessage)
         {
-            hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Notification, notificationMessage).Wait();
+            _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Notification, notificationMessage).Wait();
         }
 
         public void ActivityStarted(Guid ticket)
         {
-            hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Started, "Started yes indeed").Wait();
+            _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Started, "Started yes indeed").Wait();
         }
         #endregion
+
+        public void Synchronize(List<ActivityViewModel> activitiyVms)
+        {
+            _hubProxy.Invoke("SynchronizeActivities", activitiyVms);
+        }
     }
 }
