@@ -16,15 +16,15 @@ namespace Controll
 
         public event EventHandler<ActivityStartedEventArgs> ActivateZombie;
         public event EventHandler<ActivityCompletedEventArgs> ZombieActivityCompleted;
+        public event EventHandler<PingEventArgs> Pinged;
 
         public ControllZombieClient(string url)
         {
             _hubConnection = new HubConnection(url);
             _hubProxy = _hubConnection.CreateHubProxy("ZombieHub");
 
-            _hubConnection.Start().Wait();
-
             SetupEvents();
+            _hubConnection.Start().Wait();
         }
 
         public HubConnection HubConnection      
@@ -37,6 +37,12 @@ namespace Controll
         {
             _hubProxy.On<Guid, Guid, IDictionary<string, string>>("InvokeActivity", OnActivatePlugin);
             _hubProxy.On<Guid>("Ping", OnPing);
+        }
+
+        protected virtual void OnPinged(PingEventArgs e)
+        {
+            EventHandler<PingEventArgs> handler = Pinged;
+            if (handler != null) handler(this, e);
         }
 
         public void OnZombieActivityCompleted(ActivityCompletedEventArgs e)
@@ -78,10 +84,11 @@ namespace Controll
             return result;
         }
         
-        public void OnPing(Guid ticket)
+        private void OnPing(Guid ticket)
         {
-            _hubProxy.Invoke("QueueItemDelivered", ticket);
             Console.WriteLine("Ping!");
+            OnPinged(new PingEventArgs(ticket));
+            _hubProxy.Invoke("QueueItemDelivered", ticket).Wait();
         }
 
         #region Zombie Activity Messages

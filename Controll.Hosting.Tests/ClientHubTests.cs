@@ -338,9 +338,9 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
-            AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null), "Invalid Zombie Name"); // wrong name
+            Assert.AreEqual(default(Guid), hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null)); // wrong name
 
-            AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null), "Invalid Activity Key"); // wrong guid
+            Assert.AreEqual(default(Guid), hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null)); // wrong guid
         }
         
         [TestMethod]
@@ -532,8 +532,6 @@ namespace Controll.Hosting.Tests
                 : base(
                     controllUserRepository,
                     messageQueueService.Object,
-                    activityRepository,
-                    activityService.Object,
                     mockedSession.Object)
             {
                 ControllUserRepository = controllUserRepository;

@@ -16,19 +16,13 @@ namespace Controll.Hosting.Hubs
     public class ZombieHub : BaseHub
     {
         private readonly IControllUserRepository _controllUserRepository;
-        private IActivityService _activityService;
-        private IGenericRepository<Activity> _genericRepository;
         private readonly IMessageQueueService _messageQueueService;
 
         public ZombieHub(IControllUserRepository controllUserRepository,
-                         IActivityService activityService,
-                         IGenericRepository<Activity> genericRepository,
                          IMessageQueueService messageQueueService,
                          ISession session) : base(session)
         {
             _controllUserRepository = controllUserRepository;
-            _activityService = activityService;
-            _genericRepository = genericRepository;
             _messageQueueService = messageQueueService;
         }
 
@@ -53,8 +47,7 @@ namespace Controll.Hosting.Hubs
 
             if (user == null
                 || user.UserName.ToLower() != claimedBelongingToUserName.ToLower()
-                ||
-                user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
+                || user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
                 null)
             {
                 return false;

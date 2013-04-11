@@ -71,7 +71,8 @@
     <Compile Include="Models\ActivityDownloadOrderEventArgs.cs" />
     <Compile Include="Models\ActivitySessionLog.cs" />
     <Compile Include="ControllZombieClient.cs" />
-    <Compile Include="Models\ActivityStartedEventArgs.cs" />
+    <Compile Include="Models\PingEventArgs.cs" />
+    <Compile Include="Models\Copy of ActivityStartedEventArgs.cs" />
     <Compile Include="Models\DelegatePluginContext.cs" />
     <Compile Include="Services\PluginService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

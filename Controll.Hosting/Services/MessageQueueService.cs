@@ -7,18 +7,22 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Microsoft.AspNet.SignalR;
+using Microsoft.AspNet.SignalR.Infrastructure;
 using NHibernate.Criterion;
 
 namespace Controll.Hosting.Services
 {
     public sealed class MessageQueueService : IMessageQueueService
     {
-        private readonly QueueItemRepostiory _queueItemRepository;
+        private readonly IQueueItemRepostiory _queueItemRepository;
+        private readonly IConnectionManager _connectionManager;
 
         public MessageQueueService(
-            QueueItemRepostiory queueItemRepository)
+            IQueueItemRepostiory queueItemRepository,
+            IConnectionManager connectionManager)
         {
-            this._queueItemRepository = queueItemRepository;
+            _queueItemRepository = queueItemRepository;
+            _connectionManager = connectionManager;
         }
 
         /// <summary>
@@ -117,33 +121,31 @@ namespace Controll.Hosting.Services
             }
         }
 
-        [ExcludeFromCodeCoverage]
         private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
         {
-            GlobalHost.ConnectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
                       .ActivityMessage(ticket, type, message);
         }
 
-        [ExcludeFromCodeCoverage]
         private void SendDeliveryAcknowledgement(Guid deliveredTicked, string connectionId)
         {
-            GlobalHost.ConnectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
                       .MessageDelivered(deliveredTicked);
         }
 
-        [ExcludeFromCodeCoverage]
         private void SendPing(PingQueueItem item)
         {
             string connectionId = item.Reciever.ConnectionId;
-            GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+
+            Console.WriteLine("Pinging " + item.Reciever.Name + "(" + connectionId + " ticket = " + item.Ticket + ")");
+            _connectionManager.GetHubContext<ZombieHub>().Clients.All
                       .Ping(item.Ticket);
         }
 
-        [ExcludeFromCodeCoverage]
         private void SendActivityInvocation(ActivityInvocationQueueItem item)
         {
             string connectionId = item.Reciever.ConnectionId;
-            GlobalHost.ConnectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+            _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
                 .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters);
         }
     }

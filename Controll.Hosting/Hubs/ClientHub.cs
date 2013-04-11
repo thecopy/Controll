@@ -18,19 +18,13 @@ namespace Controll.Hosting.Hubs
     {
         private readonly IControllUserRepository _controllUserRepository;
         private readonly IMessageQueueService _messageQueueService;
-        private IGenericRepository<Activity> _activityRepository;
-        private IActivityService _activityService;
 
         public ClientHub(IControllUserRepository controllUserRepository,
                          IMessageQueueService messageQueueService,
-                         IGenericRepository<Activity> activityRepository,
-                         IActivityService activityService,
                          ISession session) : base(session)
         {
             _controllUserRepository = controllUserRepository;
             _messageQueueService = messageQueueService;
-            _activityRepository = activityRepository;
-            _activityService = activityService;
         }
 
         private ControllUser GetUser()

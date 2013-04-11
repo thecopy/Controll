@@ -7,17 +7,13 @@ using Controll.Common;
 
 namespace Controll
 {
-    public class ActivityStartedEventArgs : EventArgs
+    public class PingEventArgs : EventArgs
     {
-        public ActivityStartedEventArgs(Guid activityKey, Guid activityTicket, IDictionary<string, string> parameter)
-        {
-            Parameter = parameter;
-            ActivityTicket = activityTicket;
-            ActivityKey = activityKey;
-        }
+        public Guid Ticket { get; private set; }
 
-        public Guid ActivityKey { get; private set; }
-        public Guid ActivityTicket { get; private set; }
-        public IDictionary<string, string> Parameter { get; private set; }
+        public PingEventArgs(Guid ticket)
+        {
+            Ticket = ticket;
+        }
     }
 }

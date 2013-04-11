@@ -111,6 +111,10 @@ namespace Controll
         {
             return _hubProxy.Invoke<bool>("RegisterUser", username, password, email).Result;
         }
-        
+
+        public void Disconnect()
+        {
+            _hubConnection.Disconnect();
+        }
     }
 }

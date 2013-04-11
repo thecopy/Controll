@@ -387,7 +387,7 @@ namespace Controll.Hosting.Tests
                 Mock<IGenericRepository<Activity>> mockedActivityRepository,
                 Mock<IMessageQueueService> mockedMessageQueueService,
                 Mock<ISession> mockedSession)
-                : base(mockedUserRepository.Object, mockedActivityService.Object, mockedActivityRepository.Object, mockedMessageQueueService.Object, mockedSession.Object)
+                : base(mockedUserRepository.Object, mockedMessageQueueService.Object, mockedSession.Object)
             {
                 MockedUserRepository = mockedUserRepository;
                 MockedActivityService = mockedActivityService;

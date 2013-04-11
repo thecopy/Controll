@@ -10,7 +10,7 @@ using NHibernate.Linq;
 
 namespace Controll.Hosting.Repositories
 {
-    public interface IQueueItemRepostiory
+    public interface IQueueItemRepostiory : IGenericRepository<QueueItem>
     {
         IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId);
     }
