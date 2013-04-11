@@ -19,7 +19,7 @@ namespace Controll.IntegrationTests
     [TestClass]
     public class HubCommunicationsTests
     {
-        private const string LocalHostUrl = "http://localhost:10244/";
+        private const string LocalHostUrl = "http://erik-ws:10244"; // Change this to your preffered hostname (or localhost but machine name works with Fiddler)
         [TestMethod]
         public void ShouldBeAbleToLoginAsClient()
         {
@@ -70,8 +70,8 @@ namespace Controll.IntegrationTests
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
-                var zombie = new ControllZombieClient("http://erik-ws:10244/");
-                var client = new ControllClient("http://erik-ws:10244/");
+                var zombie = new ControllZombieClient(LocalHostUrl);
+                var client = new ControllClient(LocalHostUrl);
                 client.Connect();
 
                 zombie.LogOn("username", "password", "zombieName");
@@ -115,8 +115,8 @@ namespace Controll.IntegrationTests
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
-                var zombie = new ControllZombieClient("http://erik-ws:10244/");
-                var client = new ControllClient("http://erik-ws:10244/");
+                var zombie = new ControllZombieClient(LocalHostUrl);
+                var client = new ControllClient(LocalHostUrl);
                 client.Connect();
 
                 zombie.LogOn("username", "password", "zombieName");
