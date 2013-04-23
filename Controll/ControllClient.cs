@@ -16,28 +16,26 @@ namespace Controll
         private readonly IHubProxy _hubProxy;
 
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
-
-        private readonly ICollection<Guid> _pings;
-
+        public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
+        
         public HubConnection HubConnection { get { return _hubConnection; } }
-
-        public ICollection<Guid> Pings
-        {
-            get { return _pings; }
-        }
-
+        
         private void OnMessageDelivered(Guid ticket)
         {
             EventHandler<MessageDeliveredEventArgs> handler = MessageDelivered;
             if (handler != null) handler(this, new MessageDeliveredEventArgs(ticket));
         }
 
+        private void OnActivityMessage(Guid ticket, ActivityMessageType type, string message)
+        {
+            EventHandler<ActivityLogMessageEventArgs> handler = ActivityMessageRecieved;
+            if (handler != null) handler(this, new ActivityLogMessageEventArgs(ticket, message, type));
+        }
+
         public ControllClient(string url)
         {
             _hubConnection = new HubConnection(url);
             _hubProxy = _hubConnection.CreateHubProxy("clientHub");
-            
-            _pings = new Collection<Guid>();
 
             SetupEvents();
         }
@@ -66,6 +64,7 @@ namespace Controll
         private void SetupEvents()
         {
             _hubProxy.On<Guid>("MessageDelivered", OnMessageDelivered);
+            _hubProxy.On<Guid, ActivityMessageType, string>("ActivityMessage", OnActivityMessage);
         }
 
         public IEnumerable<ZombieViewModel> GetAllZombies()
@@ -73,15 +72,14 @@ namespace Controll
             return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
         } 
 
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters)
         {
-            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
+            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters).Result;
         }
 
         public Guid Ping(string zombieName)
         {
             var ticket = _hubProxy.Invoke<Guid>("PingZombie", zombieName).Result;
-            Pings.Add(ticket);
 
             return ticket;
         }
@@ -113,6 +111,10 @@ namespace Controll
         {
             return _hubProxy.Invoke<bool>("RegisterUser", username, password, email).Result;
         }
-        
+
+        public void Disconnect()
+        {
+            _hubConnection.Disconnect();
+        }
     }
 }

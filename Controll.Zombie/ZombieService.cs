@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
-using Controll.NHibernate;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll
@@ -37,6 +36,15 @@ namespace Controll
         public void Connect()
         {
             _client = new ControllZombieClient(_url);
+            _client.ActivateZombie += _client_ActivateZombie;
+        }
+
+        void _client_ActivateZombie(object sender, ActivityStartedEventArgs e)
+        {
+            Console.WriteLine("Got activity invocation message!");
+            var activity = PluginService.Instance.GetActivityInstance(e.ActivityKey);
+            Console.WriteLine("Activity name: " + activity.Name + ", activating...");
+            activity.Execute(new DelegatePluginContext(e.ActivityTicket, e.Parameter, _client));
         }
 
         public bool Authenticate(string username, string password, string zombieName)
@@ -50,42 +58,15 @@ namespace Controll
 
             return result;
         }
-
-        /*
-        private void ActivateZombie(object sender, ActivityStartedEventArgs e)
-        {
-            var activityRepo = new GenericRepository<ActivityViewModel>();
-            var repo = new GenericRepository<ActivitySessionLog>();
-
-            var activity = activityRepo.Get(e.ActivityKey);
-
-            // Start the actual activity
-            var plugin = PluginService.Instance.GetActivityInstance(activity.Key);
-            var context = new DelegatePluginContext(e.ActivityTicket, e.Parameter, this._client);
-            plugin.Execute(context);
-
-            //Create a log post
-            repo.Add(new ActivitySessionLog
-                {
-                    Activity = activity,
-                    Started = DateTime.Now,
-                    Ticket = e.ActivityTicket,
-                    Parameters = e.Parameter
-                });
-
-            // Notify subscribers of the started activity
-            OnActivityStarted(e);
-        }*/
-
-        public IEnumerable<ActivityViewModel> GetInstalledActivities()
-        {
-            var activityRepo = new GenericRepository<ActivityViewModel>();
-            return activityRepo.GetAll();
-        }
-
+        
         public bool Register(string userName, string password, string zombieName)
         {
             return _client.Register(userName, password, zombieName);
+        }
+
+        public void Synchronize(List<ActivityViewModel> activitiyVms)
+        {
+            _client.Synchronize(activitiyVms);
         }
     }
 }

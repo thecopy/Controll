@@ -18,19 +18,13 @@ namespace Controll.Hosting.Hubs
     {
         private readonly IControllUserRepository _controllUserRepository;
         private readonly IMessageQueueService _messageQueueService;
-        private IGenericRepository<Activity> _activityRepository;
-        private IActivityService _activityService;
 
         public ClientHub(IControllUserRepository controllUserRepository,
                          IMessageQueueService messageQueueService,
-                         IGenericRepository<Activity> activityRepository,
-                         IActivityService activityService,
                          ISession session) : base(session)
         {
             _controllUserRepository = controllUserRepository;
             _messageQueueService = messageQueueService;
-            _activityRepository = activityRepository;
-            _activityService = activityService;
         }
 
         private ControllUser GetUser()
@@ -136,8 +130,7 @@ namespace Controll.Hosting.Hubs
         }
 
         [RequiresAuthorization]
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters,
-                                  string commandName)
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters)
         {
             if (!EnsureUserIsLoggedIn())
                 return default(Guid);
@@ -148,15 +141,15 @@ namespace Controll.Hosting.Hubs
 
             var zombie = user.GetZombieByName(zombieName);
             if (zombie == null)
-                throw new ArgumentException("Invalid Zombie Name");
+                return default(Guid);
 
             var activity = zombie.GetActivity(activityKey);
             if (activity == null)
-                throw new ArgumentException("Invalid Activity Key");
+                return default(Guid);
 
             using (ITransaction transaction = Session.BeginTransaction())
             {
-                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
@@ -191,7 +184,10 @@ namespace Controll.Hosting.Hubs
             var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
 
             if (user == null || user.UserName.ToLower() != claimedUserName.ToLower())
+            {
+                Console.WriteLine("User is not authenticated. Claimed username: \"" + claimedUserName + "\"");
                 return false;
+            }
 
             return true;
         }

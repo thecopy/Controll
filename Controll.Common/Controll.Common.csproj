@@ -46,8 +46,8 @@
   <ItemGroup>
     <Compile Include="ActivityAttribute.cs" />
     <Compile Include="ActivityMessageType.cs" />
-    <Compile Include="IControllPluginClient.cs" />
-    <Compile Include="IPlugin.cs" />
+    <Compile Include="IControllPluginDelegator.cs" />
+    <Compile Include="IControllPlugin.cs" />
     <Compile Include="IPluginContext.cs" />
     <Compile Include="ParameterDescriptor.cs" />
     <Compile Include="Program.cs" />

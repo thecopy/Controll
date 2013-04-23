@@ -15,7 +15,7 @@ namespace Controll.Hosting.NHibernate.Mappings
             Id(x => x.Id);
             Map(x => x.ConnectionId);
             Map(x => x.Name);
-            HasManyToMany(x => x.Activities).Not.LazyLoad();
+            HasManyToMany(x => x.Activities).Not.LazyLoad().Cascade.SaveUpdate();
         }
     }
 }

@@ -80,7 +80,7 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
 
             // Not logged in.
-            var ticket =  hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: "");
+            var ticket =  hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null);
             Assert.AreEqual(default(Guid), ticket);
         }
 
@@ -223,7 +223,7 @@ namespace Controll.Hosting.Tests
             Assert.AreNotEqual(Guid.Empty, ticket, "Ping Ticket was emtpy");
             hub.MockedMessageQueueService.Verify(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)), Times.Once());
         }
-
+        
         [TestMethod]
         public void ShouldBeAbleToGetZombieOnlineStatus()
         {
@@ -338,9 +338,9 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
-            AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null), "Invalid Zombie Name"); // wrong name
+            Assert.AreEqual(default(Guid), hub.StartActivity("invalid_zombie_name", Guid.Empty, null)); // wrong name
 
-            AssertionHelper.Throws<ArgumentException>(() => hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null), "Invalid Activity Key"); // wrong guid
+            Assert.AreEqual(default(Guid), hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null)); // wrong guid
         }
         
         [TestMethod]
@@ -391,13 +391,12 @@ namespace Controll.Hosting.Tests
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
-                    It.Is<string>(s => s == "commandname"),
                     It.Is<string>(s => s == hub.Context.ConnectionId)))
                 .Returns(Guid.NewGuid())
                 .Verifiable();
 
 
-            var ticket = hub.StartActivity("zombiename", activity.Id, dictionary, "commandname");
+            var ticket = hub.StartActivity("zombiename", activity.Id, dictionary);
 
             Assert.AreNotEqual(Guid.Empty, ticket);
 
@@ -406,7 +405,6 @@ namespace Controll.Hosting.Tests
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
-                    It.Is<string>(s => s == "commandname"),
                     It.Is<string>(s => s == hub.Context.ConnectionId)),
                     Times.Once());
         }
@@ -532,8 +530,6 @@ namespace Controll.Hosting.Tests
                 : base(
                     controllUserRepository,
                     messageQueueService.Object,
-                    activityRepository,
-                    activityService.Object,
                     mockedSession.Object)
             {
                 ControllUserRepository = controllUserRepository;

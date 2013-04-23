@@ -2,7 +2,7 @@
 
 namespace Controll.Common
 {
-    public interface IControllPluginClient
+    public interface IControllPluginDelegator
     {
         void ActivityCompleted(Guid ticket, string resultMessage);
         void ActivityError(Guid ticket, string errorMessage);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Authentication;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Common.ViewModels;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
@@ -15,19 +16,13 @@ namespace Controll.Hosting.Hubs
     public class ZombieHub : BaseHub
     {
         private readonly IControllUserRepository _controllUserRepository;
-        private IActivityService _activityService;
-        private IGenericRepository<Activity> _genericRepository;
         private readonly IMessageQueueService _messageQueueService;
 
         public ZombieHub(IControllUserRepository controllUserRepository,
-                         IActivityService activityService,
-                         IGenericRepository<Activity> genericRepository,
                          IMessageQueueService messageQueueService,
                          ISession session) : base(session)
         {
             _controllUserRepository = controllUserRepository;
-            _activityService = activityService;
-            _genericRepository = genericRepository;
             _messageQueueService = messageQueueService;
         }
 
@@ -52,8 +47,7 @@ namespace Controll.Hosting.Hubs
 
             if (user == null
                 || user.UserName.ToLower() != claimedBelongingToUserName.ToLower()
-                ||
-                user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
+                || user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
                 null)
             {
                 return false;
@@ -81,6 +75,12 @@ namespace Controll.Hosting.Hubs
             using (var transaction = Session.BeginTransaction())
             {
                 _controllUserRepository.Update(user);
+                transaction.Commit();
+            }
+            
+            using (var transaction = Session.BeginTransaction())
+            {
+                _messageQueueService.ProcessUndeliveredMessagesForZombie(zombie);
                 transaction.Commit();
             }
 
@@ -127,6 +127,49 @@ namespace Controll.Hosting.Hubs
             }
 
             return true;
+        }
+
+        public void SynchronizeActivities(ICollection<ActivityViewModel> activities)
+        {
+            if (false == EnsureZombieAuthentication())
+                return;
+
+            var state = GetZombieState();
+            var user = _controllUserRepository.GetByUserName(state.UserName);
+            var zombie = user.GetZombieByName(state.Name);
+
+            Console.WriteLine("Synchronizing activities for zombie " + zombie.Name + " for user " + user.UserName);
+            
+            using (var transaction = Session.BeginTransaction())
+            {
+                foreach (var syncedActivity in zombie.Activities.ToList().Where(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 0))
+                {
+                    Console.WriteLine(syncedActivity.Name + ": Not installed at zombie. Removing...");
+                    zombie.Activities.Remove(syncedActivity);
+                }
+
+                foreach (var installedActivity in activities.Where(installedActivity => zombie.Activities.Count(a => a.Id == installedActivity.Key) == 0))
+                {
+                    Console.WriteLine(installedActivity.Name + ": Adding activity");
+                    zombie.Activities.Add(new Activity
+                        {
+                            Id = installedActivity.Key,
+                            Name = installedActivity.Name,
+                            LastUpdated = installedActivity.LastUpdated,
+                            CreatorName = installedActivity.CreatorName,
+                            Description = installedActivity.Description
+                        });
+                }
+
+                _controllUserRepository.Update(user);
+                transaction.Commit();
+            }
+        }
+
+        public void ActivityMessage(Guid ticket, ActivityMessageType type, string message)
+        {
+            Console.WriteLine("Message from activity: " + message);
+            _messageQueueService.InsertActivityMessage(ticket, type, message);
         }
 
         public Task OnDisconnect()

@@ -15,7 +15,7 @@ namespace Controll
         private readonly Action<Guid, string> error;
         private readonly Action<Guid, string> notify;
 
-        public DelegatePluginContext(Guid ticket, IDictionary<string, string> parameters, IControllPluginClient client)
+        public DelegatePluginContext(Guid ticket, IDictionary<string, string> parameters, IControllPluginDelegator client)
         {
             this.ticket = ticket;
             this.Parameters = parameters;
