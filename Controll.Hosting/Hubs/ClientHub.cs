@@ -130,8 +130,7 @@ namespace Controll.Hosting.Hubs
         }
 
         [RequiresAuthorization]
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters,
-                                  string commandName)
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters)
         {
             if (!EnsureUserIsLoggedIn())
                 return default(Guid);
@@ -150,7 +149,7 @@ namespace Controll.Hosting.Hubs
 
             using (ITransaction transaction = Session.BeginTransaction())
             {
-                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
@@ -185,7 +184,10 @@ namespace Controll.Hosting.Hubs
             var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
 
             if (user == null || user.UserName.ToLower() != claimedUserName.ToLower())
+            {
+                Console.WriteLine("User is not authenticated. Claimed username: \"" + claimedUserName + "\"");
                 return false;
+            }
 
             return true;
         }

@@ -68,7 +68,7 @@ namespace Controll.IntegrationTests
                 .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
                 .InThreadScope();
 
-            using (server.Start()) // Start listening on /localhost:10244/
+            using (server.Start()) // Start listening on localhost:10244/
             {
                 var zombie = new ControllZombieClient(LocalHostUrl);
                 var client = new ControllClient(LocalHostUrl);
@@ -96,7 +96,7 @@ namespace Controll.IntegrationTests
 
                 Guid messageTicket = client.Ping("zombieName");
 
-                Assert.IsTrue(pingEvent.WaitOne(1000), "Zombie did not recieve ping (zombie connection-id=" + zombie.HubConnection.ConnectionId + ")");
+                Assert.IsTrue(pingEvent.WaitOne(1000), "Zombie did not recieve ping");
                 Assert.IsTrue(pongEvent.WaitOne(1000), "Client did not recieve pong");
                 
                 Assert.AreEqual(messageTicket, pingTicket);
@@ -152,12 +152,13 @@ namespace Controll.IntegrationTests
                                 Name = "Mocked Activity",
                                 Version = new Version(1,2,3,4)
                             }
-                    });
+                    }).Wait(); // Important to wait on this
 
                 Guid ticket = client.StartActivity("zombieName",
                                                    sentActivityKey,
-                                                   sentParameters,
-                                                   "NOT USED");
+                                                   sentParameters);
+
+                Assert.AreNotEqual(Guid.Empty, ticket, "Returned activity invocation ticked was empty");
 
                 Assert.IsTrue(activatedEvent.WaitOne(6000), "Zombie did not recieve activity invocation order");
 

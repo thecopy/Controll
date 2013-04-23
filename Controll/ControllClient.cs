@@ -72,9 +72,9 @@ namespace Controll
             return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
         } 
 
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters)
         {
-            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
+            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters).Result;
         }
 
         public Guid Ping(string zombieName)

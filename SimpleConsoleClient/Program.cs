@@ -84,19 +84,18 @@ namespace SimpleConsoleClient
                         if (results.Count == 1)
                         {
                             Console.WriteLine("Activating SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
-                            Run("zombieName", Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA6"), new Dictionary<string, string> { {"param1", "param2"} }, "");
+                            Run("zombieName", Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA6"), new Dictionary<string, string> { {"param1", "param2"} });
                         }
                         else if (results.Count >= 4)
                         {
                             string zombieName = results[1];
                             string activity = results[2];
-                            string commandName = results[3];
-                            string test = results.Skip(4).Aggregate((i, j) => i + " " + j);
+                            string test = results.Skip(3).Aggregate((i, j) => i + " " + j);
 
                             string[] t = test.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
                             var dictionary = t.ToDictionary(s => s.Split('=')[0], s => s.Split('=')[1]);
 
-                            Run(zombieName, Guid.NewGuid(), dictionary, commandName);
+                            Run(zombieName, Guid.NewGuid(), dictionary);
                         }
                         else
                         {
@@ -155,15 +154,15 @@ namespace SimpleConsoleClient
             Console.WriteLine("Sent ping to " + zombieName + ". Ticket: " + ticket);
         }
 
-        private static void Run(string zombie, Guid activity, Dictionary<string,string> paramters, string commandName)
+        private static void Run(string zombie, Guid activity, Dictionary<string,string> paramters)
         {
-            Console.WriteLine("Trying to start command " + commandName + " on activity " + activity + " on zombie " + zombie);
+            Console.WriteLine("Trying to start activity " + activity + " on zombie " + zombie);
             Console.WriteLine("Parameters:");
             foreach (var paramter in paramters)
             {
                 Console.WriteLine(paramter.Key + "=" + paramter.Value);
             }
-            var ticket = _client.StartActivity(zombie, activity, paramters, commandName);
+            var ticket = _client.StartActivity(zombie, activity, paramters);
 
             if (ticket == Guid.Empty)
             {

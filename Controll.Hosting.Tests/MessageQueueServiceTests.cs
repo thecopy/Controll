@@ -44,14 +44,13 @@ namespace Controll.Hosting.Tests
                         a =>
                             a.Activity.Name == "activityname" &&
                                 a.Reciever.Name == "zombiename" &&
-                                a.CommandName == commandName &&
                                 a.Parameters.Count == 0 &&
                                 a.Type == QueueItemType.ActivityInvocation
                         )))
                 .Callback((QueueItem qi) =>qi.Ticket = Guid.NewGuid())
                 .Verifiable();
 
-            var ticket = messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, commandName, "connectionId");
+            var ticket = messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, "connectionId");
             Assert.AreNotEqual(Guid.Empty, ticket);
 
             mockedQueueItemRepostiory.Verify(x => x.Add(
@@ -59,7 +58,6 @@ namespace Controll.Hosting.Tests
                         a =>
                             a.Activity.Name == "activityname" &&
                                 a.Reciever.Name == "zombiename" &&
-                                a.CommandName == commandName &&
                                 a.Parameters.Count == 0 &&
                                 a.Type == QueueItemType.ActivityInvocation &&
                                 a.SenderConnectionId == "connectionId"

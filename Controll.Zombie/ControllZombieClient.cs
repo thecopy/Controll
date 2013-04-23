@@ -114,9 +114,9 @@ namespace Controll
         }
         #endregion
 
-        public void Synchronize(List<ActivityViewModel> activitiyVms)
+        public Task Synchronize(List<ActivityViewModel> activitiyVms)
         {
-            _hubProxy.Invoke("SynchronizeActivities", activitiyVms);
+            return _hubProxy.Invoke("SynchronizeActivities", activitiyVms);
         }
     }
 }
