@@ -14,5 +14,5 @@ See Documents/developement-plan.pdf for more information
 
 License
 ========
-This code is currently not allowed for commercial use and/or closed source products.
-This code is allowed in open source projects.
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
