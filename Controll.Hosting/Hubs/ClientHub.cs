@@ -131,7 +131,7 @@ namespace Controll.Hosting.Hubs
         }
 
         [RequiresAuthorization]
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters)
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
         {
             if (!EnsureUserIsLoggedIn())
                 return default(Guid);
@@ -150,7 +150,7 @@ namespace Controll.Hosting.Hubs
 
             using (var transaction = Session.BeginTransaction())
             {
-                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, Context.ConnectionId);
+                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);

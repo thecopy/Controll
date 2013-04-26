@@ -115,11 +115,7 @@ namespace SimpleConsoleClient
                             Console.WriteLine("No waiting intermidiates!");
                         break;
                     case "run":
-                        if (results.Count == 1)
-                        {
-                            Console.WriteLine("Activating SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
-                            Run("zombieName", Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA6"), new Dictionary<string, string> {{"param1", "param2"}});
-                        }else if(results.Count == 2){
+                        if(results.Count == 2){
                             Run(results[1]);
                         }else if (results.Count() == 4)
                         {
@@ -127,7 +123,7 @@ namespace SimpleConsoleClient
                         }
                         else
                         {
-                            Console.WriteLine("Errornous number of parameters. Please provide 4. Run help for more information");
+                            Console.WriteLine("Errornous number of parameters. Please provide 1 or 3. Run help for more information");
                         }
                         break;
                     case "list":
@@ -245,7 +241,7 @@ namespace SimpleConsoleClient
         private static void RunCommand(ActivityCommandViewModel command, string zombieName, Guid activityKey)
         {
             var parameters = new Dictionary<string, string>();
-            parameters.Add("__command", command.Name);
+            
             foreach (var parameter in command.ParameterDescriptors)
             {
                 Console.WriteLine(parameter.Name);
@@ -276,7 +272,7 @@ namespace SimpleConsoleClient
             }
 
             Console.WriteLine("OK. Sending invocation message...");
-            var ticket = _client.StartActivity(zombieName, activityKey, parameters);
+            var ticket = _client.StartActivity(zombieName, activityKey, parameters, command.Name);
             if (ticket.Equals(Guid.Empty))
             {
                 Console.WriteLine("Unkown error sending invocation message!");
@@ -288,7 +284,7 @@ namespace SimpleConsoleClient
 
         static void _client_ActivityMessageRecieved(object sender, ActivityLogMessageEventArgs e)
         {
-            Console.WriteLine("Message from activity with invocation ticket " + e.Ticket + " recieved: " + e.Message);
+            Console.WriteLine("Message recieved: " + e.Message);
         }
 
         private static void RegisterUser(string username, string password, string email = "")
@@ -316,27 +312,6 @@ namespace SimpleConsoleClient
         {
             var ticket = _client.Ping(zombieName);
             Console.WriteLine("Sent ping to " + zombieName + ". Ticket: " + ticket);
-        }
-
-        private static void Run(string zombie, Guid activity, Dictionary<string,string> paramters)
-        {
-            Console.WriteLine("Trying to start activity " + activity + " on zombie " + zombie);
-            Console.WriteLine("Parameters:");
-            foreach (var paramter in paramters)
-            {
-                Console.WriteLine(paramter.Key + "=" + paramter.Value);
-            }
-            var ticket = _client.StartActivity(zombie, activity, paramters);
-
-            if (ticket == Guid.Empty)
-            {
-                Console.WriteLine("Activation failed");
-            }
-            else
-            {
-                Console.WriteLine("OK. Ticket: " + ticket);
-            }
-
         }
 
         static private void List(string what, params string[] parameters)

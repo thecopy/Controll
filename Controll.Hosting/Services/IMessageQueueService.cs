@@ -15,7 +15,7 @@ namespace Controll.Hosting.Services
         /// <param name="parameters">The parameters which to pass to the activity</param>
         /// <param name="connectionId">The connection-id of the initiating client</param>
         /// <returns>The queue item ticket</returns>
-        Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string connectionId);
+        Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string commandName, string connectionId);
 
         /// <summary>
         /// Marks the QueueItem as delivered

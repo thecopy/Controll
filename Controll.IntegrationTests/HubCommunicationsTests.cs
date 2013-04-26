@@ -127,6 +127,7 @@ namespace Controll.IntegrationTests
 
                 var activityKey = Guid.Empty;
                 var activityTicket = Guid.Empty;
+                var activityCommandName = "";
                 IDictionary<string, string> activityParamters = null;
 
                 #region Send Activity Invocation
@@ -135,12 +136,14 @@ namespace Controll.IntegrationTests
                     activityKey = args.ActivityKey;
                     activityTicket = args.ActivityTicket;
                     activityParamters = args.Parameter;
+                    activityCommandName = args.CommandName;
 
                     activatedEvent.Set();
                 };
 
                 Guid sentActivityKey = Guid.Parse("f82a4dee-3839-4efd-8eca-0e09b2a498d3");
                 var sentParameters = new Dictionary<string, string> {{"param1", "value1"}};
+                const string sentCommandName = "commandName";
                 var mockedActivity = new ActivityViewModel
                     {
                         CreatorName = "name",
@@ -159,7 +162,8 @@ namespace Controll.IntegrationTests
                 Console.WriteLine("Starting activity " + sentActivityKey);
                 Guid ticket = client.StartActivity("zombieName",
                                                    sentActivityKey,
-                                                   sentParameters);
+                                                   sentParameters,
+                                                   sentCommandName);
 
                 Assert.AreNotEqual(Guid.Empty, ticket, "Returned activity invocation ticked was empty");
 
@@ -167,6 +171,7 @@ namespace Controll.IntegrationTests
 
                 Assert.AreEqual(ticket, activityTicket);
                 Assert.AreEqual(sentActivityKey, activityKey);
+                Assert.AreEqual(sentCommandName, activityCommandName);
                 CollectionAssert.AreEqual(sentParameters, (Dictionary<string,string>) activityParamters);
                 #endregion
 

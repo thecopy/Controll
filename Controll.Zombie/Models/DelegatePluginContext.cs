@@ -16,18 +16,21 @@ namespace Controll
         private readonly Action<Guid, string> _notify;
         private readonly Action<Guid, object> _result;
 
-        public DelegateActivityContext(Guid ticket, IDictionary<string, string> parameters, IActivityDelegator client)
+        public DelegateActivityContext(Guid ticket, IDictionary<string, string> parameters, string commandName, IActivityDelegator client)
         {
-            this._ticket = ticket;
-            this.Parameters = parameters;
-            this._finished = client.ActivityCompleted;
-            this._error = client.ActivityError;
-            this._notify = client.ActivityNotify;
-            this._started = client.ActivityStarted;
-            this._result = client.ActivityResult;
+            Parameters = parameters;
+            CommandName = commandName;
+
+            _ticket = ticket;
+            _finished = client.ActivityCompleted;
+            _error = client.ActivityError;
+            _notify = client.ActivityNotify;
+            _started = client.ActivityStarted;
+            _result = client.ActivityResult;
         }
 
         public IDictionary<string, string> Parameters { get; private set; }
+        public string CommandName { get; set; }
         public object[] Arguments { get; private set; }
 
         public void Started()

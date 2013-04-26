@@ -34,13 +34,14 @@ namespace Controll.Hosting.Services
         /// <param name="commandName">The name of the command in the activity</param>
         /// <param name="connectionId">The connection-id of the initiating client</param>
         /// <returns>The queue item ticket</returns>
-        public Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string connectionId)
+        public Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string commandName, string connectionId)
         {
             var queueItem = new ActivityInvocationQueueItem
                 {
                     Activity = activity,
                     Reciever = zombie,
                     Parameters = parameters,
+                    CommandName = commandName,
                     SenderConnectionId = connectionId,
                     RecievedAtCloud = DateTime.UtcNow
                 };
@@ -158,7 +159,7 @@ namespace Controll.Hosting.Services
         {
             string connectionId = item.Reciever.ConnectionId;
             _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
-                .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters);
+                .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters, item.CommandName);
         }
     }
 }

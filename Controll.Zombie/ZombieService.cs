@@ -44,7 +44,7 @@ namespace Controll
             Console.WriteLine("Got activity invocation message!");
             var activity = PluginService.Instance.GetActivityInstance(e.ActivityKey);
             Console.WriteLine("Activity name: " + activity.ViewModel.Name + ", activating...");
-            activity.Execute(new DelegateActivityContext(e.ActivityTicket, e.Parameter, _client));
+            activity.Execute(new DelegateActivityContext(e.ActivityTicket, e.Parameter, e.CommandName, _client));
         }
 
         public bool Authenticate(string username, string password, string zombieName)

@@ -5,7 +5,7 @@ namespace Controll.Common
     public interface IActivityContext
     {
         IDictionary<string, string> Parameters { get; }
-        object[] Arguments { get; }
+        string CommandName { get; }
         void Started();
         void Finish(string result);
         void Error(string errorMessage);

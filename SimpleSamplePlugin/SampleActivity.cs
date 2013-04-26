@@ -16,7 +16,7 @@ namespace SimpleSamplePlugin
         {
             context.Started();
 
-            var command = context.Parameters["__command"];
+            var command = context.CommandName;
             if (command == "do-nothing")
             {
                 string callerName = context.Parameters["name"];

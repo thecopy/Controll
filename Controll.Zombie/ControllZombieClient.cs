@@ -35,7 +35,7 @@ namespace Controll
         #region Events & Event Invocators
         private void SetupEvents()
         {
-            _hubProxy.On<Guid, Guid, IDictionary<string, string>>("InvokeActivity", OnActivatePlugin);
+            _hubProxy.On<Guid, Guid, IDictionary<string, string>, string>("InvokeActivity", OnActivatePlugin);
             _hubProxy.On<Guid>("Ping", OnPing);
         }
 
@@ -51,11 +51,11 @@ namespace Controll
             if (handler != null) handler(this, e);
         }
 
-        private void OnActivatePlugin(Guid activityId, Guid ticket, IDictionary<string, string> parameters)
+        private void OnActivatePlugin(Guid activityId, Guid ticket, IDictionary<string, string> parameters, string commandName)
         {
             _hubProxy.Invoke("QueueItemDelivered", ticket);
             EventHandler<ActivityStartedEventArgs> handler = ActivateZombie;
-            if (handler != null) handler(this, new ActivityStartedEventArgs(activityId, ticket, parameters));
+            if (handler != null) handler(this, new ActivityStartedEventArgs(activityId, ticket, parameters, commandName));
         }
         #endregion
 
