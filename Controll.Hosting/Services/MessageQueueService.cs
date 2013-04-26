@@ -100,6 +100,13 @@ namespace Controll.Hosting.Services
             SendActivityMessage(queueItem.SenderConnectionId, ticket, type, message);
         }
 
+        public void InsertActivityResult(Guid ticket, object result)
+        {
+            var queueItem = _queueItemRepository.Get(ticket);
+
+            SendActivityResult(queueItem.SenderConnectionId, ticket, result);
+        }
+
         private void ProcessQueueItem(QueueItem queueItem)
         {
             if (string.IsNullOrEmpty(queueItem.Reciever.ConnectionId))
@@ -124,6 +131,12 @@ namespace Controll.Hosting.Services
         {
             _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
                       .ActivityMessage(ticket, type, message);
+        }
+
+        private void SendActivityResult(string connectionId, Guid ticket, object result)
+        {
+            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+                      .ActivityResult(ticket, result);
         }
 
         private void SendDeliveryAcknowledgement(Guid deliveredTicked, string connectionId)

@@ -9,7 +9,7 @@ using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll
 {
-    public class ControllZombieClient : IControllPluginDelegator
+    public class ControllZombieClient : IActivityDelegator
     {
         private readonly HubConnection _hubConnection;
         private readonly IHubProxy _hubProxy;
@@ -92,6 +92,12 @@ namespace Controll
         }
 
         #region Zombie Activity Messages
+
+        public void ActivityResult(Guid ticket, object result)
+        {
+            _hubProxy.Invoke("ActivityResult", ticket, result).Wait();
+        }
+
         public virtual void ActivityCompleted(Guid ticket, string result)
         {
             _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Completed, result).Wait();

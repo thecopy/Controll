@@ -10,6 +10,7 @@ using Controll.Hosting;
 using Controll.Hosting.NHibernate;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
+using Newtonsoft.Json;
 
 namespace Controll.IntegrationTests
 {
@@ -23,7 +24,7 @@ namespace Controll.IntegrationTests
         [TestMethod]
         public void ShouldBeAbleToLoginAsClient()
         {
-            var server = new ControllServer("http://*:10244/");
+            var server = new ControllStandAloneServer("http://*:10244/");
 
             Bootstrapper.Kernel.Rebind<ISession>()
                 .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
@@ -43,7 +44,7 @@ namespace Controll.IntegrationTests
         [TestMethod]
         public void ShouldBeAbleToLoginAsZombie()
         {
-            var server = new ControllServer("http://*:10244/");
+            var server = new ControllStandAloneServer("http://*:10244/");
 
             Bootstrapper.Kernel.Rebind<ISession>()
                 .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
@@ -62,7 +63,7 @@ namespace Controll.IntegrationTests
         [TestMethod]
         public void ShouldBeAbleToPing()
         {
-            var server = new ControllServer("http://*:10244/");
+            var server = new ControllStandAloneServer("http://*:10244/");
 
             Bootstrapper.Kernel.Rebind<ISession>()
                 .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
@@ -107,7 +108,7 @@ namespace Controll.IntegrationTests
         [TestMethod]
         public void ShouldBeAbleToActivateActivity()
         {
-            var server = new ControllServer("http://*:10244/");
+            var server = new ControllStandAloneServer("http://*:10244/");
 
             Bootstrapper.Kernel.Rebind<ISession>()
                 .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
@@ -138,22 +139,24 @@ namespace Controll.IntegrationTests
                     activatedEvent.Set();
                 };
 
-                Guid sentActivityKey = Guid.NewGuid();
+                Guid sentActivityKey = Guid.Parse("f82a4dee-3839-4efd-8eca-0e09b2a498d3");
                 var sentParameters = new Dictionary<string, string> {{"param1", "value1"}};
-
+                var mockedActivity = new ActivityViewModel
+                    {
+                        CreatorName = "name",
+                        Description = "mocked",
+                        Key = sentActivityKey,
+                        LastUpdated = DateTime.Now,
+                        Name = "Mocked Activity",
+                        Version = new Version(1, 2, 3, 4),
+                        Commands = new List<ActivityCommandViewModel>()
+                    };
                 zombie.Synchronize(new List<ActivityViewModel>()
                     {
-                        new ActivityViewModel
-                            {
-                                CreatorName = "name",
-                                Description = "mocked",
-                                Key = sentActivityKey,
-                                LastUpdated = DateTime.Now,
-                                Name = "Mocked Activity",
-                                Version = new Version(1,2,3,4)
-                            }
+                        mockedActivity
                     }).Wait(); // Important to wait on this
 
+                Console.WriteLine("Starting activity " + sentActivityKey);
                 Guid ticket = client.StartActivity("zombieName",
                                                    sentActivityKey,
                                                    sentParameters);
@@ -183,6 +186,14 @@ namespace Controll.IntegrationTests
                         activityMessageEvent.Set();
                     };
 
+                object recievedObject = null;
+                Guid activityResultTicket = Guid.Empty;
+                client.ActivityResultRecieved += (sender, args) =>
+                    {
+                        recievedObject = args.Result;
+                        activityResultTicket = args.Ticket;
+                    };
+
                 zombie.ActivityStarted(activityTicket);
 
                 Assert.IsTrue(activityMessageEvent.WaitOne(6000), "Client did not recieve activity started message");
@@ -190,13 +201,24 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(activityTicket, activityMessageEventTicket);
 
                 activityMessageEvent.Reset();
-
+                zombie.ActivityResult(activityTicket, mockedActivity);
                 zombie.ActivityCompleted(activityTicket, "result");
 
                 Assert.IsTrue(activityMessageEvent.WaitOne(6000), "Client did not recieve activity finished message");
                 Assert.AreEqual(ActivityMessageType.Completed, messageType);
                 Assert.AreEqual(activityTicket, activityMessageEventTicket);
                 Assert.AreEqual("result", activityMessage);
+                
+                Assert.IsNotNull(recievedObject);
+                Assert.AreEqual(ticket, activityResultTicket);
+
+                var converted = JsonConvert.DeserializeObject<ActivityViewModel>(recievedObject.ToString());
+                Assert.AreEqual(mockedActivity.CreatorName, converted.CreatorName);
+                Assert.AreEqual(mockedActivity.Name, converted.Name);
+                Assert.AreEqual(mockedActivity.Description, converted.Description);
+                Assert.AreEqual(mockedActivity.LastUpdated, converted.LastUpdated);
+                Assert.AreEqual(mockedActivity.Version, converted.Version);
+
                 #endregion
             }
         }

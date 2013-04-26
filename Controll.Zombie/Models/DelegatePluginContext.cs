@@ -7,22 +7,24 @@ using Controll.Common;
 
 namespace Controll
 {
-    class DelegatePluginContext : IPluginContext
+    class DelegateActivityContext : IActivityContext
     {
-        private readonly Guid ticket;
-        private readonly Action<Guid, string> finished;
-        private readonly Action<Guid> started;
-        private readonly Action<Guid, string> error;
-        private readonly Action<Guid, string> notify;
+        private readonly Guid _ticket;
+        private readonly Action<Guid, string> _finished;
+        private readonly Action<Guid> _started;
+        private readonly Action<Guid, string> _error;
+        private readonly Action<Guid, string> _notify;
+        private readonly Action<Guid, object> _result;
 
-        public DelegatePluginContext(Guid ticket, IDictionary<string, string> parameters, IControllPluginDelegator client)
+        public DelegateActivityContext(Guid ticket, IDictionary<string, string> parameters, IActivityDelegator client)
         {
-            this.ticket = ticket;
+            this._ticket = ticket;
             this.Parameters = parameters;
-            this.finished = client.ActivityCompleted;
-            this.error = client.ActivityError;
-            this.notify = client.ActivityNotify;
-            this.started = client.ActivityStarted;
+            this._finished = client.ActivityCompleted;
+            this._error = client.ActivityError;
+            this._notify = client.ActivityNotify;
+            this._started = client.ActivityStarted;
+            this._result = client.ActivityResult;
         }
 
         public IDictionary<string, string> Parameters { get; private set; }
@@ -30,22 +32,27 @@ namespace Controll
 
         public void Started()
         {
-            started.Invoke(ticket);
+            _started.Invoke(_ticket);
         }
 
         public void Finish(string result)
         {
-            finished.Invoke(ticket, result);
+            _finished.Invoke(_ticket, result);
         }
 
         public void Error(string errorMessage)
         {
-            error.Invoke(ticket, errorMessage);
+            _error.Invoke(_ticket, errorMessage);
         }
 
         public void Notify(string message)
         {
-            notify.Invoke(ticket, message);
+            _notify.Invoke(_ticket, message);
+        }
+
+        public void Result(object result)
+        {
+            _result.Invoke(_ticket, result);
         }
     }
 }

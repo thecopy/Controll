@@ -43,8 +43,8 @@ namespace Controll
         {
             Console.WriteLine("Got activity invocation message!");
             var activity = PluginService.Instance.GetActivityInstance(e.ActivityKey);
-            Console.WriteLine("Activity name: " + activity.Name + ", activating...");
-            activity.Execute(new DelegatePluginContext(e.ActivityTicket, e.Parameter, _client));
+            Console.WriteLine("Activity name: " + activity.ViewModel.Name + ", activating...");
+            activity.Execute(new DelegateActivityContext(e.ActivityTicket, e.Parameter, _client));
         }
 
         public bool Authenticate(string username, string password, string zombieName)
@@ -64,9 +64,9 @@ namespace Controll
             return _client.Register(userName, password, zombieName);
         }
 
-        public void Synchronize(List<ActivityViewModel> activitiyVms)
+        public Task Synchronize(List<ActivityViewModel> activitiyVms)
         {
-            _client.Synchronize(activitiyVms);
+            return _client.Synchronize(activitiyVms);
         }
     }
 }

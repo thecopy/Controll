@@ -23,6 +23,38 @@ namespace Controll.Hosting.NHibernate
 {
     public class NHibernateHelper
     {
+        public static ISessionFactory GetSessionFactoryForConnectionStringAlias(string connectionStringAlias)
+        {
+            ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings[connectionStringAlias];
+            if (mockedConnectionString == null)
+                throw new ConfigurationErrorsException("No ConnectionString named \"" + connectionStringAlias + "\"");
+
+            Configuration config = Fluently.Configure()
+                                           .Database(
+                                               MsSqlConfiguration.MsSql2008.ConnectionString(
+                                                   mockedConnectionString.ConnectionString))
+                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
+                                           .BuildConfiguration();
+
+            return config.BuildSessionFactory();
+        }
+
+        public static ISessionFactory GetSessionFactoryForAppHarbor()
+        {
+            ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings["appharbor"];
+            if (mockedConnectionString == null)
+                throw new ConfigurationErrorsException("No ConnectionString named \"appharbor\"");
+
+            Configuration config = Fluently.Configure()
+                                           .Database(
+                                               MsSqlConfiguration.MsSql2008.ConnectionString(
+                                                   mockedConnectionString.ConnectionString))
+                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
+                                           .BuildConfiguration();
+
+            return config.BuildSessionFactory();
+        }
+
         public static ISessionFactory GetSessionFactoryForTesting()
         {
             ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings["testing"];
@@ -36,12 +68,6 @@ namespace Controll.Hosting.NHibernate
                                            .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
                                            .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ParameterDescriptor>())
                                            .BuildConfiguration();
-
-            //new SchemaExport(config).Drop(false, true);
-            //new SchemaExport(config).Execute(false, true,false); //Kör endast om nödvändigt
-
-            new SchemaValidator(config).Validate();
-            
 
             return config.BuildSessionFactory();
         }
@@ -60,13 +86,13 @@ namespace Controll.Hosting.NHibernate
                                            .BuildConfiguration();
 
             //Kör endast om nödvändigt
-            {
-                //var export = new SchemaExport(config);
-                //export.Drop(true, true);
-                //export.Create(true, true);
+#if FALSE
+                var export = new SchemaExport(config);
+                export.Drop(true, true);
+                export.Create(true, true);
             }
             new SchemaValidator(config).Validate();
-
+#endif
 
             return config.BuildSessionFactory();
         }

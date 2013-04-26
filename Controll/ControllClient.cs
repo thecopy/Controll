@@ -17,19 +17,26 @@ namespace Controll
 
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
+        public event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
         
         public HubConnection HubConnection { get { return _hubConnection; } }
         
         private void OnMessageDelivered(Guid ticket)
         {
-            EventHandler<MessageDeliveredEventArgs> handler = MessageDelivered;
+            var handler = MessageDelivered;
             if (handler != null) handler(this, new MessageDeliveredEventArgs(ticket));
         }
 
         private void OnActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            EventHandler<ActivityLogMessageEventArgs> handler = ActivityMessageRecieved;
+            var handler = ActivityMessageRecieved;
             if (handler != null) handler(this, new ActivityLogMessageEventArgs(ticket, message, type));
+        }
+
+        private void OnActivityResult(Guid ticket, object result)
+        {
+            var handler = ActivityResultRecieved;
+            if (handler != null) handler(this, new ActivityResultEventArgs(ticket, result));
         }
 
         public ControllClient(string url)
@@ -65,6 +72,7 @@ namespace Controll
         {
             _hubProxy.On<Guid>("MessageDelivered", OnMessageDelivered);
             _hubProxy.On<Guid, ActivityMessageType, string>("ActivityMessage", OnActivityMessage);
+            _hubProxy.On<Guid, object>("ActivityResult", OnActivityResult);
         }
 
         public IEnumerable<ZombieViewModel> GetAllZombies()

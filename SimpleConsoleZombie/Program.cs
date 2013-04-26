@@ -86,16 +86,11 @@ namespace SimpleConsoleZombie
         {
             var activitiyTypes = PluginService.Instance.GetAllActivityTypes().ToList();
             var activitiyVms = new List<ActivityViewModel>(activitiyTypes.Count);
-            activitiyVms.AddRange(activitiyTypes.Select(activity => (IControllPlugin) Activator.CreateInstance(activity)).Select(activityInstance => new ActivityViewModel
-                {
-                    Key = activityInstance.Key, 
-                    Name = activityInstance.Name,
-                    CreatorName = activityInstance.CreatorName,
-                    Description = activityInstance.Description,
-                    LastUpdated = activityInstance.LastUpdated
-                }));
+            activitiyVms.AddRange(activitiyTypes.Select(activity => 
+                (IActivity) Activator.CreateInstance(activity)).Select(activityInstance => 
+                    activityInstance.ViewModel));
 
-            service.Synchronize(activitiyVms);
+            service.Synchronize(activitiyVms).Wait();
             Console.WriteLine("Ok. Synchronized!");
         }
 

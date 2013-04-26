@@ -79,6 +79,38 @@ namespace Controll.Hosting.Tests
         }
 
         [TestMethod]
+        public void ShouldBeAbleToRespondWithArbritraryActivityResult()
+        {
+            var hub = GetTestableZombieHub();
+            hub.Clients.Caller.ZombieName = "zombie";
+            hub.Clients.Caller.BelongsToUser = "username";
+
+            var user = new ControllUser
+            {
+                UserName = "username",
+                Password = "password",
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    Name = "zombie",
+                                    Id = 1
+                                }
+                        }
+            };
+
+            var ticket = Guid.NewGuid();
+
+            hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
+            hub.MockedMessageQueueService.Setup(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommandViewModel>(vm => vm.Label == "RESULT COMMAND"))).Verifiable();
+
+            hub.LogOn("username", "password", "zombie");
+            hub.ActivityResult(ticket, new ActivityCommandViewModel{Label = "RESULT COMMAND"});
+
+            hub.MockedMessageQueueService.Verify(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommandViewModel>(vm => vm.Label == "RESULT COMMAND")), Times.Once());
+        }
+
+        [TestMethod]
         public void ShouldBeAbleToSetMessageAsDelivered()
         {
             var hub = GetTestableZombieHub();

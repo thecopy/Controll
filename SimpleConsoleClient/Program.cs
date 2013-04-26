@@ -6,13 +6,22 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Controll;
+using Controll.Common.ViewModels;
+using Newtonsoft.Json;
 
 namespace SimpleConsoleClient
 {
     class Program
     {
+        private static IList<ZombieViewModel> _zombies;
+        private static IDictionary<Guid, Tuple<string, Guid>> _invokedActivities; // string = zombieName, Guid = activity key
+        private static IDictionary<Guid, ActivityCommandViewModel> _waitningIntermidiates; 
         static void Main(string[] args)
         {
+            _zombies = new List<ZombieViewModel>();
+            _invokedActivities = new Dictionary<Guid, Tuple<string, Guid>>();
+            _waitningIntermidiates = new Dictionary<Guid, ActivityCommandViewModel>();
+
             Console.WriteLine("Simple Console Client for Controll");
             Console.WriteLine("https://github.com/thecopy/controll");
             Console.WriteLine();
@@ -23,11 +32,27 @@ namespace SimpleConsoleClient
             {
                 Connect("http://localhost:10244/");
             }
+            else
+            {
+                Console.Write("Enter (http://domain:port/) url: ");
+                var url = Console.ReadLine();
+                Connect(url);
+            }
         }
 
         static void _client_MessageDelivered(object sender, MessageDeliveredEventArgs e)
         {
             Console.WriteLine("Message delivered: " + e.DeliveredTicket);
+        }
+
+        static void _client_ActivityResultRecieved(object sender, ActivityResultEventArgs e)
+        {
+            Console.WriteLine("Result recieved!");
+            var command = JsonConvert.DeserializeObject<ActivityCommandViewModel>(e.Result.ToString());
+            if (command == null) return;
+
+            Console.Write("Is it an intermidiate command! To run is type 'list intermidiates'");
+            _waitningIntermidiates.Add(e.Ticket, command);
         }
 
         private static ControllClient _client;
@@ -38,6 +63,7 @@ namespace SimpleConsoleClient
             _client = new ControllClient(host);
             _client.MessageDelivered += _client_MessageDelivered;
             _client.ActivityMessageRecieved += _client_ActivityMessageRecieved;
+            _client.ActivityResultRecieved += _client_ActivityResultRecieved;
             _client.Connect();
 
             Console.WriteLine("Connected");
@@ -57,7 +83,9 @@ namespace SimpleConsoleClient
                     case "help":
                     case "h":
                         Console.WriteLine("* run\t\t\tRun SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
-                        Console.WriteLine("* run <zombieName> <activity-key> <commandName> <parameters>\tRun activity with id <activity-key>");
+                        Console.WriteLine("* run <zombieName>");
+                        Console.WriteLine("* run <zombieName> <activity-name> <commandName>");
+                        Console.WriteLine("* intermidiate");
                         Console.WriteLine("* auth <[user] [password]>\t\tIf no user or password is passed: username:password will be used");
                         Console.WriteLine("* register [username] [password] <email>\tRegister user");
                         Console.WriteLine("* list [zombies|activities <zombieName>]\t\tList all your zombies or a specified zombies installed activities");
@@ -80,26 +108,26 @@ namespace SimpleConsoleClient
                         else
                             Console.WriteLine("Parameter syntax error");
                         break;
+                    case "intermidiate":
+                        if(_waitningIntermidiates.Count > 0)
+                            RunIntermidiate();
+                        else
+                            Console.WriteLine("No waiting intermidiates!");
+                        break;
                     case "run":
                         if (results.Count == 1)
                         {
                             Console.WriteLine("Activating SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
-                            Run("zombieName", Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA6"), new Dictionary<string, string> { {"param1", "param2"} });
-                        }
-                        else if (results.Count >= 4)
+                            Run("zombieName", Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA6"), new Dictionary<string, string> {{"param1", "param2"}});
+                        }else if(results.Count == 2){
+                            Run(results[1]);
+                        }else if (results.Count() == 4)
                         {
-                            string zombieName = results[1];
-                            string activity = results[2];
-                            string test = results.Skip(3).Aggregate((i, j) => i + " " + j);
-
-                            string[] t = test.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
-                            var dictionary = t.ToDictionary(s => s.Split('=')[0], s => s.Split('=')[1]);
-
-                            Run(zombieName, Guid.NewGuid(), dictionary);
+                            Run(results[1], results[2], results[3]);
                         }
                         else
                         {
-                            Console.WriteLine("Errornous number of parameters. Please provide at least 4. Run help for more information");
+                            Console.WriteLine("Errornous number of parameters. Please provide 4. Run help for more information");
                         }
                         break;
                     case "list":
@@ -120,6 +148,142 @@ namespace SimpleConsoleClient
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        private static void RunIntermidiate()
+        {
+            Console.WriteLine("Select an intermidiate:");
+            for (int i = 0; i < _waitningIntermidiates.Count; i++)
+            {
+                Console.WriteLine(" [{0}] {1}", i, _waitningIntermidiates.ElementAt(i).Value.Name);
+            }
+            Console.Write("Please select an intermidiate: ");
+            var enteredIndex = Console.ReadLine();
+            int selectedIntermidiateIndex;
+            if (!int.TryParse(enteredIndex, out selectedIntermidiateIndex) 
+                || selectedIntermidiateIndex >= _waitningIntermidiates.Count
+                || selectedIntermidiateIndex < 0)
+            {
+                Console.WriteLine("Parse error");
+                return;
+            }
+
+            var selectedIntermidiate = _waitningIntermidiates.ElementAt(0).Value;
+            var ticket = _waitningIntermidiates.ElementAt(0).Key;
+            var zombieName = _invokedActivities[ticket].Item1;
+            var activityKey = _invokedActivities[ticket].Item2;
+
+            RunCommand(selectedIntermidiate, zombieName, activityKey);
+        }
+
+        private static void Run(string zombieName)
+        {
+            var zombie = _zombies.SingleOrDefault(z => z.Name == zombieName);
+            if (zombie == null)
+            {
+                Console.WriteLine("No zombie named " + zombieName + " found. If you are sure it exists please run \"list zombies\" to sync");
+                return;
+            }
+
+            for (int i = 0; i < zombie.Activities.Count(); i++ )
+            {
+                var a = zombie.Activities.ElementAt(i);
+                Console.WriteLine("[{0}] {1}", i, a.Name);
+            }
+            Console.Write("Please select an activity: ");
+            var enteredIndex = Console.ReadLine();
+            int selectedActivityIndex;
+            if (!int.TryParse(enteredIndex, out selectedActivityIndex))
+            {
+                Console.WriteLine("Parse error");
+                return;
+            }
+
+            var activity = zombie.Activities.ElementAt(selectedActivityIndex);
+
+            for (int i = 0; i < activity.Commands.Count(); i++)
+            {
+                var c = activity.Commands.ElementAt(i);
+                Console.WriteLine("[{0}] {1}", i, c.Name);
+            }
+            Console.WriteLine("Please select a command: ");
+            enteredIndex = Console.ReadLine();
+            int selectedCommandIndex;
+            if (!int.TryParse(enteredIndex, out selectedCommandIndex))
+            {
+                Console.WriteLine("Parse error");
+                return;
+            }
+
+            Run(zombieName, activity.Name, activity.Commands.ElementAt(selectedCommandIndex).Name);
+        }
+
+        private static void Run(string zombieName, string activityName, string commandName)
+        {
+            var zombie = _zombies.SingleOrDefault(z => z.Name == zombieName);
+            if (zombie == null)
+            {
+                Console.WriteLine("No zombie named " + zombieName + " found. If you are sure it exists please run \"list zombies\" to sync");
+                return;
+            }
+            var activity = zombie.Activities.SingleOrDefault(a => a.Name == activityName);
+            if (activity == null)
+            {
+                Console.WriteLine("No activity named " + activityName + " found. If you are sure it exists please run \"list zombies\" to sync");
+                return;
+            }
+            var command = activity.Commands.SingleOrDefault(c => c.Name == commandName);
+            if (command == null)
+            {
+                Console.WriteLine("No command named " + command + " found. If you are sure it exists please run \"list zombies\" to sync");
+                return;
+            }
+
+            RunCommand(command, zombieName, activity.Key);
+        }
+
+        private static void RunCommand(ActivityCommandViewModel command, string zombieName, Guid activityKey)
+        {
+            var parameters = new Dictionary<string, string>();
+            parameters.Add("__command", command.Name);
+            foreach (var parameter in command.ParameterDescriptors)
+            {
+                Console.WriteLine(parameter.Name);
+                Console.WriteLine(parameter.Description);
+                if (parameter.PickerValues == null || !parameter.PickerValues.Any())
+                {
+                    Console.Write("Enter a value: ");
+                    var value = Console.ReadLine();
+                    parameters.Add(parameter.Name, value);
+                }
+                else
+                {
+                    for (int pv = 0; pv < parameter.PickerValues.Count(); pv++)
+                    {
+                        var v = parameter.PickerValues.ElementAt(pv);
+                        Console.WriteLine(" [{0}] {1}", pv, v);
+                    }
+                    Console.WriteLine("Enter selection index: ");
+                    var enteredIndex = Console.ReadLine();
+                    int selectedPickerIndex;
+                    if (!int.TryParse(enteredIndex, out selectedPickerIndex) || selectedPickerIndex >= parameter.PickerValues.Count())
+                    {
+                        Console.WriteLine("Parse error");
+                        return;
+                    }
+                    parameters.Add(parameter.Name, parameter.PickerValues.ElementAt(selectedPickerIndex));
+                }
+            }
+
+            Console.WriteLine("OK. Sending invocation message...");
+            var ticket = _client.StartActivity(zombieName, activityKey, parameters);
+            if (ticket.Equals(Guid.Empty))
+            {
+                Console.WriteLine("Unkown error sending invocation message!");
+                return;
+            }
+            _invokedActivities.Add(ticket, new Tuple<string, Guid>(zombieName, activityKey));
+            Console.WriteLine("OK!");
         }
 
         static void _client_ActivityMessageRecieved(object sender, ActivityLogMessageEventArgs e)
@@ -184,6 +348,7 @@ namespace SimpleConsoleClient
                 {
                     Console.WriteLine(" * " + zombie.Name);
                 }
+                _zombies = zombies;
                 Console.WriteLine("Total: " + zombies.Count() + " zombies");
             }else if (what == "activities")
             {
@@ -199,10 +364,18 @@ namespace SimpleConsoleClient
                     Console.WriteLine(" * " + activity.Name + " " + activity.Key);
                 }
                 Console.WriteLine("Total: " + activities.Count() + " zombies");
+            }else if (what == "intermidiates")
+            {
+                Console.WriteLine("Avaiable intermidiates: ");
+                foreach (var pair in _waitningIntermidiates)
+                {
+                    Console.WriteLine(" * " + pair.Value.Name);
+                }
+                Console.WriteLine("Total: " + _waitningIntermidiates.Count() + " intermidiates");
             }
             else
             {
-                Console.WriteLine("Avaiable enumerables: zombies, activities");
+                Console.WriteLine("Avaiable enumerables: zombies, activities, intermidiates");
             }
         }
 
@@ -214,6 +387,9 @@ namespace SimpleConsoleClient
             {
                 Console.WriteLine("Login Successful");
                 _user = user;
+                Console.WriteLine("Syncing zombie list...");
+                List("zombies");
+                Console.WriteLine("Type 'run <zombieName>' to start a wizard for invocing an activity!");
             }
             else
             {

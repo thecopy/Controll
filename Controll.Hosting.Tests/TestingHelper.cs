@@ -88,7 +88,7 @@ namespace Controll.Hosting.Tests
         {
             get
             {
-                return (c, vm) => vm.IsQuickCommand == c.IsQuickCommand &&
+                return (c, vm) => 
                                   vm.Label == c.Label &&
                                   vm.Name == c.Name &&
                                   AssertionHelper.IsEnumerableItemsEqual(c.ParameterDescriptors, vm.ParameterDescriptors,

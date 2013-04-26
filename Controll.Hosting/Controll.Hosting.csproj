@@ -91,7 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bootstrapper.cs" />
-    <Compile Include="ControllServer.cs" />
+    <Compile Include="ControllStandAloneServer.cs" />
     <Compile Include="Helpers\RequiresAuthorization.cs" />
     <Compile Include="Helpers\ViewModelHelper.cs" />
     <Compile Include="Hubs\BaseHub.cs" />

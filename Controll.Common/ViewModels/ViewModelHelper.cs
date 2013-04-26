@@ -35,6 +35,7 @@ namespace Controll.Hosting.Helpers
         {
             self.Name = command.Name;
             self.Label = command.Label;
+            self.IsQuickCommand = command.IsQuickCommand;
             self.ParameterDescriptors = command.ParameterDescriptors.Select(CreateViewModel);
 
             return self;

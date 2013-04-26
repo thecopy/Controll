@@ -10,6 +10,7 @@ using Controll.Hosting.Helpers;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
+using Microsoft.AspNet.SignalR;
 using NHibernate;
 
 namespace Controll.Hosting.Hubs
@@ -137,7 +138,7 @@ namespace Controll.Hosting.Hubs
 
             var user = GetUser();
 
-            Console.WriteLine("User '{0}' is requesting to start activity", user.UserName);
+            Console.WriteLine("User '{0}' is requesting to start activity with key {1}", user.UserName, activityKey);
 
             var zombie = user.GetZombieByName(zombieName);
             if (zombie == null)
@@ -147,7 +148,7 @@ namespace Controll.Hosting.Hubs
             if (activity == null)
                 return default(Guid);
 
-            using (ITransaction transaction = Session.BeginTransaction())
+            using (var transaction = Session.BeginTransaction())
             {
                 var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, Context.ConnectionId);
                 transaction.Commit();

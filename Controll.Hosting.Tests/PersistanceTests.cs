@@ -105,7 +105,6 @@ namespace Controll.Hosting.Tests
                     var commandGotten = activityGotten.Commands[c];
 
                     Assert.AreEqual(command.Id, commandGotten.Id);
-                    Assert.AreEqual(command.IsQuickCommand, commandGotten.IsQuickCommand);
                     Assert.AreEqual(command.Label, commandGotten.Label);
                     Assert.AreEqual(command.Name, commandGotten.Name);
 
@@ -183,7 +182,6 @@ namespace Controll.Hosting.Tests
                         var commandGotten = activityGotten.Commands[c];
 
                         Assert.AreEqual(command.Id, commandGotten.Id);
-                        Assert.AreEqual(command.IsQuickCommand, commandGotten.IsQuickCommand);
                         Assert.AreEqual(command.Label, commandGotten.Label);
                         Assert.AreEqual(command.Name, commandGotten.Name);
 
@@ -244,7 +242,6 @@ namespace Controll.Hosting.Tests
             {
                 new PersistenceSpecification<ActivityCommand>(session)
                     .CheckProperty(x => x.Name, "name")
-                    .CheckProperty(x => x.IsQuickCommand, true)
                     .CheckProperty(x => x.Label, "Label")
                     .VerifyTheMappings();
             }

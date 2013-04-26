@@ -15,7 +15,7 @@ namespace SimpleConsoleServer
             Console.WriteLine("https://github.com/thecopy/controll");
             
             const string url = "http://*:10244/";
-            var server = new ControllServer(url);
+            var server = new ControllStandAloneServer(url);
 
             Console.WriteLine("Starting server on " + url);
 

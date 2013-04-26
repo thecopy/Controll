@@ -14,7 +14,6 @@ namespace Controll.Hosting.NHibernate.Mappings
         public ActivityCommandMap()
         {
             Id(x => x.Id);
-            Map(x => x.IsQuickCommand);
             Map(x => x.Label);
             Map(x => x.Name);
             HasMany(x => x.ParameterDescriptors).Cascade.All().Not.LazyLoad();

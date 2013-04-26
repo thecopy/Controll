@@ -6,6 +6,7 @@ using System.Security.Authentication;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
@@ -142,6 +143,28 @@ namespace Controll.Hosting.Hubs
             
             using (var transaction = Session.BeginTransaction())
             {
+                foreach (var syncedActivity in zombie.Activities.ToList().Where(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 1))
+                {
+                    Console.WriteLine(syncedActivity.Name + ": existing in database. Updating...");
+                    var installedActivity = activities.Single(a => a.Key == syncedActivity.Id);
+
+                    syncedActivity.Name = installedActivity.Name;
+                    syncedActivity.Description = installedActivity.Description;
+                    syncedActivity.LastUpdated = installedActivity.LastUpdated;
+                    syncedActivity.Commands = installedActivity.Commands.Select(c => new ActivityCommand
+                        {
+                            Label = c.Label,
+                            Name = c.Name,
+                            ParameterDescriptors = c.ParameterDescriptors.Select(p => new ParameterDescriptor
+                                {
+                                    Description = p.Description,
+                                    Label = p.Label,
+                                    Name = p.Name,
+                                    PickerValues = p.PickerValues != null ? p.PickerValues.ToList() : new List<string>()
+                                }).ToList()
+                        }).ToList();
+                }
+
                 foreach (var syncedActivity in zombie.Activities.ToList().Where(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 0))
                 {
                     Console.WriteLine(syncedActivity.Name + ": Not installed at zombie. Removing...");
@@ -150,14 +173,26 @@ namespace Controll.Hosting.Hubs
 
                 foreach (var installedActivity in activities.Where(installedActivity => zombie.Activities.Count(a => a.Id == installedActivity.Key) == 0))
                 {
-                    Console.WriteLine(installedActivity.Name + ": Adding activity");
+                    Console.WriteLine(installedActivity.Name + ": Adding activity...");
                     zombie.Activities.Add(new Activity
                         {
                             Id = installedActivity.Key,
                             Name = installedActivity.Name,
                             LastUpdated = installedActivity.LastUpdated,
                             CreatorName = installedActivity.CreatorName,
-                            Description = installedActivity.Description
+                            Description = installedActivity.Description,
+                            Commands = installedActivity.Commands.Select(c => new ActivityCommand
+                                {
+                                    Label = c.Label,
+                                    Name = c.Name,
+                                    ParameterDescriptors = c.ParameterDescriptors.Select(p => new ParameterDescriptor
+                                        {
+                                            Description = p.Description,
+                                            Label = p.Label,
+                                            Name = p.Name,
+                                            PickerValues = p.PickerValues != null ? p.PickerValues.ToList() : new List<string>()
+                                        }).ToList()
+                                }).ToList()
                         });
                 }
 
@@ -170,6 +205,12 @@ namespace Controll.Hosting.Hubs
         {
             Console.WriteLine("Message from activity: " + message);
             _messageQueueService.InsertActivityMessage(ticket, type, message);
+        }
+
+        public void ActivityResult(Guid ticket, object result)
+        {
+            Console.WriteLine("Activity result recieved.");
+            _messageQueueService.InsertActivityResult(ticket, result);
         }
 
         public Task OnDisconnect()

@@ -70,7 +70,8 @@
     <Compile Include="ControllClient.cs" />
     <Compile Include="Models\ActivityDownloadedAtZombieEventArgs.cs" />
     <Compile Include="Models\ActivityLogMessageEventArgs.cs" />
-    <Compile Include="Models\Copy of ZombieActivityCompletedEventArgs.cs" />
+    <Compile Include="Models\ActivityResultEventArgs.cs" />
+    <Compile Include="Models\ZombieActivityCompletedEventArgs.cs" />
     <Compile Include="Models\ZombieActivityStarted.cs" />
     <Compile Include="Models\MessageDeliveredEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
