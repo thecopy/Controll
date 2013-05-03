@@ -42,7 +42,7 @@ namespace Controll.Hosting.Tests
                 session.Evict(zombie);
 
                 var gotten = repo.Get(zombie.Id);
-                
+                Assert.AreNotSame(zombie,gotten);
                 Assert.AreEqual(zombie.Name, gotten.Name);
                 Assert.AreEqual(zombie.Id, gotten.Id);
                 Assert.AreEqual(zombie.ConnectionId, gotten.ConnectionId);
@@ -82,8 +82,8 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var activity = TestingHelper.GetListOfZombies()[0].Activities[0]; // Get generated activity with commands and parameters
-                var activityCopy = TestingHelper.GetListOfZombies()[0].Activities[0]; // This is used for comparing since the one above will be the same reference when getting from repo
+                var activity = TestingHelper.GetListOfZombies(1)[0].Activities[0]; // Get generated activity with commands and parameters
+                var activityCopy = TestingHelper.GetListOfZombies(1)[0].Activities[0]; // Get a new copy of the activity so nhibernate wont track it 
                 var repo = new GenericRepository<Activity>(session);
                 repo.Add(activity);
                 
@@ -93,7 +93,6 @@ namespace Controll.Hosting.Tests
 
                 Assert.AreEqual(activityCopy.CreatorName, activityGotten.CreatorName);
                 Assert.AreEqual(activityCopy.Description, activityGotten.Description);
-                Assert.AreEqual(activityCopy.FilePath, activityGotten.FilePath);
                 Assert.AreEqual(activityCopy.LastUpdated, activityGotten.LastUpdated);
                 Assert.AreEqual(activityCopy.Name, activityGotten.Name);
                 Assert.AreEqual(activityCopy.Version, activityGotten.Version);
@@ -117,9 +116,24 @@ namespace Controll.Hosting.Tests
                         Assert.AreEqual(param.Description, paramGotten.Description);
                         Assert.AreEqual(param.Id, paramGotten.Id);
                         Assert.AreEqual(param.Label, paramGotten.Label);
+                        Assert.AreEqual(param.IsBoolean, paramGotten.IsBoolean);
                         Assert.AreEqual(param.Name, paramGotten.Name);
 
-                        CollectionAssert.AreEquivalent(param.PickerValues.ToList(), paramGotten.PickerValues.ToList());
+                        Assert.AreEqual(param.PickerValues.Count, paramGotten.PickerValues.Count);
+                        for (int pv = 0; pv < param.PickerValues.Count; pv++)
+                        {
+                            var pickerValue = param.PickerValues[pv];
+                            var pickerValueGotten = paramGotten.PickerValues[pv];
+
+                            Assert.AreEqual(pickerValue.Description, pickerValueGotten.Description);
+                            Assert.AreEqual(pickerValue.Id, pickerValueGotten.Id);
+                            Assert.AreEqual(pickerValue.Label, pickerValueGotten.Label);
+                            Assert.AreEqual(pickerValue.Identifier, pickerValueGotten.Identifier);
+                            Assert.AreEqual(pickerValue.IsCommand, pickerValueGotten.IsCommand);
+
+
+                            AssertionHelper.AssertDictionariesAreEqual(pickerValue.Parameters, pickerValueGotten.Parameters);
+                        }
                     }
                 }
             }
@@ -131,8 +145,8 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var activities = TestingHelper.GetListOfZombies()[0].Activities;
-                var activitiesCopy = TestingHelper.GetListOfZombies()[0].Activities;
+                var activities = TestingHelper.GetListOfZombies(1)[0].Activities;
+                var activitiesCopy = TestingHelper.GetListOfZombies(1)[0].Activities;
                 var zombie = new Zombie
                     {
                         ConnectionId = "conn",
@@ -170,7 +184,6 @@ namespace Controll.Hosting.Tests
 
                     Assert.AreEqual(activity.CreatorName, activityGotten.CreatorName);
                     Assert.AreEqual(activity.Description, activityGotten.Description);
-                    Assert.AreEqual(activity.FilePath, activityGotten.FilePath);
                     Assert.AreEqual(activity.LastUpdated, activityGotten.LastUpdated);
                     Assert.AreEqual(activity.Name, activityGotten.Name);
                     Assert.AreEqual(activity.Version, activityGotten.Version);
@@ -194,9 +207,24 @@ namespace Controll.Hosting.Tests
                             Assert.AreEqual(param.Description, paramGotten.Description);
                             Assert.AreEqual(param.Id, paramGotten.Id);
                             Assert.AreEqual(param.Label, paramGotten.Label);
+                            Assert.AreEqual(param.IsBoolean, paramGotten.IsBoolean);
                             Assert.AreEqual(param.Name, paramGotten.Name);
 
-                            CollectionAssert.AreEquivalent(param.PickerValues.ToList(), paramGotten.PickerValues.ToList());
+                            Assert.AreEqual(param.PickerValues.Count, paramGotten.PickerValues.Count);
+                            for (int pv = 0; pv < param.PickerValues.Count; pv++)
+                            {
+                                var pickerValue = param.PickerValues[pv];
+                                var pickerValueGotten = paramGotten.PickerValues[pv];
+
+                                Assert.AreEqual(pickerValue.Description, pickerValueGotten.Description);
+                                Assert.AreEqual(pickerValue.Id, pickerValueGotten.Id);
+                                Assert.AreEqual(pickerValue.Label, pickerValueGotten.Label);
+                                Assert.AreEqual(pickerValue.Identifier, pickerValueGotten.Identifier);
+                                Assert.AreEqual(pickerValue.IsCommand, pickerValueGotten.IsCommand);
+
+
+                                AssertionHelper.AssertDictionariesAreEqual(pickerValue.Parameters, pickerValueGotten.Parameters);
+                            }
                         }
                     }
                 }
@@ -212,7 +240,6 @@ namespace Controll.Hosting.Tests
                 new PersistenceSpecification<Activity>(session)
                     .CheckProperty(x => x.CreatorName, "name")
                     .CheckProperty(x => x.Description, "desc")
-                    .CheckProperty(x => x.FilePath, "C:\\")
                     .CheckProperty(x => x.LastUpdated, DateTime.Parse("2012-12-12 12:12:12"))
                     .CheckProperty(x => x.Name, "activity name")
                     .VerifyTheMappings();
@@ -243,21 +270,6 @@ namespace Controll.Hosting.Tests
                 new PersistenceSpecification<ActivityCommand>(session)
                     .CheckProperty(x => x.Name, "name")
                     .CheckProperty(x => x.Label, "Label")
-                    .VerifyTheMappings();
-            }
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToAddAndPersistParameterDescriptor()
-        {
-            using (var session = SessionFactory.OpenSession())
-            using (session.BeginTransaction())
-            {
-                new PersistenceSpecification<ParameterDescriptor>(session)
-                    .CheckProperty(x => x.Description, "description")
-                    .CheckProperty(x => x.Label, "label")
-                    .CheckProperty(x => x.Name, "name")
-                    .CheckComponentList(x => x.PickerValues, new[] { "picker 1", "picker 2" })
                     .VerifyTheMappings();
             }
         }

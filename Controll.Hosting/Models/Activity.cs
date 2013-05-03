@@ -11,7 +11,6 @@ namespace Controll.Hosting.Models
         public virtual string CreatorName { get; set; }
         public virtual string Description { get; set; }
         public virtual DateTime LastUpdated { get; set; }
-        public virtual string FilePath { get; set; }
         public virtual IList<ActivityCommand> Commands { get; set; }
         public virtual Version Version { get; set; }
     }

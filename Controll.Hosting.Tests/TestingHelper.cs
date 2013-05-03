@@ -7,6 +7,7 @@ using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.Hosting.Models;
 using FizzWare.NBuilder;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Controll.Hosting.Tests
 {
@@ -35,22 +36,22 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        public static IList<Zombie> GetListOfZombies()
+        public static IList<Zombie> GetListOfZombies(int count = 3)
         {
             IList<ParameterDescriptor> parameters =
-                Builder<ParameterDescriptor>.CreateListOfSize(5)
+                Builder<ParameterDescriptor>.CreateListOfSize(count)
                                             .All()
-                                            .Do(p => p.PickerValues = new List<string> {"string1", "string2"})
+                                            .Do(p => p.PickerValues = Builder<PickerValue>.CreateListOfSize(count)/*.All().Do(x => x.Id = Guid.NewGuid())*/.Build())
                                             .Build();
 
             IList<ActivityCommand> commands =
-                Builder<ActivityCommand>.CreateListOfSize(5)
+                Builder<ActivityCommand>.CreateListOfSize(count)
                                         .All()
                                         .Do(c => c.ParameterDescriptors = parameters.ToList())
                                         .Build();
 
             IList<Zombie> zombies =
-                Builder<Zombie>.CreateListOfSize(3).All().Do(x => x.Activities = Builder<Activity>.CreateListOfSize(5)
+                Builder<Zombie>.CreateListOfSize(count).All().Do(x => x.Activities = Builder<Activity>.CreateListOfSize(count)
                                                                                                   .All()
                                                                                                   .Do(
                                                                                                       a =>
@@ -102,9 +103,26 @@ namespace Controll.Hosting.Tests
             {
                 return (p, vm) => vm.Description == p.Description &&
                                   vm.Label == p.Label &&
+                                  vm.IsBoolean == p.IsBoolean &&
                                   vm.Name == p.Name &&
-                                  AssertionHelper.IsEnumerableItemsEqual(vm.PickerValues, p.PickerValues);
+                                  AssertionHelper.IsEnumerableItemsEqual(p.PickerValues, vm.PickerValues, PickerValueViewModelComparer);
             }
+        }
+
+        public static Func<PickerValue, PickerValueViewModel, bool> PickerValueViewModelComparer
+        {
+            get { return ComparePickerValueToViewModel; }
+        } 
+        private static bool ComparePickerValueToViewModel(PickerValue pv, PickerValueViewModel vm)
+        {
+            var result =  vm.CommandName == pv.CommandName &&
+                                   vm.Description == pv.Description &&
+                                   vm.Identifier == pv.Identifier &&
+                                   vm.IsCommand == pv.IsCommand &&
+                                   vm.Label == pv.Label &&
+                                   AssertionHelper.IsDictionariesEqual(vm.Parameters, pv.Parameters);
+
+            return result;
         }
     }
     

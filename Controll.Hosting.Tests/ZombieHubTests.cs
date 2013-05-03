@@ -386,7 +386,7 @@ namespace Controll.Hosting.Tests
 
         private TestableZombieHub GetTestableZombieHub()
         {
-            var mockedActivityService = new Mock<IActivityService>();
+            var mockedActivityService = new Mock<IActivityMessageLogService>();
             var mockedUserRepository = new Mock<IControllUserRepository>();
             var mockedActivityRepository = new Mock<IGenericRepository<Activity>>();
             var mockedMessageQueueService = new Mock<IMessageQueueService>();
@@ -408,18 +408,18 @@ namespace Controll.Hosting.Tests
         private class TestableZombieHub : ZombieHub
         {
             public Mock<IControllUserRepository> MockedUserRepository { get; set; }
-            public Mock<IActivityService> MockedActivityService { get; set; }
+            public Mock<IActivityMessageLogService> MockedActivityService { get; set; }
             public Mock<IGenericRepository<Activity>> MockedActivityRepository { get; set; }
             public Mock<IMessageQueueService> MockedMessageQueueService { get; set; }
             public Mock<ISession> MockedSession { get; set; }
 
             public TestableZombieHub(
                 Mock<IControllUserRepository> mockedUserRepository, 
-                Mock<IActivityService> mockedActivityService, 
+                Mock<IActivityMessageLogService> mockedActivityService, 
                 Mock<IGenericRepository<Activity>> mockedActivityRepository,
                 Mock<IMessageQueueService> mockedMessageQueueService,
                 Mock<ISession> mockedSession)
-                : base(mockedUserRepository.Object, mockedMessageQueueService.Object, mockedSession.Object)
+                : base(mockedUserRepository.Object, mockedMessageQueueService.Object, mockedActivityService.Object, mockedSession.Object)
             {
                 MockedUserRepository = mockedUserRepository;
                 MockedActivityService = mockedActivityService;

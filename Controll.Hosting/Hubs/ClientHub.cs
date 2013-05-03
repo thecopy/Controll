@@ -18,13 +18,16 @@ namespace Controll.Hosting.Hubs
     public class ClientHub : BaseHub
     {
         private readonly IControllUserRepository _controllUserRepository;
+        private readonly IMembershipService _membershipService;
         private readonly IMessageQueueService _messageQueueService;
 
         public ClientHub(IControllUserRepository controllUserRepository,
+                         IMembershipService membershipService,
                          IMessageQueueService messageQueueService,
                          ISession session) : base(session)
         {
             _controllUserRepository = controllUserRepository;
+            _membershipService = membershipService;
             _messageQueueService = messageQueueService;
         }
 
@@ -39,17 +42,8 @@ namespace Controll.Hosting.Hubs
 
         public bool LogOn(string password)
         {
-            Console.Write("Client trying to logon ");
-
-            var user = GetUser();
-
-            if (user == null)
-                return false;
-
-            Console.WriteLine("user: '" + user.UserName + "'");
-
-            if (user.Password != password)
-                return false;
+            string userName = Clients.Caller.UserName;
+            var user = _membershipService.AuthenticateUser(userName, password);
 
             var client = new ControllClient
                 {
@@ -93,20 +87,9 @@ namespace Controll.Hosting.Hubs
 
         public bool RegisterUser(string userName, string password, string email)
         {
-            if (_controllUserRepository.GetByUserName(userName) != null
-                || _controllUserRepository.GetByEMail(email) != null)
-                return false;
-
-            var newUser = new ControllUser
-                {
-                    EMail = email,
-                    UserName = userName,
-                    Password = password
-                };
-
             using (var transaction = Session.BeginTransaction())
             {
-                _controllUserRepository.Add(newUser);
+                _membershipService.AddUser(userName, password, email);
                 transaction.Commit();
             }
             return true;

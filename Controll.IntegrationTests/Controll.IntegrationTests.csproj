@@ -70,7 +70,7 @@
       <HintPath>..\Controll.Hosting\bin\Debug\NHibernate.dll</HintPath>
     </Reference>
     <Reference Include="Ninject">
-      <HintPath>..\Controll.Hosting\bin\Debug\Ninject.dll</HintPath>
+      <HintPath>..\packages\Ninject.3.0.1.10\lib\net45-full\Ninject.dll</HintPath>
     </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

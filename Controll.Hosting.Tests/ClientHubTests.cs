@@ -39,12 +39,15 @@ namespace Controll.Hosting.Tests
             var repo = new InMemoryControllUserRepository();
             repo.Add(user);
 
-            var hub = GetTestableClientHub(clientId, clientState,user, repo);
+            var hub = GetTestableClientHub(clientId, clientState, user, repo);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "pass123"))).Returns(user);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u != "Erik"), It.Is<string>(p => p == "pass123"))).Callback(() => { throw new InvalidOperationException(); });
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p != "pass123"))).Callback(() => { throw new InvalidOperationException(); });
             hub.Clients.Caller.UserName = "Erik";
 
-            Assert.IsFalse(hub.LogOn("pass")); // Wrong password
+            AssertionHelper.Throws<InvalidOperationException>(() => hub.LogOn("pass")); // Wrong password
             hub.Clients.Caller.UserName = "Erika123";
-            Assert.IsFalse(hub.LogOn("pass123")); // Wrong username
+            AssertionHelper.Throws<InvalidOperationException>(() => hub.LogOn("pass123")); // Wrong username
 
         }
 
@@ -60,6 +63,7 @@ namespace Controll.Hosting.Tests
             const string clientId = "1";
 
             var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
             hub.Clients.Caller.UserName = "Erik";
 
             hub.LogOn("password");
@@ -107,6 +111,7 @@ namespace Controll.Hosting.Tests
             const string clientId = "1";
 
             var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
             hub.Clients.Caller.UserName = "Erik";
             
             hub.LogOn("password");
@@ -129,6 +134,7 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
             hub.Clients.Caller.UserName = "Erik";
 
             hub.LogOn("password");
@@ -157,6 +163,9 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AddUser(It.Is<string>(u => u == "username"), It.Is<string>(p => p == "password"), It.Is<string>(e => e == "email")))
+                .Returns(user)
+                .Callback(() => userRepository.Add(new ControllUser{UserName = "username", Password = "password", EMail = "email"}));
 
             hub.Clients.Caller.UserName = "username";
             var result = hub.RegisterUser("username", "password", "email");
@@ -182,15 +191,13 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AddUser(It.Is<string>(u => u == "Erik"), It.IsAny<string>(), It.IsAny<string>())).Callback(() => { throw new InvalidOperationException(); });
+            hub.MembershipService.Setup(s => s.AddUser(It.IsAny<string>(), It.IsAny<string>(), It.Is<string>(u => u == "mail"))).Callback(() => { throw new InvalidOperationException(); });
 
             hub.Clients.Caller.UserName = "username";
-            var result = hub.RegisterUser("Erik", "password", "NotSameEmail"); // Samma Username
+            AssertionHelper.Throws<InvalidOperationException>(() => hub.RegisterUser("Erik", "password", "NotSameEmail")); // Samma Username
 
-            Assert.IsFalse(result);
-             
-            result = hub.RegisterUser("NotErik", "password", "mail"); // Samma mail
-
-            Assert.IsFalse(result);
+            AssertionHelper.Throws<InvalidOperationException>(() => hub.RegisterUser("NotErik", "password", "mail")); // Samma mail
         }
 
         [TestMethod]
@@ -212,6 +219,7 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
 
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
@@ -243,6 +251,7 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
 
             hub.Clients.Caller.UserName = "Erik";
              hub.LogOn("password");
@@ -276,6 +285,7 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
 
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
@@ -303,6 +313,7 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
 
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
@@ -336,6 +347,7 @@ namespace Controll.Hosting.Tests
             const string connectionId = "conn-id";
 
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
 
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
@@ -380,6 +392,7 @@ namespace Controll.Hosting.Tests
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
+            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
@@ -500,7 +513,8 @@ namespace Controll.Hosting.Tests
                 connection,
                 new Mock<IMessageQueueService>(),
                 activityRepository,
-                new Mock<IActivityService>(),
+                new Mock<IActivityMessageLogService>(),
+                new Mock<IMembershipService>(), 
                 mockedSession);
 
             var mockedConnectionObject = hub.MockedConnection.Object;
@@ -529,10 +543,12 @@ namespace Controll.Hosting.Tests
                 Mock<IConnection> connection,
                 Mock<IMessageQueueService> messageQueueService,
                 IGenericRepository<Activity> activityRepository,
-                Mock<IActivityService> activityService,
+                Mock<IActivityMessageLogService> activityService,
+                Mock<IMembershipService> membershipService,
                 Mock<ISession> mockedSession)
                 : base(
                     controllUserRepository,
+                    membershipService.Object,
                     messageQueueService.Object,
                     mockedSession.Object)
             {
@@ -541,13 +557,15 @@ namespace Controll.Hosting.Tests
                 MockedMessageQueueService = messageQueueService;
                 ActivityRepository = activityRepository;
                 MockedActivityService = activityService;
+                MembershipService = membershipService;
                 MockedSession = mockedSession;
             }
 
             public Mock<IConnection> MockedConnection { get; set; }
             public Mock<IMessageQueueService> MockedMessageQueueService { get; set; }
             public IGenericRepository<Activity> ActivityRepository { get; set; }
-            public Mock<IActivityService> MockedActivityService { get; set; }
+            public Mock<IActivityMessageLogService> MockedActivityService { get; set; }
+            public Mock<IMembershipService> MembershipService { get; set; }
             public Mock<ISession> MockedSession { get; set; }
             public IControllUserRepository ControllUserRepository { get; set; }
         }

@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.Hosting;
+using Controll.Hosting.Models;
 using Controll.Hosting.NHibernate;
+using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
 using Newtonsoft.Json;
@@ -20,15 +22,57 @@ namespace Controll.IntegrationTests
     [TestClass]
     public class HubCommunicationsTests
     {
+        // Add user and zombie in datebase for mocked data is not exists
+        private static bool _userAndZombieExists;
+        [ClassInitialize]
+        public static void ClassInit(TestContext context)
+        {
+            if (!_userAndZombieExists)
+            {
+                using (var session = NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
+                using (var transaction = session.BeginTransaction())
+                {
+                    var userRepo = new ControllUserRepository(session);
+                    if (userRepo.GetByUserName("username") == null)
+                    {
+                        userRepo.Add(new ControllUser
+                            {
+                                EMail = "email",
+                                Password = "password",
+                                UserName = "username"
+                            });
+                    }
+
+                    var user = userRepo.GetByUserName("username");
+                    
+                    if (user.GetZombieByName("zombieName") == null)
+                    {
+                        user.Zombies.Add(new Zombie
+                            {
+                                Name = "zombieName"
+                            });
+                    }
+
+                    userRepo.Update(user);
+                    transaction.Commit(); 
+                }
+                _userAndZombieExists = true;
+            }
+        }
+
+        private void UseMockedData()
+        {
+            Bootstrapper.Kernel.Rebind<ISession>()
+                .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
+                .InThreadScope();
+        }
+
         private const string LocalHostUrl = "http://erik-ws:10244"; // Change this to your preffered hostname (or localhost but machine name works with Fiddler)
         [TestMethod]
         public void ShouldBeAbleToLoginAsClient()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-
-            Bootstrapper.Kernel.Rebind<ISession>()
-                .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                .InThreadScope();
+            UseMockedData();
 
             using(server.Start()) // Start listening on /localhost:10244/
             {
@@ -38,6 +82,8 @@ namespace Controll.IntegrationTests
                 var logonResult = client.LogOn("username", "password");
 
                 Assert.IsTrue(logonResult, "Client could not logon");
+
+                client.HubConnection.Disconnect();
             }
         }
 
@@ -45,10 +91,7 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToLoginAsZombie()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-
-            Bootstrapper.Kernel.Rebind<ISession>()
-                .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                .InThreadScope();
+            UseMockedData();
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
@@ -57,6 +100,8 @@ namespace Controll.IntegrationTests
                 var logonResult = client.LogOn("username", "password", "zombieName");
 
                 Assert.IsTrue(logonResult, "Zombie could not logon");
+
+                client.HubConnection.Disconnect();
             }
         }
 
@@ -64,10 +109,7 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToPing()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-
-            Bootstrapper.Kernel.Rebind<ISession>()
-                .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                .InThreadScope();
+            UseMockedData();
 
             using (server.Start()) // Start listening on localhost:10244/
             {
@@ -86,22 +128,24 @@ namespace Controll.IntegrationTests
 
                 zombie.Pinged += (sender, args) =>
                     {
-                        pingEvent.Set();
                         pingTicket = args.Ticket;
+                        pingEvent.Set();
                     };
                 client.MessageDelivered += (sender, args) =>
                     {
-                        pongEvent.Set();
                         pongTicket = args.DeliveredTicket;
+                        pongEvent.Set();
                     };
 
                 Guid messageTicket = client.Ping("zombieName");
 
-                Assert.IsTrue(pingEvent.WaitOne(1000), "Zombie did not recieve ping");
-                Assert.IsTrue(pongEvent.WaitOne(1000), "Client did not recieve pong");
+                Assert.IsTrue(pingEvent.WaitOne(4000), "Zombie did not recieve ping");
+                Assert.IsTrue(pongEvent.WaitOne(4000), "Client did not recieve pong");
                 
                 Assert.AreEqual(messageTicket, pingTicket);
                 Assert.AreEqual(messageTicket, pongTicket);
+
+                client.HubConnection.Disconnect();
             }
         }
 
@@ -109,10 +153,7 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToActivateActivity()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-
-            Bootstrapper.Kernel.Rebind<ISession>()
-                .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                .InThreadScope();
+            UseMockedData();
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
@@ -225,6 +266,8 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(mockedActivity.Version, converted.Version);
 
                 #endregion
+
+                client.HubConnection.Disconnect();
             }
         }
     }

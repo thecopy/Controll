@@ -9,7 +9,7 @@ using Controll.Common.ViewModels;
 
 namespace SimpleSamplePlugin
 {
-    [ActivityAttribute("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA3")]
+    [ActivityAttribute("3F7DB79F-A596-4A1A-852F-1B0EF287D479")]
     public class SampleActivity : IActivity
     {
         public void Execute(IActivityContext context)
@@ -41,7 +41,24 @@ namespace SimpleSamplePlugin
                                         Description = "Pick a value",
                                         Label = "Values",
                                         Name = "picked-value",
-                                        PickerValues = new List<string> {"apple", "pear", "banana"}
+                                        PickerValues = new List<PickerValueViewModel>
+                                            {
+                                                new PickerValueViewModel
+                                                    {
+                                                        Label = "Apple",
+                                                        Identifier = "apple"
+                                                    },
+                                                new PickerValueViewModel
+                                                    {
+                                                        Label = "Banana",
+                                                        Identifier = "banana"
+                                                    },
+                                                new PickerValueViewModel
+                                                    {
+                                                        Label = "Pear",
+                                                        Identifier = "pear"
+                                                    }
+                                            }
                                     }
                             }
                     };
@@ -59,7 +76,7 @@ namespace SimpleSamplePlugin
         public ActivityViewModel ViewModel { get { return _viewModel; } }
         private readonly ActivityViewModel _viewModel = new ActivityViewModel
             {
-                Key = Guid.Parse("1925C00C-7BD8-4D5D-BD34-78CD1D7D0EA3"),
+                Key = Guid.Parse("3F7DB79F-A596-4A1A-852F-1B0EF287D479"),
                 Name = "Sample Activity",
                 Description = "An activity which does nothing",
                 CreatorName = "thecopy",

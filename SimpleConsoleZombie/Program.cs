@@ -24,12 +24,18 @@ namespace SimpleConsoleZombie
             {
                 Connect("http://localhost:10244/");
             }
+            else
+            {
+                Console.Write("Enter url to connect to: ");
+                string url = Console.ReadLine();
+                Connect(url);
+            }
         }
 
         private static void Connect(string url)
         {
             Console.WriteLine("Initializing service...");
-            service = new ZombieService("http://localhost:10244/");
+            service = new ZombieService(url);
             Console.WriteLine("Connecting to " + url);
             service.Connect();
             Console.WriteLine("Connected!");

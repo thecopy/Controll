@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Controll.Common;
+﻿using System.Collections.Generic;
+using Controll.Common.ViewModels;
 
 namespace Controll.Hosting.Models
 {

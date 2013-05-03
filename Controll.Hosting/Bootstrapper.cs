@@ -1,57 +1,72 @@
 ﻿using System;
-using Controll.Hosting.Hubs;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
-using Microsoft.AspNet.SignalR;
-using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using NHibernate;
 using Ninject;
-using Ninject.Activation;
 
 namespace Controll.Hosting
 {
     public static class Bootstrapper
     {
-        public static IKernel Kernel = null;
-        public static NinjectDependencyResolver NinjectDependencyResolver = null;
+        public static IKernel Kernel
+        {
+            get { return _kernel; }
+            private set { _kernel = value; }
+        }
+
+        public static NinjectDependencyResolver NinjectDependencyResolver { get; private set; }
+        private static IKernel _kernel;
+
+        public static void UseKernel(IKernel kernel)
+        {
+            if(_kernel != null)
+                throw new InvalidOperationException("Cannot set kernel. It is already set!");
+            _kernel = kernel;
+        }
 
         public static void StrapTheBoot(string connectionStringAlias = "mocked")
-    {
-        var kernel = new StandardKernel();
+        {
+            if(Kernel == null)
+            {
+                _kernel = new StandardKernel();
+            }
 
-        // Do not use GlobalHost.ConnectionManager. It will try to resolve it with the DependecyResolver
-        // which is THIS. GetFromBase uses the default resolver.
-        kernel.Bind<IConnectionManager>()
-              .ToMethod(_ => (IConnectionManager) NinjectDependencyResolver.GetFromBase<IConnectionManager>());
+            // Do not use GlobalHost.ConnectionManager. It will try to resolve it with the DependecyResolver
+            // which is THIS. GetFromBase uses the default SignalR resolver.
+            _kernel.Bind<IConnectionManager>()
+                  .ToMethod(_ => (IConnectionManager)NinjectDependencyResolver.GetFromBase<IConnectionManager>());
 
-        kernel.Bind(typeof (IGenericRepository<>))
-              .To(typeof (GenericRepository<>))
-              .InThreadScope();
+            _kernel.Bind(typeof(IGenericRepository<>))
+                  .To(typeof(GenericRepository<>))
+                  .InThreadScope();
 
-        kernel.Bind<IQueueItemRepostiory>()
-              .To<QueueItemRepostiory>()
-              .InThreadScope();
+            _kernel.Bind<IQueueItemRepostiory>()
+                  .To<QueueItemRepostiory>()
+                  .InThreadScope();
 
-        kernel.Bind<IControllUserRepository>()
-              .To<ControllUserRepository>()
-              .InThreadScope();
+            _kernel.Bind<IControllUserRepository>()
+                  .To<ControllUserRepository>()
+                  .InThreadScope();
 
-        kernel.Bind<IMessageQueueService>()
-              .To<MessageQueueService>()
-              .InThreadScope();
+            _kernel.Bind<IMessageQueueService>()
+                  .To<MessageQueueService>()
+                  .InThreadScope();
 
-        kernel.Bind<IActivityService>()
-              .To<ActivityService>()
-              .InThreadScope();
+            _kernel.Bind<IMembershipService>()
+                  .To<MembershipService>()
+                  .InThreadScope();
 
-        kernel.Bind<ISession>()
-              .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
-              .InThreadScope();
+            _kernel.Bind<IActivityMessageLogService>()
+                  .To<ActivityMessageLogService>()
+                  .InThreadScope();
 
-        Kernel = kernel;
-        NinjectDependencyResolver = new NinjectDependencyResolver(kernel);
-    }
+            _kernel.Bind<ISession>()
+                  .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
+                  .InThreadScope();
+
+            NinjectDependencyResolver = new NinjectDependencyResolver(_kernel);
+        }
     }
 }

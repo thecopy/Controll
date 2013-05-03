@@ -53,5 +53,7 @@ namespace Controll.Hosting.Tests
         {
             return Collection.Take(maxResults).ToList();
         }
+
+        public IQueryable<T> Query { get; private set; }
     }
 }

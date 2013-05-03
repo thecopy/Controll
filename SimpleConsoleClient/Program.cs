@@ -42,7 +42,7 @@ namespace SimpleConsoleClient
 
         static void _client_MessageDelivered(object sender, MessageDeliveredEventArgs e)
         {
-            Console.WriteLine("Message delivered: " + e.DeliveredTicket);
+            //Console.WriteLine("Message delivered: " + e.DeliveredTicket);
         }
 
         static void _client_ActivityResultRecieved(object sender, ActivityResultEventArgs e)
@@ -51,7 +51,7 @@ namespace SimpleConsoleClient
             var command = JsonConvert.DeserializeObject<ActivityCommandViewModel>(e.Result.ToString());
             if (command == null) return;
 
-            Console.Write("Is it an intermidiate command! To run is type 'list intermidiates'");
+            Console.WriteLine("Is it an intermidiate command! To run is type 'intermidiate'");
             _waitningIntermidiates.Add(e.Ticket, command);
         }
 
@@ -82,7 +82,6 @@ namespace SimpleConsoleClient
                 {
                     case "help":
                     case "h":
-                        Console.WriteLine("* run\t\t\tRun SampleActivity on zombie names zombieName with parameters : [ {{param1} {value1}} ]");
                         Console.WriteLine("* run <zombieName>");
                         Console.WriteLine("* run <zombieName> <activity-name> <commandName>");
                         Console.WriteLine("* intermidiate");
@@ -151,7 +150,7 @@ namespace SimpleConsoleClient
             Console.WriteLine("Select an intermidiate:");
             for (int i = 0; i < _waitningIntermidiates.Count; i++)
             {
-                Console.WriteLine(" [{0}] {1}", i, _waitningIntermidiates.ElementAt(i).Value.Name);
+                Console.WriteLine(" [{0}] {1}", i, _waitningIntermidiates.ElementAt(i).Value.Label);
             }
             Console.Write("Please select an intermidiate: ");
             var enteredIndex = Console.ReadLine();
@@ -164,12 +163,13 @@ namespace SimpleConsoleClient
                 return;
             }
 
-            var selectedIntermidiate = _waitningIntermidiates.ElementAt(0).Value;
-            var ticket = _waitningIntermidiates.ElementAt(0).Key;
+            var selectedIntermidiate = _waitningIntermidiates.ElementAt(selectedIntermidiateIndex).Value;
+            var ticket = _waitningIntermidiates.ElementAt(selectedIntermidiateIndex).Key;
             var zombieName = _invokedActivities[ticket].Item1;
             var activityKey = _invokedActivities[ticket].Item2;
 
             RunCommand(selectedIntermidiate, zombieName, activityKey);
+            _waitningIntermidiates.Remove(ticket);
         }
 
         private static void Run(string zombieName)
@@ -240,15 +240,17 @@ namespace SimpleConsoleClient
 
         private static void RunCommand(ActivityCommandViewModel command, string zombieName, Guid activityKey)
         {
+            Console.WriteLine("----------------------------------------");
+            Console.WriteLine("Running command " + command.Label);
+            Console.WriteLine();
             var parameters = new Dictionary<string, string>();
             
             foreach (var parameter in command.ParameterDescriptors)
             {
-                Console.WriteLine(parameter.Name);
-                Console.WriteLine(parameter.Description);
+                Console.WriteLine(parameter.Label + " [" + parameter.Description + "]");
                 if (parameter.PickerValues == null || !parameter.PickerValues.Any())
                 {
-                    Console.Write("Enter a value: ");
+                    Console.Write(": ");
                     var value = Console.ReadLine();
                     parameters.Add(parameter.Name, value);
                 }
@@ -257,9 +259,9 @@ namespace SimpleConsoleClient
                     for (int pv = 0; pv < parameter.PickerValues.Count(); pv++)
                     {
                         var v = parameter.PickerValues.ElementAt(pv);
-                        Console.WriteLine(" [{0}] {1}", pv, v);
+                        Console.WriteLine(" [{0}] {1} ({2})", pv, v.Label, v.Description);
                     }
-                    Console.WriteLine("Enter selection index: ");
+                    Console.Write(": ");
                     var enteredIndex = Console.ReadLine();
                     int selectedPickerIndex;
                     if (!int.TryParse(enteredIndex, out selectedPickerIndex) || selectedPickerIndex >= parameter.PickerValues.Count())
@@ -267,7 +269,7 @@ namespace SimpleConsoleClient
                         Console.WriteLine("Parse error");
                         return;
                     }
-                    parameters.Add(parameter.Name, parameter.PickerValues.ElementAt(selectedPickerIndex));
+                    parameters.Add(parameter.Name, parameter.PickerValues.ElementAt(selectedPickerIndex).Identifier);
                 }
             }
 
@@ -284,7 +286,7 @@ namespace SimpleConsoleClient
 
         static void _client_ActivityMessageRecieved(object sender, ActivityLogMessageEventArgs e)
         {
-            Console.WriteLine("Message recieved: " + e.Message);
+            //Console.WriteLine("Message recieved: " + e.Message);
         }
 
         private static void RegisterUser(string username, string password, string email = "")

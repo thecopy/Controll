@@ -18,8 +18,8 @@ namespace Controll.Hosting.NHibernate.Mappings
             Map(x => x.Response);
 
             HasMany(x => x.Parameters)
-                .AsMap<string>(index => index.Column("ParameterName").Type<string>(),
-                               element => element.Column("ParameterValue").Type<string>())
+                .AsMap<string>(index => index.Column("InvokedParameterName").Type<string>(),
+                               element => element.Column("InvokedParameterValue").Type<string>())
                 .Table("InvocationParameters")
                 .Cascade.All();
 

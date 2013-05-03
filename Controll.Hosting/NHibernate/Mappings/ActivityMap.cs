@@ -19,7 +19,6 @@ namespace Controll.Hosting.NHibernate.Mappings
             Map(x => x.LastUpdated);
             Map(x => x.Description);
             Map(x => x.Version);
-            Map(x => x.FilePath);
             HasMany(x => x.Commands).Cascade.All().Not.LazyLoad();
         }
     }

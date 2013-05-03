@@ -11,6 +11,7 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using NHibernate;
+using ParameterDescriptor = Controll.Hosting.Models.ParameterDescriptor;
 
 namespace Controll.Hosting.Hubs
 {
@@ -18,13 +19,16 @@ namespace Controll.Hosting.Hubs
     {
         private readonly IControllUserRepository _controllUserRepository;
         private readonly IMessageQueueService _messageQueueService;
+        private readonly IActivityMessageLogService _activityService;
 
         public ZombieHub(IControllUserRepository controllUserRepository,
                          IMessageQueueService messageQueueService,
+                         IActivityMessageLogService activityService,
                          ISession session) : base(session)
         {
             _controllUserRepository = controllUserRepository;
             _messageQueueService = messageQueueService;
+            _activityService = activityService;
         }
 
         private ZombieState GetZombieState()
@@ -143,26 +147,13 @@ namespace Controll.Hosting.Hubs
             
             using (var transaction = Session.BeginTransaction())
             {
-                foreach (var syncedActivity in zombie.Activities.ToList().Where(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 1))
+                for (int i = 0; i < zombie.Activities.Count(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 1); i++)
                 {
-                    Console.WriteLine(syncedActivity.Name + ": existing in database. Updating...");
+                    var syncedActivity = zombie.Activities.ToList().Where(s => activities.Count(a => a.Key == s.Id) == 1).ToList()[i];
+                    Console.WriteLine(syncedActivity.Name + ": existing in database. Updating (ONLY VERSION!!!!)...");
                     var installedActivity = activities.Single(a => a.Key == syncedActivity.Id);
 
-                    syncedActivity.Name = installedActivity.Name;
-                    syncedActivity.Description = installedActivity.Description;
-                    syncedActivity.LastUpdated = installedActivity.LastUpdated;
-                    syncedActivity.Commands = installedActivity.Commands.Select(c => new ActivityCommand
-                        {
-                            Label = c.Label,
-                            Name = c.Name,
-                            ParameterDescriptors = c.ParameterDescriptors.Select(p => new ParameterDescriptor
-                                {
-                                    Description = p.Description,
-                                    Label = p.Label,
-                                    Name = p.Name,
-                                    PickerValues = p.PickerValues != null ? p.PickerValues.ToList() : new List<string>()
-                                }).ToList()
-                        }).ToList();
+                    zombie.Activities[i].Version = installedActivity.Version;
                 }
 
                 foreach (var syncedActivity in zombie.Activities.ToList().Where(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 0))
@@ -174,26 +165,7 @@ namespace Controll.Hosting.Hubs
                 foreach (var installedActivity in activities.Where(installedActivity => zombie.Activities.Count(a => a.Id == installedActivity.Key) == 0))
                 {
                     Console.WriteLine(installedActivity.Name + ": Adding activity...");
-                    zombie.Activities.Add(new Activity
-                        {
-                            Id = installedActivity.Key,
-                            Name = installedActivity.Name,
-                            LastUpdated = installedActivity.LastUpdated,
-                            CreatorName = installedActivity.CreatorName,
-                            Description = installedActivity.Description,
-                            Commands = installedActivity.Commands.Select(c => new ActivityCommand
-                                {
-                                    Label = c.Label,
-                                    Name = c.Name,
-                                    ParameterDescriptors = c.ParameterDescriptors.Select(p => new ParameterDescriptor
-                                        {
-                                            Description = p.Description,
-                                            Label = p.Label,
-                                            Name = p.Name,
-                                            PickerValues = p.PickerValues != null ? p.PickerValues.ToList() : new List<string>()
-                                        }).ToList()
-                                }).ToList()
-                        });
+                    zombie.Activities.Add(installedActivity.CreateConcreteClass());
                 }
 
                 _controllUserRepository.Update(user);
@@ -203,7 +175,12 @@ namespace Controll.Hosting.Hubs
 
         public void ActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            Console.WriteLine("Message from activity: " + message);
+            using (var transaction = Session.BeginTransaction())
+            {
+                _activityService.InsertActivityLogMessage(ticket, type, message);
+                transaction.Commit();
+            }
+            
             _messageQueueService.InsertActivityMessage(ticket, type, message);
         }
 

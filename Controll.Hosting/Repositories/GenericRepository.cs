@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Controll.Hosting.NHibernate;
 using NHibernate;
 using NHibernate.Criterion;
+using NHibernate.Linq;
 
 namespace Controll.Hosting.Repositories
 {
@@ -16,6 +17,7 @@ namespace Controll.Hosting.Repositories
         T Get(object identifier);
         void Remove(T entity);
         IList<T> GetAll(int maxResults = 100);
+        IQueryable<T> Query { get; }
     }
 
     public class GenericRepository<T> : IGenericRepository<T> where T: class
@@ -52,6 +54,11 @@ namespace Controll.Hosting.Repositories
             return Session.CreateCriteria<T>()
                           .SetMaxResults(maxResult)
                           .List<T>();
+        }
+
+        public IQueryable<T> Query
+        {
+            get { return Session.Query<T>(); }
         }
     }
 }

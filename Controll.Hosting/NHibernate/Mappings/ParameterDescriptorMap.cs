@@ -17,7 +17,7 @@ namespace Controll.Hosting.Models
             Map(x => x.Label);
             Map(x => x.Name);
             Map(x => x.IsBoolean);
-            HasMany(x => x.PickerValues).Element("Value");
+            HasMany(x => x.PickerValues).Cascade.All();
         }
     }
 }

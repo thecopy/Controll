@@ -1,13 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Controll.Hosting.Hubs;
-using Controll.Hosting.Models;
-using Controll.Hosting.Repositories;
-using Controll.Hosting.Services;
-using Ninject;
 using Microsoft.AspNet.SignalR;
 using Microsoft.Owin.Hosting;
 using Owin;

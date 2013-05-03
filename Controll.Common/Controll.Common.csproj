@@ -49,12 +49,12 @@
     <Compile Include="IActivityDelegator.cs" />
     <Compile Include="IActivity.cs" />
     <Compile Include="IActivityContext.cs" />
-    <Compile Include="ParameterDescriptor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModels\ActivityViewModel.cs" />
     <Compile Include="ViewModels\ActivityCommandViewModel.cs" />
     <Compile Include="ViewModels\ParameterDescriptorViewModel.cs" />
+    <Compile Include="ViewModels\PickerValueViewModel.cs" />
     <Compile Include="ZombieState.cs" />
     <Compile Include="ViewModels\ZombieViewModel.cs" />
   </ItemGroup>

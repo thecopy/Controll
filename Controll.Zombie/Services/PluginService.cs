@@ -41,7 +41,7 @@ namespace Controll
         public IActivity GetActivityInstance(Guid activityKey)
         {
             var activityType = GetAllActivityTypes().SingleOrDefault(p =>
-                                   p.GetCustomAttribute<ActivityAttribute>().Key == activityKey);
+                                   ((IActivity)Activator.CreateInstance(p)).ViewModel.Key == activityKey);
 
             if (activityType == null)
                 throw new ArgumentException("There exists no activities with the specified key", "activityKey");
