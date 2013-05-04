@@ -26,9 +26,15 @@ namespace Controll.Hosting.Tests
                 mockedQueueItemRepostiory.Object,
                 mockedConnectionManager.Object);
 
+            var user = new ControllUser
+                {
+                    UserName = "username"
+                };
+
             var zombie = new Zombie
                 {
-                    Name = "zombiename"
+                    Name = "zombiename",
+                    Owner = user
                 };
             var activity = new Activity
                 {
@@ -43,7 +49,10 @@ namespace Controll.Hosting.Tests
                     It.Is<ActivityInvocationQueueItem>(
                         a =>
                             a.Activity.Name == "activityname" &&
-                                a.Reciever.Name == "zombiename" &&
+                                a.Reciever.GetType() == typeof(Zombie) &&
+                                ((Zombie)a.Reciever).Name == "zombiename" &&
+                                a.Sender.GetType() == typeof(ControllUser) &&
+                                ((ControllUser)a.Sender).UserName == "username" &&
                                 a.CommandName == commandName &&
                                 a.Parameters.Count == 0 &&
                                 a.Type == QueueItemType.ActivityInvocation
@@ -58,11 +67,14 @@ namespace Controll.Hosting.Tests
                     It.Is<ActivityInvocationQueueItem>(
                         a =>
                             a.Activity.Name == "activityname" &&
-                                a.Reciever.Name == "zombiename" &&
+                                a.Reciever.GetType() == typeof(Zombie) &&
+                                ((Zombie)a.Reciever).Name == "zombiename" &&
+                                a.Sender.GetType() == typeof(ControllUser) &&
+                                ((ControllUser)a.Sender).UserName == "username" &&
                                 a.CommandName == commandName &&
                                 a.Parameters.Count == 0 &&
                                 a.Type == QueueItemType.ActivityInvocation &&
-                                a.SenderConnectionId == "connectionId"
+                                a.Sender == user
                         )), Times.Once());
         }
 
@@ -83,7 +95,12 @@ namespace Controll.Hosting.Tests
             var queueItem = new Mock<QueueItem>();
             queueItem.SetupAllProperties();
             queueItem.SetupGet(x => x.Ticket).Returns(ticket);
-            queueItem.SetupGet(x => x.SenderConnectionId).Returns("Connid");
+            queueItem.SetupGet(x => x.Sender).Returns(() =>
+                {
+                    var controllUser = new ControllUser();
+                    controllUser.ConnectedClients.Add(new ControllClient { ConnectionId = "Connid" });
+                    return controllUser;
+                });
 
             // Setup the hubcontext and client objects
             mockedConnectionContext.Setup(x => x.Client(It.IsAny<String>())).Returns(new MockedClient());

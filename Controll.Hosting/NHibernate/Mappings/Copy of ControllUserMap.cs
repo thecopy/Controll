@@ -14,11 +14,11 @@ namespace Controll.Hosting.NHibernate.Mappings
     {
         public ControllUserMap()
         {
-            Map(x => x.Email).Unique();
-            Map(x => x.Password).Not.Nullable();
-            Map(x => x.UserName).Unique().Not.Nullable();
+            Map(x => x.EMail).Unique();
+            Map(x => x.Password);
+            Map(x => x.UserName).Unique();
 
-            HasMany(x => x.Zombies).Cascade.All();
+            HasMany(x => x.Zombies).Cascade.All().Not.LazyLoad();
         }
     }
 }

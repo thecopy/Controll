@@ -48,7 +48,6 @@ namespace Controll.Hosting.Hubs
             var client = new ControllClient
                 {
                     ConnectionId = Context.ConnectionId,
-                    DeviceType = DeviceType.Client
                 };
 
             user.ConnectedClients.Add(client);

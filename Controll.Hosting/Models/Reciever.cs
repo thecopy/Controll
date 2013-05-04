@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Controll.Common;
 
 namespace Controll.Hosting.Models
 {
-    public class ControllClient
+    class Reciever
     {
-        public virtual string ConnectionId { get; set; }
     }
 }

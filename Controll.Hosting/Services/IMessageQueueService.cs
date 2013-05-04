@@ -32,6 +32,6 @@ namespace Controll.Hosting.Services
 
         void ProcessUndeliveredMessagesForZombie(Zombie zombie);
         void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message);
-        void InsertActivityResult(Guid ticket, object result);
+        void InsertActivityResult(Guid ticket, ActivityCommand result);
     }
 }

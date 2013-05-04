@@ -29,25 +29,24 @@ namespace Controll.Hosting.Tests
                 {
                     UserName = "username",
                     Password = "password",
-                    Zombies = new List<Zombie>
-                        {
-                            new Zombie
-                                {
-                                    Name = "zombie",
-                                    Id = 1
-                                }
-                        }
+                    Zombies = new List<Zombie>()
                 };
+            user.Zombies.Add(
+                new Zombie
+                    {
+                        Name = "zombie",
+                        Id = 1
+                    });
 
             hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
 
-            hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectionId == hub.Context.ConnectionId))).Verifiable();
+            hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients[0].ConnectionId == hub.Context.ConnectionId))).Verifiable();
 
             bool result = hub.LogOn("username", "password", "zombie");
             Assert.IsTrue(result);
 
             // Verify that connection-id was set
-            hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectionId == hub.Context.ConnectionId)), Times.Once());
+            hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients[0].ConnectionId == hub.Context.ConnectionId)), Times.Once());
         }
 
         [TestMethod]
@@ -102,12 +101,12 @@ namespace Controll.Hosting.Tests
             var ticket = Guid.NewGuid();
 
             hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
-            hub.MockedMessageQueueService.Setup(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommandViewModel>(vm => vm.Label == "RESULT COMMAND"))).Verifiable();
+            hub.MockedMessageQueueService.Setup(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND"))).Verifiable();
 
             hub.LogOn("username", "password", "zombie");
             hub.ActivityResult(ticket, new ActivityCommandViewModel{Label = "RESULT COMMAND"});
 
-            hub.MockedMessageQueueService.Verify(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommandViewModel>(vm => vm.Label == "RESULT COMMAND")), Times.Once());
+            hub.MockedMessageQueueService.Verify(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND")), Times.Once());
         }
 
         [TestMethod]
@@ -162,8 +161,7 @@ namespace Controll.Hosting.Tests
                                 {
                                     Name = "zombie",
                                     Id = 1,
-                                    Activities = new List<Activity>(),
-                                    ConnectionId = hub.Context.ConnectionId
+                                    Activities = new List<Activity>()
                                 }
                         }
             };
@@ -227,8 +225,7 @@ namespace Controll.Hosting.Tests
                                                     Name = "TestActivity2",
                                                     Commands = new List<ActivityCommand>()
                                                 }
-                                        },
-                                    ConnectionId = hub.Context.ConnectionId
+                                        }
                                 }
                         }
             };
@@ -294,7 +291,7 @@ namespace Controll.Hosting.Tests
             Assert.IsFalse(hub.QueueItemDelivered(ticket)); // Spoofing zombie
 
             hub.Clients.Caller.ZombieName = "zombie"; // Correct Zombie
-            user.Zombies[0].ConnectionId = "another_connection_id"; // Wrong Connection-ID
+            user.Zombies[0].ConnectedClients[0].ConnectionId = "another_connection_id"; // Wrong Connection-ID
             Assert.IsFalse(hub.QueueItemDelivered(ticket)); // Wrong Connection-ID
         }
 
@@ -314,22 +311,22 @@ namespace Controll.Hosting.Tests
                             new Zombie
                                 {
                                     Name = "zombie",
-                                    Id = 1,
-                                    ConnectionId = hub.Context.ConnectionId // Fake Having Logged In
+                                    Id = 1
                                 }
                         }
                 };
+            user.Zombies[0].ConnectedClients.Add(new ControllClient { ConnectionId = hub.Context.ConnectionId}); // Have something to clean up
 
             hub.MockedUserRepository.Setup(x => x.GetByUserName(It.Is<string>(s => s == "username")))
                 .Returns(user)
                 .Verifiable();
-            hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectionId == null)))
+            hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients.Count == 0)))
                 .Verifiable();
 
             hub.OnDisconnect();
 
             hub.MockedUserRepository.Verify(x => x.GetByUserName(It.Is<string>(s => s == "username")), Times.Once());
-            hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectionId == null)), Times.Once());
+            hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients.Count == 0)), Times.Once());
         }
         
         [TestMethod]

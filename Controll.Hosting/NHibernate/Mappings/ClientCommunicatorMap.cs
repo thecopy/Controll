@@ -10,15 +10,15 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ControllUserMap : SubclassMap<ControllUser>
+    public class ClientCommunicatorMap : ClassMap<ClientCommunicator>
     {
-        public ControllUserMap()
+        public ClientCommunicatorMap()
         {
-            Map(x => x.Email).Unique();
-            Map(x => x.Password).Not.Nullable();
-            Map(x => x.UserName).Unique().Not.Nullable();
-
-            HasMany(x => x.Zombies).Cascade.All();
+            Id(x => x.Id);
+            HasMany(x => x.ConnectedClients)
+                .Component(c => { c.Map(x => x.ConnectionId); })
+                .KeyColumn("Id")
+                .Cascade.All(); // Save clients after communicator
         }
     }
 }

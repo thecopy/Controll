@@ -52,8 +52,7 @@ namespace Controll.Hosting.Hubs
 
             if (user == null
                 || user.UserName.ToLower() != claimedBelongingToUserName.ToLower()
-                || user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
-                null)
+                || !user.Zombies.Any(z => z.Name == claimedZombieName && z.ConnectedClients.Any(x => x.ConnectionId == Context.ConnectionId)))
             {
                 return false;
             }
@@ -75,7 +74,7 @@ namespace Controll.Hosting.Hubs
             if (zombie == null)
                 return false;
 
-            zombie.ConnectionId = Context.ConnectionId;
+            zombie.ConnectedClients.Add(new ControllClient {ConnectionId = Context.ConnectionId});
 
             using (var transaction = Session.BeginTransaction())
             {
@@ -118,7 +117,6 @@ namespace Controll.Hosting.Hubs
 
             var zombie = new Zombie
                 {
-                    ConnectionId = Context.ConnectionId,
                     Name = zombieName,
                     Activities = new List<Activity>()
                 };
@@ -178,16 +176,17 @@ namespace Controll.Hosting.Hubs
             using (var transaction = Session.BeginTransaction())
             {
                 _activityService.InsertActivityLogMessage(ticket, type, message);
+                _messageQueueService.InsertActivityMessage(ticket, type, message);
+
                 transaction.Commit();
             }
             
-            _messageQueueService.InsertActivityMessage(ticket, type, message);
         }
 
-        public void ActivityResult(Guid ticket, object result)
+        public void ActivityResult(Guid ticket, ActivityCommandViewModel result)
         {
             Console.WriteLine("Activity result recieved.");
-            _messageQueueService.InsertActivityResult(ticket, result);
+            _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
         }
 
         public Task OnDisconnect()
@@ -195,7 +194,7 @@ namespace Controll.Hosting.Hubs
             var state = GetZombieState();
 
             var user = _controllUserRepository.GetByUserName(state.UserName);
-            var zombie = user.Zombies.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
+            var zombie = user.Zombies.SingleOrDefault(z => z.ConnectedClients.Any(c => c.ConnectionId == Context.ConnectionId));
 
             Console.Write("Zombie ");
 
@@ -203,7 +202,8 @@ namespace Controll.Hosting.Hubs
             {
                 using (var transaction = Session.BeginTransaction())
                 {
-                    zombie.ConnectionId = null;
+                    var client = zombie.ConnectedClients.Single(c => c.ConnectionId == Context.ConnectionId);
+                    zombie.ConnectedClients.Remove(client);
                     _controllUserRepository.Update(user);
 
                     transaction.Commit();

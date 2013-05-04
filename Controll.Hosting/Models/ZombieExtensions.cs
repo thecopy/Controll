@@ -10,7 +10,7 @@ namespace Controll.Hosting.Models
     {
         public static bool IsOnline(this Zombie zombie)
         {
-            return !string.IsNullOrEmpty(zombie.ConnectionId);
+            return zombie.ConnectedClients != null && zombie.ConnectedClients.Any(x => x.ConnectionId != null);
         }
 
         public static Activity GetActivity(this Zombie zombie, Guid key)

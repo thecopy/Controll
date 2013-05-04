@@ -31,7 +31,7 @@ namespace Controll.Hosting.Services
             var user = new ControllUser
                 {
                     UserName = userName,
-                    EMail = email,
+                    Email = email,
                     Password = password
                 };
 

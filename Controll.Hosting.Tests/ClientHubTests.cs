@@ -55,7 +55,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToAuthenticate()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>() };
+            var user = new ControllUser() { UserName = "Erik", Password = "password" };
 
             userRepository.Add(user);
 
@@ -73,7 +73,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToDetectUserNameSpoof()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>() };
+            var user = new ControllUser() { UserName = "Erik", Password = "password"};
 
             userRepository.Add(user);
 
@@ -98,7 +98,6 @@ namespace Controll.Hosting.Tests
                 {
                     UserName = "Erik",
                     Password = "password",
-                    ConnectedClients = new List<ControllClient>(),
                     Zombies = new List<Zombie>
                         {
                             new Zombie {Activities = activities, Name = "zombie"}
@@ -126,7 +125,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToAddClientWhenLoggingInAndRemoveClientFromUserWhenDisconnecting()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>()};
+            var user = new ControllUser() { UserName = "Erik", Password = "password" };
 
             userRepository.Add(user);
 
@@ -155,7 +154,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToRegisterUser()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password", ConnectedClients = new List<ControllClient>() };
+            var user = new ControllUser() { UserName = "Erik", Password = "password", };
 
             userRepository.Add(user);
 
@@ -165,7 +164,7 @@ namespace Controll.Hosting.Tests
             var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
             hub.MembershipService.Setup(s => s.AddUser(It.Is<string>(u => u == "username"), It.Is<string>(p => p == "password"), It.Is<string>(e => e == "email")))
                 .Returns(user)
-                .Callback(() => userRepository.Add(new ControllUser{UserName = "username", Password = "password", EMail = "email"}));
+                .Callback(() => userRepository.Add(new ControllUser{UserName = "username", Password = "password", Email = "email"}));
 
             hub.Clients.Caller.UserName = "username";
             var result = hub.RegisterUser("username", "password", "email");
@@ -176,14 +175,14 @@ namespace Controll.Hosting.Tests
 
             Assert.AreEqual("username", userFromRepo.UserName);
             Assert.AreEqual("password", userFromRepo.Password);
-            Assert.AreEqual("email", userFromRepo.EMail);
+            Assert.AreEqual("email", userFromRepo.Email);
         }
 
         [TestMethod]
         public void ShouldNotBeAbleToRegisterUser()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password", EMail = "mail", ConnectedClients = new List<ControllClient>() };
+            var user = new ControllUser() { UserName = "Erik", Password = "password", Email = "mail" };
 
             userRepository.Add(user);
 
@@ -208,9 +207,14 @@ namespace Controll.Hosting.Tests
             {
                 UserName = "Erik",
                 Password = "password",
-                EMail = "mail",
-                ConnectedClients = new List<ControllClient>(),
-                Zombies = new List<Zombie> { new Zombie { Name = "zombie", ConnectionId = "connection-id" } }
+                Email = "mail",
+                Zombies = new List<Zombie>
+                    {
+                        new Zombie
+                            {
+                                Name = "zombie"
+                            }
+                    }
             };
 
             userRepository.Add(user);
@@ -240,9 +244,14 @@ namespace Controll.Hosting.Tests
                 {
                     UserName = "Erik",
                     Password = "password",
-                    EMail = "mail",
-                    ConnectedClients = new List<ControllClient>(),
-                    Zombies = new List<Zombie> {new Zombie {Name = "zombie", ConnectionId = "connection-id"}}
+                    Email = "mail",
+                    Zombies = new List<Zombie>
+                    {
+                        new Zombie
+                            {
+                                Name = "zombie"
+                            }
+                    }
                 };
 
             userRepository.Add(user);
@@ -256,10 +265,18 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
              hub.LogOn("password");
 
+
+             user.Zombies[0].ConnectedClients.Add(new ControllClient{ ConnectionId = "conn"});
+
             var result = hub.IsZombieOnline("zombie");
             Assert.IsTrue(result);
 
-            user.Zombies[0].ConnectionId = null;
+            user.Zombies[0].ConnectedClients[0].ConnectionId = null;
+            result = hub.IsZombieOnline("zombie");
+
+            Assert.IsFalse(result);
+
+            user.Zombies[0].ConnectedClients.Clear();
             result = hub.IsZombieOnline("zombie");
 
             Assert.IsFalse(result);
@@ -274,8 +291,7 @@ namespace Controll.Hosting.Tests
             {
                 UserName = "Erik",
                 Password = "password",
-                EMail = "mail",
-                ConnectedClients = new List<ControllClient>(),
+                Email = "mail",
                 Zombies = new List<Zombie>()
             };
 
@@ -302,8 +318,7 @@ namespace Controll.Hosting.Tests
             {
                 UserName = "Erik",
                 Password = "password",
-                EMail = "mail",
-                ConnectedClients = new List<ControllClient>(),
+                Email = "mail",
                 Zombies = zombieList
             };
 
@@ -332,8 +347,7 @@ namespace Controll.Hosting.Tests
             {
                 UserName = "Erik",
                 Password = "password",
-                EMail = "mail",
-                ConnectedClients = new List<ControllClient>(),
+                Email = "mail",
                 Zombies = TestingHelper.GetListOfZombies().Take(1).ToList()
             };
 
@@ -372,12 +386,10 @@ namespace Controll.Hosting.Tests
                 {
                     UserName = "Erik",
                     Password = "password",
-                    ConnectedClients = new List<ControllClient>(),
                     Zombies = new List<Zombie>
                         {
                             new Zombie
                                 {
-                                    ConnectionId = "zombie-conn-id",
                                     Name = "zombiename",
                                     Activities = new List<Activity>
                                         {
@@ -435,8 +447,7 @@ namespace Controll.Hosting.Tests
             var user = new ControllUser
             {
                 UserName = "Erik",
-                Password = "pass123",
-                ConnectedClients = new List<ControllClient>()
+                Password = "pass123"
             };
 
             var repo = new InMemoryControllUserRepository();

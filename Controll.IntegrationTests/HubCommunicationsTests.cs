@@ -37,7 +37,7 @@ namespace Controll.IntegrationTests
                     {
                         userRepo.Add(new ControllUser
                             {
-                                EMail = "email",
+                                Email = "email",
                                 Password = "password",
                                 UserName = "username"
                             });
@@ -49,7 +49,8 @@ namespace Controll.IntegrationTests
                     {
                         user.Zombies.Add(new Zombie
                             {
-                                Name = "zombieName"
+                                Name = "zombieName",
+                                Owner = user
                             });
                     }
 
@@ -68,7 +69,7 @@ namespace Controll.IntegrationTests
         }
 
         private const string LocalHostUrl = "http://erik-ws:10244"; // Change this to your preffered hostname (or localhost but machine name works with Fiddler)
-        [TestMethod]
+        //[TestMethod]
         public void ShouldBeAbleToLoginAsClient()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
@@ -87,7 +88,7 @@ namespace Controll.IntegrationTests
             }
         }
 
-        [TestMethod]
+       // [TestMethod]
         public void ShouldBeAbleToLoginAsZombie()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
@@ -149,6 +150,8 @@ namespace Controll.IntegrationTests
             }
         }
 
+        // This is a monster test. It tests: Logging in for both zombie and client,
+        // sending and recieving activity messages, invocations and results
         [TestMethod]
         public void ShouldBeAbleToActivateActivity()
         {
@@ -162,6 +165,8 @@ namespace Controll.IntegrationTests
                 client.Connect();
 
                 zombie.LogOn("username", "password", "zombieName");
+                Thread.Sleep(4000); // Let NHibernate init
+
                 client.LogOn("username", "password");
 
                 var activatedEvent = new ManualResetEvent(false);
@@ -193,7 +198,41 @@ namespace Controll.IntegrationTests
                         LastUpdated = DateTime.Now,
                         Name = "Mocked Activity",
                         Version = new Version(1, 2, 3, 4),
-                        Commands = new List<ActivityCommandViewModel>()
+                        Commands = new List<ActivityCommandViewModel>
+                            {
+                                new ActivityCommandViewModel
+                                    {
+                                        Label = "command-label",
+                                        Name = "command-name",
+                                        ParameterDescriptors = new List<ParameterDescriptorViewModel>
+                                            {
+                                                new ParameterDescriptorViewModel
+                                                    {
+                                                        Description = "pd-description",
+                                                        IsBoolean = true,
+                                                        Label = "pd-label",
+                                                        Name = "pd-name",
+                                                        PickerValues = new List<PickerValueViewModel>
+                                                            {
+                                                                new PickerValueViewModel
+                                                                    {
+                                                                        CommandName = "pv-commandname",
+                                                                        Description = "pv-description",
+                                                                        Identifier = "pv-id",
+                                                                        IsCommand = true,
+                                                                        Label = "pv-label",
+                                                                        Parameters = new Dictionary<string, string>
+                                                                            {
+                                                                                {"param1", "value1"}
+                                                                            }
+                                                                    }
+                                                            }
+
+                                                        
+                                                    }
+                                            }
+                                    }
+                            }
                     };
                 zombie.Synchronize(new List<ActivityViewModel>()
                     {
@@ -207,7 +246,6 @@ namespace Controll.IntegrationTests
                                                    sentCommandName);
 
                 Assert.AreNotEqual(Guid.Empty, ticket, "Returned activity invocation ticked was empty");
-
                 Assert.IsTrue(activatedEvent.WaitOne(6000), "Zombie did not recieve activity invocation order");
 
                 Assert.AreEqual(ticket, activityTicket);
@@ -247,7 +285,7 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(activityTicket, activityMessageEventTicket);
 
                 activityMessageEvent.Reset();
-                zombie.ActivityResult(activityTicket, mockedActivity);
+                zombie.ActivityResult(activityTicket, mockedActivity.Commands.First());
                 zombie.ActivityCompleted(activityTicket, "result");
 
                 Assert.IsTrue(activityMessageEvent.WaitOne(6000), "Client did not recieve activity finished message");
@@ -258,13 +296,35 @@ namespace Controll.IntegrationTests
                 Assert.IsNotNull(recievedObject);
                 Assert.AreEqual(ticket, activityResultTicket);
 
-                var converted = JsonConvert.DeserializeObject<ActivityViewModel>(recievedObject.ToString());
-                Assert.AreEqual(mockedActivity.CreatorName, converted.CreatorName);
-                Assert.AreEqual(mockedActivity.Name, converted.Name);
-                Assert.AreEqual(mockedActivity.Description, converted.Description);
-                Assert.AreEqual(mockedActivity.LastUpdated, converted.LastUpdated);
-                Assert.AreEqual(mockedActivity.Version, converted.Version);
+                var converted = JsonConvert.DeserializeObject<ActivityCommandViewModel>(recievedObject.ToString());
+                var convertedPD = converted.ParameterDescriptors.First();
+                var convertedPV = convertedPD.PickerValues.First();
+                var convertedParam = convertedPV.Parameters.ElementAt(0);
 
+                var mockedCommand = mockedActivity.Commands.First();
+                var mockedPD = mockedCommand.ParameterDescriptors.First();
+                var mockedPV = mockedPD.PickerValues.First();
+                var mockedParam = mockedPV.Parameters.ElementAt(0);
+
+                Assert.AreEqual(mockedCommand.Name, converted.Name);
+                Assert.AreEqual(mockedCommand.Label, converted.Label);
+                Assert.AreEqual(converted.ParameterDescriptors.Count(), 1);
+
+                Assert.AreEqual(mockedPD.Name, convertedPD.Name);
+                Assert.AreEqual(mockedPD.Description, convertedPD.Description);
+                Assert.AreEqual(mockedPD.Label, convertedPD.Label);
+                Assert.AreEqual(mockedPD.IsBoolean, convertedPD.IsBoolean);
+                Assert.AreEqual(mockedPD.PickerValues.Count(), convertedPD.PickerValues.Count());
+
+                Assert.AreEqual(mockedPV.CommandName, convertedPV.CommandName);
+                Assert.AreEqual(mockedPV.Identifier, convertedPV.Identifier);
+                Assert.AreEqual(mockedPV.Description, convertedPV.Description);
+                Assert.AreEqual(mockedPV.Label, convertedPV.Label);
+                Assert.AreEqual(mockedPV.IsCommand, convertedPV.IsCommand);
+                Assert.AreEqual(mockedPV.Parameters.Count, convertedPV.Parameters.Count);
+
+                Assert.AreEqual(mockedParam.Key, convertedParam.Key);
+                Assert.AreEqual(mockedParam.Value, convertedParam.Value);
                 #endregion
 
                 client.HubConnection.Disconnect();

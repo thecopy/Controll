@@ -17,7 +17,7 @@ namespace Controll.Hosting.Tests
     public class NinjectTests
     {
         [TestMethod]
-        public void ShouldBeAbleToResolveZombieHub()
+        public void ShouldBeAbleToResolveHubs()
         {
             Bootstrapper.StrapTheBoot();
             Bootstrapper.Kernel.Rebind<ISession>()
@@ -25,23 +25,11 @@ namespace Controll.Hosting.Tests
                   .InThreadScope();
 
             IDependencyResolver ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
-            
+
             var zombieHub = ninjectDependencyResolver.Resolve<ZombieHub>();
+            var clientHub = ninjectDependencyResolver.Resolve<ClientHub>();
             Assert.IsNotNull(zombieHub);
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToResolveClientHub()
-        {
-            Bootstrapper.StrapTheBoot();
-            Bootstrapper.Kernel.Rebind<ISession>()
-                  .ToMethod(context => NHibernateHelper.GetSessionFactoryForTesting().OpenSession())
-                  .InThreadScope();
-
-            IDependencyResolver ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
-
-            var zombieHub = ninjectDependencyResolver.Resolve<ClientHub>();
-            Assert.IsNotNull(zombieHub);
+            Assert.IsNotNull(clientHub);
         }
     }
 }

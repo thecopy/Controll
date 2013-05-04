@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Controll.Common;
@@ -17,13 +18,47 @@ namespace Controll.Hosting.Tests
     [TestClass]
     public class PersistanceTests : TestBase
     {
+        public class PersistenceSpecificationEqualityComparer : IEqualityComparer
+        {
+            private readonly Dictionary<Type, Delegate> _comparers = new Dictionary<Type, Delegate>();
+
+            public void RegisterComparer<T>(Func<T, object> comparer)
+            {
+                _comparers.Add(typeof(T), comparer);
+            }
+
+            public bool Equals(object x, object y)
+            {
+                if (x == null || y == null)
+                {
+                    return false;
+                }
+                var xType = x.GetType();
+                var yType = y.GetType();
+                // check subclass to handle proxies
+                if (_comparers.ContainsKey(xType) && (xType == yType || yType.IsSubclassOf(xType)))
+                {
+                    var comparer = _comparers[xType];
+                    var xValue = comparer.DynamicInvoke(new[] { x });
+                    var yValue = comparer.DynamicInvoke(new[] { y });
+                    return xValue.Equals(yValue);
+                }
+                return x.Equals(y);
+            }
+
+            public int GetHashCode(object obj)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         [TestMethod]
         public void ShouldBeAbleToAddAndPersistControllUser()
         {
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
                 new PersistenceSpecification<ControllUser>(session)
-                    .CheckProperty(x => x.EMail, "email")
+                    .CheckProperty(x => x.Email, "email")
                     .CheckProperty(x => x.Password, "password")
                     .CheckProperty(x => x.UserName, "username")
                     .VerifyTheMappings();
@@ -35,7 +70,22 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var zombie = new Zombie {ConnectionId = "conn", Id = 123, Name = "name"};
+                var user = new ControllUser
+                    {
+                        UserName = "username",
+                        Password = "password",
+                        Email = "email"
+                    };
+                var zombie = new Zombie
+                    {
+                        Id = 123, 
+                        Name = "name",
+                        Owner = user
+                    };
+                zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+
+                var userRepo = new ControllUserRepository(session);
+                userRepo.Add(user);
                 var repo = new GenericRepository<Zombie>(session);
                 repo.Add(zombie);
 
@@ -45,7 +95,7 @@ namespace Controll.Hosting.Tests
                 Assert.AreNotSame(zombie,gotten);
                 Assert.AreEqual(zombie.Name, gotten.Name);
                 Assert.AreEqual(zombie.Id, gotten.Id);
-                Assert.AreEqual(zombie.ConnectionId, gotten.ConnectionId);
+                Assert.IsTrue(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
             }
         }
 
@@ -55,8 +105,13 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var zombie = new Zombie { ConnectionId = "conn", Id = 123, Name = "name" };
-                var user = new ControllUser {UserName = "user", EMail = "mail", Password = "password", Zombies = new List<Zombie>()};
+                var zombie = new Zombie
+                {
+                    Id = 123,
+                    Name = "name"
+                };
+                zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                var user = new ControllUser {UserName = "user", Email = "mail", Password = "password", Zombies = new List<Zombie>()};
 
                 var userRepo = new GenericRepository<ControllUser>(session);
                 userRepo.Add(user);
@@ -72,7 +127,7 @@ namespace Controll.Hosting.Tests
 
                 Assert.AreEqual(zombie.Name, gotten.Zombies[0].Name);
                 Assert.AreEqual(zombie.Id, gotten.Zombies[0].Id);
-                Assert.AreEqual(zombie.ConnectionId, gotten.Zombies[0].ConnectionId);
+                Assert.IsTrue(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
             }
         }
 
@@ -147,19 +202,32 @@ namespace Controll.Hosting.Tests
             {
                 var activities = TestingHelper.GetListOfZombies(1)[0].Activities;
                 var activitiesCopy = TestingHelper.GetListOfZombies(1)[0].Activities;
-                var zombie = new Zombie
-                    {
-                        ConnectionId = "conn",
-                        Id = 123,
-                        Name = "name"
-                    };
-                var zombieCopy = new Zombie
+
+                var user = new ControllUser
                 {
-                    ConnectionId = "conn",
+                    UserName = "username",
+                    Password = "password",
+                    Email = "email"
+                };
+                var zombie = new Zombie
+                {
                     Id = 123,
                     Name = "name",
+                    Owner = user
+                };
+
+                var zombieCopy = new Zombie
+                {
+                    Id = 123,
+                    Name = "name",
+                    Owner = user,
                     Activities = activitiesCopy
                 };
+                zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                zombieCopy.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                
+                var userRepo = new ControllUserRepository(session);
+                userRepo.Add(user);
 
                 var zombieRepo = new GenericRepository<Zombie>(session);
                 var activityRepo = new GenericRepository<Activity>(session);
@@ -252,15 +320,56 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                new PersistenceSpecification<PingQueueItem>(session)
+                var user = new ControllUser {UserName = "username", Email = "email", Password = "password"};
+
+                var repo = new ControllUserRepository(session);
+                repo.Add(user);
+
+                var comparer = new PersistenceSpecificationEqualityComparer();
+                comparer.RegisterComparer((ControllUser x) => x.Id);
+                comparer.RegisterComparer((ClientCommunicator x) => x.Id);
+                
+                new PersistenceSpecification<PingQueueItem>(session, comparer)
                     .CheckProperty(x => x.Delivered, DateTime.Parse("2004-03-11 13:22:11"))
                     .CheckProperty(x => x.RecievedAtCloud, DateTime.Parse("2004-03-11 13:22:11"))
-                    .CheckProperty(x => x.TimeOut, 20)
-                    .CheckProperty(x => x.SenderConnectionId, "connection-id")
+                    .CheckReference(x => x.Sender, user)
+                    .CheckReference(x => x.Reciever, user)
                     .VerifyTheMappings();
             }
         }
 
+        [TestMethod]
+        public void ShouldBeAbleToAddAndPersistActivityInvocationQueueItem()
+        {
+            using (var session = SessionFactory.OpenSession())
+            using (session.BeginTransaction())
+            {
+                var user = new ControllUser { UserName = "username", Email = "email", Password = "password" };
+                var activity = new Activity {Name = "mocked", Description = "desc", LastUpdated = DateTime.Parse("2004-03-11 13:22:11")};
+
+                var activityRepo = new GenericRepository<Activity>(session);
+                var userRepo = new ControllUserRepository(session);
+                
+                userRepo.Add(user);
+                activityRepo.Add(activity);
+                
+                var comparer = new PersistenceSpecificationEqualityComparer();
+                comparer.RegisterComparer((ControllUser x) => x.Id);
+                comparer.RegisterComparer((ClientCommunicator x) => x.Id);
+                comparer.RegisterComparer((Activity x) => x.Id);
+
+                new PersistenceSpecification<ActivityInvocationQueueItem>(session, comparer)
+                    .CheckProperty(x => x.Delivered, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckProperty(x => x.RecievedAtCloud, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckReference(x => x.Sender, user)
+                    .CheckReference(x => x.Reciever, user)
+                    .CheckReference(x => x.Activity, activity)
+                    .CheckProperty(x => x.CommandName, "commandName")
+                     // How to test dictionary persistence?
+                    .VerifyTheMappings();
+            }
+        }
+        
         [TestMethod]
         public void ShouldBeAbleToAddAndPersistCommand()
         {
@@ -307,7 +416,7 @@ namespace Controll.Hosting.Tests
 
                 var user = new ControllUser()
                     {
-                        EMail = "emailToRemove",
+                        Email = "emailToRemove",
                         Password = "password",
                         UserName = "userToRemove"
                     };
@@ -331,19 +440,19 @@ namespace Controll.Hosting.Tests
                 var repo = new GenericRepository<ControllUser>(session);
                 var user = new ControllUser()
                     {
-                        EMail = "email",
+                        Email = "email",
                         Password = "password",
                         UserName = "username"
                     };
 
                 repo.Add(user);
 
-                user.EMail = "hehe";
+                user.Email = "hehe";
                 repo.Update(user);
 
                 var user2 = repo.Get(user.Id);
 
-                Assert.AreEqual(user2.EMail, "hehe");
+                Assert.AreEqual(user2.Email, "hehe");
             }
         }
     }

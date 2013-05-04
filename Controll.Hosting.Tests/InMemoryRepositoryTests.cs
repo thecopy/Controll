@@ -45,7 +45,7 @@ namespace Controll.Hosting.Tests
         {
             var repo = new InMemoryControllUserRepository();
 
-            var user = new ControllUser() { UserName = "name", EMail = "mail", Id = 222 };
+            var user = new ControllUser() { UserName = "name", Email = "mail", Id = 222 };
             repo.Add(user);
 
             var fetched = repo.GetByUserName("name");
@@ -53,7 +53,7 @@ namespace Controll.Hosting.Tests
             Assert.IsNotNull(fetched);
             Assert.AreEqual(user.UserName, fetched.UserName);
             Assert.AreEqual(user.Id, fetched.Id);
-            Assert.AreEqual(user.EMail, fetched.EMail);
+            Assert.AreEqual(user.Email, fetched.Email);
         }
 
         [TestMethod]
@@ -61,7 +61,7 @@ namespace Controll.Hosting.Tests
         {
             var repo = new InMemoryControllUserRepository();
 
-            var user = new ControllUser() { UserName = "name", EMail = "mail", Id = 222 };
+            var user = new ControllUser() { UserName = "name", Email = "mail", Id = 222 };
             repo.Add(user);
 
             var fetched = repo.GetByEMail("mail");
@@ -69,7 +69,7 @@ namespace Controll.Hosting.Tests
             Assert.IsNotNull(fetched);
             Assert.AreEqual(user.UserName, fetched.UserName);
             Assert.AreEqual(user.Id, fetched.Id);
-            Assert.AreEqual(user.EMail, fetched.EMail);
+            Assert.AreEqual(user.Email, fetched.Email);
         }
 
         [TestMethod]
@@ -80,10 +80,10 @@ namespace Controll.Hosting.Tests
             var user = new ControllUser
                 {
                     UserName = "name",
-                    EMail = "mail",
+                    Email = "mail",
                     Id = 222,
-                    ConnectedClients = new List<ControllClient> { new ControllClient { ConnectionId = "conn", DeviceType = DeviceType.PC} }
                 };
+            user.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
             repo.Add(user);
 
             var fetched = repo.GetByConnectionId("conn");
@@ -91,7 +91,7 @@ namespace Controll.Hosting.Tests
             Assert.IsNotNull(fetched);
             Assert.AreEqual(user.UserName, fetched.UserName);
             Assert.AreEqual(user.Id, fetched.Id);
-            Assert.AreEqual(user.EMail, fetched.EMail);
+            Assert.AreEqual(user.Email, fetched.Email);
         }
     }
 }

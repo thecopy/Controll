@@ -31,29 +31,37 @@ namespace Controll.Hosting.NHibernate
             if (mockedConnectionString == null)
                 throw new ConfigurationErrorsException("No ConnectionString named \"" + connectionStringAlias + "\"");
 
-            Configuration config = Fluently.Configure()
-                                           .Database(
-                                               MsSqlConfiguration.MsSql2008.ConnectionString(
-                                                   mockedConnectionString.ConnectionString))
-                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>()
-                                               .Conventions.Setup(x => x.Add(AutoImport.Never())))
-                                               .ExposeConfiguration(TreatConfiguration)
-                                           .BuildConfiguration();
+            var schemaExportPath = Path.Combine(System.Environment.CurrentDirectory, "Mappings");
+            if (!Directory.Exists(schemaExportPath))
+                Directory.CreateDirectory(schemaExportPath);
+            
+            Configuration config = Fluently
+                .Configure()
+                .Database(MsSqlConfiguration.MsSql2008.ConnectionString(mockedConnectionString.ConnectionString))
+                .Mappings(m => m
+                    .FluentMappings.AddFromAssemblyOf<ControllUser>()
+                    .Conventions.Setup(x => x.Add(AutoImport.Never()))
+                    //.ExportTo(schemaExportPath)
+                    )
+                .ExposeConfiguration(TreatConfiguration)
+                .BuildConfiguration();
 
-            //{
-            //    var export = new SchemaExport(config);
-            //    export.Drop(true, true);
-            //    export.Create(true, true);
-
-            //    new SchemaValidator(config).Validate();
-            //}
             return config.BuildSessionFactory();
         }
 
         protected static void TreatConfiguration(Configuration configuration)
         {
-            var update = new SchemaUpdate(configuration);
-            update.Execute(false, true);
+            if (true)
+            {
+                var update = new SchemaUpdate(configuration);
+                update.Execute(false, true);
+            }
+            else
+            {
+                var export = new SchemaExport(configuration);
+                export.Drop(true, true);
+                export.Create(true, true);
+            }
         }
 
 

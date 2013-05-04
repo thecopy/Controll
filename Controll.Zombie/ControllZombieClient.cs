@@ -116,7 +116,7 @@ namespace Controll
 
         public void ActivityStarted(Guid ticket)
         {
-            _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Started, "Started yes indeed").Wait();
+            _hubProxy.Invoke("ActivityMessage", ticket, ActivityMessageType.Started, "").Wait();
         }
         #endregion
 

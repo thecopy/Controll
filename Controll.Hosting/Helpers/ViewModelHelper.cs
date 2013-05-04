@@ -96,27 +96,33 @@ namespace Controll.Hosting.Helpers
                     CreatorName = activityViewModel.CreatorName,
                     Description = activityViewModel.Description,
                     Version = activityViewModel.Version,
-                    Commands = activityViewModel.Commands.Select(c => new ActivityCommand
+                    Commands = activityViewModel.Commands.Select(c => c.CreateConcreteClass()).ToList()
+                };
+        }
+
+        public static ActivityCommand CreateConcreteClass(this ActivityCommandViewModel activityViewModel)
+        {
+            return new ActivityCommand
+                {
+                    Label = activityViewModel.Label,
+                    Name = activityViewModel.Name,
+                    ParameterDescriptors = activityViewModel.ParameterDescriptors.Select(p => new ParameterDescriptor
                         {
-                            Label = c.Label,
-                            Name = c.Name,
-                            ParameterDescriptors = c.ParameterDescriptors.Select(p => new ParameterDescriptor
-                                {
-                                    Description = p.Description,
-                                    Label = p.Label,
-                                    Name = p.Name,
-                                    IsBoolean = p.IsBoolean,
-                                    PickerValues = p.PickerValues == null
-                                                       ? new List<PickerValue>()
-                                                       : p.PickerValues.Select(pvvm => new PickerValue
-                                                           {
-                                                               IsCommand = pvvm.IsCommand,
-                                                               Label = pvvm.Label,
-                                                               Description = pvvm.Description,
-                                                               CommandName = pvvm.CommandName,
-                                                               Parameters = pvvm.Parameters
-                                                           }).ToList()
-                                }).ToList()
+                            Description = p.Description,
+                            Label = p.Label,
+                            Name = p.Name,
+                            IsBoolean = p.IsBoolean,
+                            PickerValues = p.PickerValues == null
+                                               ? new List<PickerValue>()
+                                               : p.PickerValues.Select(pvvm => new PickerValue
+                                                   {
+                                                       IsCommand = pvvm.IsCommand,
+                                                       Label = pvvm.Label,
+                                                       Description = pvvm.Description,
+                                                       CommandName = pvvm.CommandName,
+                                                       Identifier = pvvm.Identifier,
+                                                       Parameters = pvvm.Parameters
+                                                   }).ToList()
                         }).ToList()
                 };
         }

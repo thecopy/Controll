@@ -85,6 +85,29 @@ namespace Controll.Hosting.Tests
         }
 
         [TestMethod]
+        public void ShouldBeAbleToCreateConcreteFromViewModel()
+        {
+            var parameters =
+                   Builder<ParameterDescriptor>.CreateListOfSize(5)
+                                               .All()
+                                               .Do(p => p.PickerValues = Builder<PickerValue>.CreateListOfSize(2).Build())
+                                               .Build();
+
+            var commands =
+                Builder<ActivityCommand>.CreateListOfSize(5)
+                                        .All()
+                                        .Do(c => c.ParameterDescriptors = parameters.ToList())
+                                        .Build();
+            
+            var activity = Builder<Activity>.CreateNew().Do(a => a.Commands = commands.ToList()).Build();
+
+            var activityVm = activity.CreateViewModel();
+            var activityConcreteFromVm = activityVm.CreateConcreteClass();
+
+            Assert.IsTrue(TestingHelper.ActivityViewModelComparer(activityConcreteFromVm, activityVm));
+        }
+
+        [TestMethod]
         public void ShouldSetKeyOnActivityAttribute()
         {
             var key = Guid.NewGuid();

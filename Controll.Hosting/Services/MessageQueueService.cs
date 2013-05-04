@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 using Controll.Common;
+using Controll.Common.ViewModels;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
@@ -42,7 +46,7 @@ namespace Controll.Hosting.Services
                     Reciever = zombie,
                     Parameters = parameters,
                     CommandName = commandName,
-                    SenderConnectionId = connectionId,
+                    Sender = zombie.Owner,
                     RecievedAtCloud = DateTime.UtcNow
                 };
 
@@ -66,7 +70,9 @@ namespace Controll.Hosting.Services
             // Do not add the delivered queue item into the queue. This should only be sent to the original sender
             // of the message which has been marked as delivered. And if he is not online we dont care.
             // The message will be marked as delivered in the log here on server side anyway.
-            SendDeliveryAcknowledgement(ticket, queueItem.SenderConnectionId);
+
+            foreach (var connectionId in queueItem.Sender.ConnectedClients.Select(x => x.ConnectionId))
+                SendDeliveryAcknowledgement(ticket, connectionId);
         }
 
         public Guid InsertPingMessage(Zombie zombie, string senderConnectionId)
@@ -74,7 +80,7 @@ namespace Controll.Hosting.Services
             var queueItem = new PingQueueItem
             {
                 Reciever = zombie,
-                SenderConnectionId = senderConnectionId,
+                Sender = zombie.Owner,
                 RecievedAtCloud = DateTime.UtcNow
             };
 
@@ -98,19 +104,30 @@ namespace Controll.Hosting.Services
         {
             var queueItem = _queueItemRepository.Get(ticket);
 
-            SendActivityMessage(queueItem.SenderConnectionId, ticket, type, message);
+            // We want to send this to the sender aka the invocator
+            foreach (var connectionId in queueItem.Sender.ConnectedClients.Select(x => x.ConnectionId))
+                SendActivityMessage(connectionId, ticket, type, message);
         }
 
-        public void InsertActivityResult(Guid ticket, object result)
+        public void InsertActivityResult(Guid ticket, ActivityCommand intermidiateCommand)
         {
             var queueItem = _queueItemRepository.Get(ticket);
 
-            SendActivityResult(queueItem.SenderConnectionId, ticket, result);
+            var activityResultQueueItem = new ActivityResultQueueItem
+                {
+                    ActivityCommand = intermidiateCommand,
+                    RecievedAtCloud = DateTime.Now,
+                    Reciever = queueItem.Sender,
+                    Sender = queueItem.Reciever,
+                    InvocationTicket = ticket
+                };
+            
+            ProcessQueueItem(activityResultQueueItem);
         }
 
         private void ProcessQueueItem(QueueItem queueItem)
         {
-            if (string.IsNullOrEmpty(queueItem.Reciever.ConnectionId))
+            if (!queueItem.Reciever.ConnectedClients.Any())
                 return;
 
             var type = queueItem.Type;
@@ -122,9 +139,11 @@ namespace Controll.Hosting.Services
                 case QueueItemType.Ping:
                     SendPing((PingQueueItem) queueItem);
                     break;
-                default:
-                    Console.WriteLine("FATAL ERROR IN DELIVERY QUEUE: Unkown queue item type: " + queueItem.Type);
+                case QueueItemType.ActivityResult:
+                    SendActivityResult((ActivityResultQueueItem) queueItem);
                     break;
+                default:
+                    throw new InvalidOperationException("Unkown queue item type: " + queueItem.Type);
             }
         }
 
@@ -134,10 +153,11 @@ namespace Controll.Hosting.Services
                       .ActivityMessage(ticket, type, message);
         }
 
-        private void SendActivityResult(string connectionId, Guid ticket, object result)
+        private void SendActivityResult(ActivityResultQueueItem queueItem)
         {
-            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
-                      .ActivityResult(ticket, result);
+            foreach (var connectionId in queueItem.Reciever.ConnectedClients.Select(x => x.ConnectionId))
+                _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+                          .ActivityResult(queueItem.InvocationTicket, queueItem.ActivityCommand.CreateViewModel());
         }
 
         private void SendDeliveryAcknowledgement(Guid deliveredTicked, string connectionId)
@@ -148,16 +168,14 @@ namespace Controll.Hosting.Services
 
         private void SendPing(PingQueueItem item)
         {
-            string connectionId = item.Reciever.ConnectionId;
-
-            Console.WriteLine("Pinging " + item.Reciever.Name + "(" + connectionId + " ticket = " + item.Ticket + ")");
-            _connectionManager.GetHubContext<ZombieHub>().Clients.All
-                      .Ping(item.Ticket);
+            foreach (var connectionId in item.Reciever.ConnectedClients.Select(x => x.ConnectionId))
+                _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+                          .Ping(item.Ticket);
         }
 
         private void SendActivityInvocation(ActivityInvocationQueueItem item)
         {
-            string connectionId = item.Reciever.ConnectionId;
+            foreach (var connectionId in item.Reciever.ConnectedClients.Select(x => x.ConnectionId))
             _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
                 .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters, item.CommandName);
         }

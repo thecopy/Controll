@@ -6,13 +6,16 @@ using System.Threading.Tasks;
 
 namespace Controll.Hosting.Models
 {
-    public class ControllUser
+    public class ControllUser : ClientCommunicator
     {
-        public virtual int Id { get; set; }
+        private IList<Zombie> _zombies = new List<Zombie>();
         public virtual string UserName { get; set; }
         public virtual string Password { get; set; }
-        public virtual string EMail { get; set; }
-        public virtual IList<ControllClient> ConnectedClients { get; set; }
-        public virtual IList<Zombie> Zombies { get; set; }
+        public virtual string Email { get; set; }
+        public virtual IList<Zombie> Zombies
+        {
+            get { return _zombies; }
+            set { _zombies = value; }
+        }
     }
 }
