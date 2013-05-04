@@ -120,7 +120,7 @@ namespace Controll.Hosting.Tests
             AssertionHelper.AssertEnumerableItemsAreEqual(user.Zombies[0].Activities, fetchedActivities,
                                                           TestingHelper.ActivityViewModelComparer);
         }
-
+        
         [TestMethod]
         public void ShouldBeAbleToAddClientWhenLoggingInAndRemoveClientFromUserWhenDisconnecting()
         {

@@ -151,7 +151,7 @@ namespace Controll.IntegrationTests
         }
 
         // This is a monster test. It tests: Logging in for both zombie and client,
-        // sending and recieving activity messages, invocations and results
+        // sending and recieving activity messages, invocations and results.
         [TestMethod]
         public void ShouldBeAbleToActivateActivity()
         {
@@ -165,7 +165,6 @@ namespace Controll.IntegrationTests
                 client.Connect();
 
                 zombie.LogOn("username", "password", "zombieName");
-                Thread.Sleep(4000); // Let NHibernate init
 
                 client.LogOn("username", "password");
 

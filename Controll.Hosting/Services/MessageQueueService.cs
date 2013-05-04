@@ -125,59 +125,56 @@ namespace Controll.Hosting.Services
             ProcessQueueItem(activityResultQueueItem);
         }
 
-        private void ProcessQueueItem(QueueItem queueItem)
+        private void ProcessQueueItem<T>(T queueItem) 
+            where T:QueueItem
         {
             if (!queueItem.Reciever.ConnectedClients.Any())
                 return;
+            
+            var actions = new Dictionary<QueueItemType, Action<QueueItem, string>>
+                {
+                    {QueueItemType.ActivityInvocation, (qi, s) => SendActivityInvocation((ActivityInvocationQueueItem) qi, s)},
+                    {QueueItemType.Ping, (qi, s) => SendPing((PingQueueItem) qi, s)},
+                    {QueueItemType.ActivityResult, (qi, s) => SendActivityResult((ActivityResultQueueItem) qi, s)},
+                };
 
-            var type = queueItem.Type;
-            switch (type)
+            if (!actions.ContainsKey(queueItem.Type))
             {
-                case QueueItemType.ActivityInvocation:
-                    SendActivityInvocation((ActivityInvocationQueueItem)queueItem);
-                    break;
-                case QueueItemType.Ping:
-                    SendPing((PingQueueItem) queueItem);
-                    break;
-                case QueueItemType.ActivityResult:
-                    SendActivityResult((ActivityResultQueueItem) queueItem);
-                    break;
-                default:
-                    throw new InvalidOperationException("Unkown queue item type: " + queueItem.Type);
+                throw new InvalidOperationException("Unkown queue item type: " + queueItem.Type);
             }
+
+            foreach(var connectionId in queueItem.Reciever.ConnectedClients.Select(x => x.ConnectionId))
+                actions[queueItem.Type](queueItem, connectionId);
         }
 
         private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
         {
             _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
-                      .ActivityMessage(ticket, type, message);
-        }
-
-        private void SendActivityResult(ActivityResultQueueItem queueItem)
-        {
-            foreach (var connectionId in queueItem.Reciever.ConnectedClients.Select(x => x.ConnectionId))
-                _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
-                          .ActivityResult(queueItem.InvocationTicket, queueItem.ActivityCommand.CreateViewModel());
+                              .ActivityMessage(ticket, type, message);
         }
 
         private void SendDeliveryAcknowledgement(Guid deliveredTicked, string connectionId)
         {
             _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
-                      .MessageDelivered(deliveredTicked);
+                              .MessageDelivered(deliveredTicked);
         }
 
-        private void SendPing(PingQueueItem item)
+        private void SendActivityResult(ActivityResultQueueItem queueItem, string connectionId)
         {
-            foreach (var connectionId in item.Reciever.ConnectedClients.Select(x => x.ConnectionId))
-                _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
-                          .Ping(item.Ticket);
+            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+                              .ActivityResult(queueItem.InvocationTicket, queueItem.ActivityCommand.CreateViewModel());
         }
 
-        private void SendActivityInvocation(ActivityInvocationQueueItem item)
+        private void SendPing(PingQueueItem item, string connectionId)
         {
-            foreach (var connectionId in item.Reciever.ConnectedClients.Select(x => x.ConnectionId))
             _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
-                .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters, item.CommandName);
+                              .Ping(item.Ticket);
+        }
+
+        private void SendActivityInvocation(ActivityInvocationQueueItem item, string connectionId)
+        {
+            _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+                              .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters, item.CommandName);
         }
     }
 }
