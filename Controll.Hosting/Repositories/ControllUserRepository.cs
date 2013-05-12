@@ -37,7 +37,7 @@ namespace Controll.Hosting.Repositories
         public ControllUser GetByEMail(string email)
         {
                 return Session.CreateCriteria<ControllUser>()
-                    .Add(Restrictions.Eq("EMail", email))
+                    .Add(Restrictions.Eq("Email", email))
                     .UniqueResult<ControllUser>();      
         }
     }

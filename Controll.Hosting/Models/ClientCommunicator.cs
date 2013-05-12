@@ -16,4 +16,15 @@ namespace Controll.Hosting.Models
             get { return _connectedClients; }
         }
     }
+
+    public static class ClientCommunicatorExtensions
+    {
+        public static Zombie AsZombie(this ClientCommunicator clientCommunicator)
+        {
+            if (clientCommunicator as Zombie != null)
+                return (Zombie) clientCommunicator;
+
+            throw new InvalidOperationException("Cannot cast this instance to 'Zombie'");
+        }
+    }
 }

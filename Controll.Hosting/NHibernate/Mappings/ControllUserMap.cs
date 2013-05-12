@@ -14,9 +14,9 @@ namespace Controll.Hosting.NHibernate.Mappings
     {
         public ControllUserMap()
         {
-            Map(x => x.Email).Unique();
-            Map(x => x.Password).Not.Nullable();
-            Map(x => x.UserName).Unique().Not.Nullable();
+            Map(x => x.Email).Unique().Column("Email");
+            Map(x => x.Password).Not.Nullable().Column("Password"); ;
+            Map(x => x.UserName).Unique().Not.Nullable().Column("Username");
 
             HasMany(x => x.Zombies).Cascade.All();
         }

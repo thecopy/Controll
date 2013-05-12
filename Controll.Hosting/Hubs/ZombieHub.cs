@@ -118,6 +118,7 @@ namespace Controll.Hosting.Hubs
             var zombie = new Zombie
                 {
                     Name = zombieName,
+                    Owner = user,
                     Activities = new List<Activity>()
                 };
 
@@ -186,7 +187,11 @@ namespace Controll.Hosting.Hubs
         public void ActivityResult(Guid ticket, ActivityCommandViewModel result)
         {
             Console.WriteLine("Activity result recieved.");
-            _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
+            using (var transaction = Session.BeginTransaction())
+            {
+                _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
+                transaction.Commit();
+            }
         }
 
         public Task OnDisconnect()

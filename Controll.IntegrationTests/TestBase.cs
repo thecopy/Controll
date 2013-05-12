@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Controll.Hosting.NHibernate;
+﻿using Controll.Hosting.NHibernate;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
 
-namespace Controll.Hosting.Tests
+namespace Controll.IntegrationTests
 {
     public class TestBase
     {

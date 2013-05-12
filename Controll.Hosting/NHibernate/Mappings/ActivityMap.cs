@@ -14,12 +14,14 @@ namespace Controll.Hosting.NHibernate.Mappings
         public ActivityMap()
         {
             Id(x => x.Id).GeneratedBy.Assigned();
-            Map(x => x.Name);
-            Map(x => x.CreatorName);
-            Map(x => x.LastUpdated);
-            Map(x => x.Description);
-            Map(x => x.Version);
-            HasMany(x => x.Commands).Cascade.All().Not.LazyLoad();
+            Map(x => x.Name).Column("Name");
+            Map(x => x.CreatorName).Column("CreatorName");
+            Map(x => x.LastUpdated).Column("LastUpdated");
+            Map(x => x.Description).Column("Description");
+            Map(x => x.Version).Column("Version");
+            HasMany(x => x.Commands)
+                .Cascade.AllDeleteOrphan()
+                .Not.LazyLoad();
         }
     }
 }

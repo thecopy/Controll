@@ -24,11 +24,14 @@ namespace Controll.Hosting.Tests
                 var user = new ControllUser
                     {
                         UserName = "name",
-                        Email = "mail"
+                        Email = "mail",
+                        Password = "password"
                     };
+                repo.Add(user);
+
                 user.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
 
-                repo.Add(user);
+                repo.Update(user);
                 
                 var fetched = repo.GetByConnectionId("conn");
 
@@ -47,7 +50,13 @@ namespace Controll.Hosting.Tests
             {
                 var repo = new ControllUserRepository(session);
 
-                var user = new ControllUser() { UserName = "name", Email = "mail", Id = 222 };
+                var user = new ControllUser()
+                {
+                    UserName = "name",
+                    Email = "mail",
+                    Id = 222,
+                    Password = "password"
+                };
                 repo.Add(user);
 
                 var fetched = repo.GetByUserName("name");
@@ -67,7 +76,13 @@ namespace Controll.Hosting.Tests
             {
                 var repo = new ControllUserRepository(session);
 
-                var user = new ControllUser() { UserName = "name", Email = "mail", Id = 222 };
+                var user = new ControllUser()
+                {
+                    UserName = "name",
+                    Email = "mail",
+                    Id = 222,
+                    Password = "password"
+                };
                 repo.Add(user);
 
                 var fetched = repo.GetByEMail("mail");

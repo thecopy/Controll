@@ -24,9 +24,18 @@ namespace SimpleConsoleZombie
             {
                 Connect("http://localhost:10244/");
             }
+
+            Console.WriteLine("Connect to localhost:<port> (Y/n)?");
+            result = Console.ReadLine();
+            if (string.IsNullOrEmpty(result) || result.ToLower() == "y")
+            {
+                Console.Write("Enter port: ");
+                string port = Console.ReadLine();
+                Connect("http://localhost:" + int.Parse(port) + "/");
+            }
             else
             {
-                Console.Write("Enter url to connect to: ");
+                Console.Write("Enter url: ");
                 string url = Console.ReadLine();
                 Connect(url);
             }

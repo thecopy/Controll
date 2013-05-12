@@ -16,9 +16,9 @@ namespace Controll.Hosting.NHibernate.Mappings
         {
             Id(x => x.Id);
             HasMany(x => x.ConnectedClients)
-                .Component(c => { c.Map(x => x.ConnectionId); })
+                .Component(c => c.Map(x => x.ConnectionId))
                 .KeyColumn("Id")
-                .Cascade.All(); // Save clients after communicator
+                .Cascade.AllDeleteOrphan();
         }
     }
 }

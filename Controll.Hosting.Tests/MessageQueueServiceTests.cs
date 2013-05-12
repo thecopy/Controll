@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Controll.Common.ViewModels;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
@@ -76,6 +77,55 @@ namespace Controll.Hosting.Tests
                                 a.Type == QueueItemType.ActivityInvocation &&
                                 a.Sender == user
                         )), Times.Once());
+        }
+        [TestMethod]
+        public void ShouldBeAbleToInsertActivityResultQueueItem()
+        {
+            var mockedQueueItemRepostiory = new Mock<IQueueItemRepostiory>();
+            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var messageQueueService = new MessageQueueService(
+                mockedQueueItemRepostiory.Object,
+                mockedConnectionManager.Object);
+
+            var user = new ControllUser
+            {
+                UserName = "username"
+            };
+
+            var zombie = new Zombie
+            {
+                Name = "zombiename",
+                Owner = user
+            };
+            var activityCommand = new ActivityCommand
+            {
+                Name = "activityname",
+                Label = "labellll"
+            };
+            var ticket = Guid.NewGuid();
+            var communicator = new Mock<ClientCommunicator>();
+            communicator.SetupGet(x => x.ConnectedClients).Returns(new List<ControllClient>());
+            var invocationQueueItem = new ActivityInvocationQueueItem
+                {
+                    Ticket = ticket,
+                    Reciever = communicator.Object,
+                    Sender = communicator.Object
+                };
+
+            mockedQueueItemRepostiory.Setup(x => x.Get(It.Is<Guid>(g => g.Equals(ticket))))
+                .Returns(invocationQueueItem);
+
+            mockedQueueItemRepostiory.Setup(q => q.Add(
+                It.Is<ActivityResultQueueItem>(x =>
+                                               x.ActivityCommand == activityCommand &&
+                                               x.InvocationTicket == ticket))).Verifiable();
+
+            messageQueueService.InsertActivityResult(ticket, activityCommand);
+
+            mockedQueueItemRepostiory.Verify(q => q.Add(
+                It.Is<ActivityResultQueueItem>(x =>
+                                               x.ActivityCommand == activityCommand &&
+                                               x.InvocationTicket == ticket)), Times.Once());
         }
 
         [TestMethod]

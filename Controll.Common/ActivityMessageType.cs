@@ -8,9 +8,9 @@ namespace Controll.Common
 {
     public enum ActivityMessageType
     {
-        Started,
-        Notification,
-        Failed,
-        Completed
+        Started = 0,
+        Notification = 1,
+        Failed = 2,
+        Completed = 3
     }
 }

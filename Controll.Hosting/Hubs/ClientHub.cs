@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Authentication;
@@ -33,7 +34,7 @@ namespace Controll.Hosting.Hubs
 
         private ControllUser GetUser()
         {
-            var userName = (string) Clients.Caller.UserName;
+            var userName = (string) Clients.Caller.userName;
 
             ControllUser user = _controllUserRepository.GetByUserName(userName);
 
@@ -42,7 +43,7 @@ namespace Controll.Hosting.Hubs
 
         public bool LogOn(string password)
         {
-            string userName = Clients.Caller.UserName;
+            string userName = Clients.Caller.userName;
             var user = _membershipService.AuthenticateUser(userName, password);
 
             var client = new ControllClient
@@ -132,11 +133,12 @@ namespace Controll.Hosting.Hubs
 
             using (var transaction = Session.BeginTransaction())
             {
-                var ticket = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                var queueItem = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
-                return ticket;
+                _messageQueueService.ProcessQueueItem(queueItem);
+                return queueItem.Ticket;
             }
         }
 
@@ -153,16 +155,17 @@ namespace Controll.Hosting.Hubs
 
             using(var transaction = Session.BeginTransaction())
             {
-                var ticket = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
+                var queueItem = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
                 transaction.Commit();
-                
-                return ticket;
+
+                _messageQueueService.ProcessQueueItem(queueItem);
+                return queueItem.Ticket;
             }
         }
 
         private bool EnsureUserIsLoggedIn()
         {
-            var claimedUserName = (string) Clients.Caller.UserName;
+            var claimedUserName = (string) Clients.Caller.userName;
 
             var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
 

@@ -24,6 +24,8 @@ namespace Controll.Hosting.NHibernate.Mappings
                 .Cascade.All();
 
             HasMany(x => x.MessageLog)
+                .Cascade.AllDeleteOrphan()
+                .KeyColumn("Id")
                 .Component(c =>
                     {
                         c.Map(x => x.Date);

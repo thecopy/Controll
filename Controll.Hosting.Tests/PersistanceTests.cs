@@ -339,6 +339,37 @@ namespace Controll.Hosting.Tests
         }
 
         [TestMethod]
+        public void ShouldBeAbleToAddAndPersistActivityResultQueueItem()
+        {
+            using (var session = SessionFactory.OpenSession())
+            using (session.BeginTransaction())
+            {
+                var user = new ControllUser { UserName = "username", Email = "email", Password = "password" };
+                var activity = new ActivityCommand
+                    {
+                        Name = "some-intermidiate-command"
+                    };
+                var repo = new ControllUserRepository(session);
+                repo.Add(user);
+
+                var comparer = new PersistenceSpecificationEqualityComparer();
+                comparer.RegisterComparer((ControllUser x) => x.Id);
+                comparer.RegisterComparer((ClientCommunicator x) => x.Id);
+                comparer.RegisterComparer((ActivityCommand x) => x.Name);
+
+                var ticket = Guid.NewGuid();
+                new PersistenceSpecification<ActivityResultQueueItem>(session, comparer)
+                    .CheckProperty(x => x.Delivered, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckProperty(x => x.RecievedAtCloud, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckReference(x => x.Sender, user)
+                    .CheckReference(x => x.Reciever, user)
+                    .CheckReference(x => x.ActivityCommand, activity)
+                    .CheckProperty(x => x.InvocationTicket, ticket)
+                    .VerifyTheMappings();
+            }
+        }
+
+        [TestMethod]
         public void ShouldBeAbleToAddAndPersistActivityInvocationQueueItem()
         {
             using (var session = SessionFactory.OpenSession())

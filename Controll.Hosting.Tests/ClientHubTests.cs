@@ -228,7 +228,9 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
 
-            hub.MockedMessageQueueService.Setup(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId))).Returns(Guid.NewGuid).Verifiable("InsertPingMessage was not called by hub");
+            hub.MockedMessageQueueService
+                .Setup(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)))
+                .Returns(new PingQueueItem { Ticket = Guid.NewGuid() }).Verifiable("InsertPingMessage was not called by hub");
 
             var ticket = hub.PingZombie("zombie");
 
@@ -420,7 +422,7 @@ namespace Controll.Hosting.Tests
                     It.Is<Dictionary<string, string>>(d => d.ContainsKey("param1") && d["param1"] == "param1value"),
                     It.Is<string>(s => s == "commandName"),
                     It.Is<string>(s => s == hub.Context.ConnectionId)))
-                .Returns(Guid.NewGuid())
+                .Returns(new ActivityInvocationQueueItem{ Ticket = Guid.NewGuid() })
                 .Verifiable();
 
 

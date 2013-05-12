@@ -14,6 +14,7 @@ namespace Controll.Hosting.NHibernate.Mappings
         public ActivitytResultQueueItemMap()
         {
             References(x => x.ActivityCommand).Cascade.All();
+            Map(x => x.InvocationTicket).Not.Nullable();
         }
     }
 }

@@ -12,6 +12,7 @@ using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Infrastructure;
+using NHibernate;
 using NHibernate.Criterion;
 
 namespace Controll.Hosting.Services
@@ -38,7 +39,7 @@ namespace Controll.Hosting.Services
         /// <param name="commandName">The name of the command in the activity</param>
         /// <param name="connectionId">The connection-id of the initiating client</param>
         /// <returns>The queue item ticket</returns>
-        public Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string commandName, string connectionId)
+        public QueueItem InsertActivityInvocation(Zombie zombie, Activity activity, IDictionary<string, string> parameters, string commandName, string connectionId)
         {
             var queueItem = new ActivityInvocationQueueItem
                 {
@@ -47,13 +48,11 @@ namespace Controll.Hosting.Services
                     Parameters = parameters,
                     CommandName = commandName,
                     Sender = zombie.Owner,
-                    RecievedAtCloud = DateTime.UtcNow
+                    RecievedAtCloud = DateTime.Now
                 };
-
             _queueItemRepository.Add(queueItem);
 
-            ProcessQueueItem(queueItem);
-            return queueItem.Ticket;
+            return queueItem;
         }
 
         /// <summary>
@@ -63,8 +62,8 @@ namespace Controll.Hosting.Services
         public void MarkQueueItemAsDelivered(Guid ticket)
         {
             var queueItem = _queueItemRepository.Get(ticket);
-
-            queueItem.Delivered = DateTime.UtcNow;
+            
+            queueItem.Delivered = DateTime.Now;
             _queueItemRepository.Update(queueItem);
 
             // Do not add the delivered queue item into the queue. This should only be sent to the original sender
@@ -75,19 +74,18 @@ namespace Controll.Hosting.Services
                 SendDeliveryAcknowledgement(ticket, connectionId);
         }
 
-        public Guid InsertPingMessage(Zombie zombie, string senderConnectionId)
+        public QueueItem InsertPingMessage(Zombie zombie, string senderConnectionId)
         {
             var queueItem = new PingQueueItem
             {
                 Reciever = zombie,
                 Sender = zombie.Owner,
-                RecievedAtCloud = DateTime.UtcNow
+                RecievedAtCloud = DateTime.Now
             };
 
             _queueItemRepository.Add(queueItem);
 
-            ProcessQueueItem(queueItem);
-            return queueItem.Ticket;
+            return queueItem;
         }
 
         public void ProcessUndeliveredMessagesForZombie(Zombie zombie)
@@ -121,11 +119,13 @@ namespace Controll.Hosting.Services
                     Sender = queueItem.Reciever,
                     InvocationTicket = ticket
                 };
+
+            _queueItemRepository.Add(activityResultQueueItem);
             
             ProcessQueueItem(activityResultQueueItem);
         }
 
-        private void ProcessQueueItem<T>(T queueItem) 
+        public void ProcessQueueItem<T>(T queueItem) 
             where T:QueueItem
         {
             if (!queueItem.Reciever.ConnectedClients.Any())

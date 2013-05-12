@@ -68,7 +68,7 @@ namespace Controll.IntegrationTests
                 .InThreadScope();
         }
 
-        private const string LocalHostUrl = "http://erik-ws:10244"; // Change this to your preffered hostname (or localhost but machine name works with Fiddler)
+        private const string LocalHostUrl = "http://erik-ws:10244"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
         //[TestMethod]
         public void ShouldBeAbleToLoginAsClient()
         {
@@ -202,7 +202,7 @@ namespace Controll.IntegrationTests
                                 new ActivityCommandViewModel
                                     {
                                         Label = "command-label",
-                                        Name = "command-name",
+                                        Name = "commandName",
                                         ParameterDescriptors = new List<ParameterDescriptorViewModel>
                                             {
                                                 new ParameterDescriptorViewModel

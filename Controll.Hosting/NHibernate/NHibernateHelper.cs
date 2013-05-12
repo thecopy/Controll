@@ -34,15 +34,20 @@ namespace Controll.Hosting.NHibernate
             var schemaExportPath = Path.Combine(System.Environment.CurrentDirectory, "Mappings");
             if (!Directory.Exists(schemaExportPath))
                 Directory.CreateDirectory(schemaExportPath);
-            
+
             Configuration config = Fluently
                 .Configure()
-                .Database(MsSqlConfiguration.MsSql2008.ConnectionString(mockedConnectionString.ConnectionString))
-                .Mappings(m => m
-                    .FluentMappings.AddFromAssemblyOf<ControllUser>()
-                    .Conventions.Setup(x => x.Add(AutoImport.Never()))
-                    //.ExportTo(schemaExportPath)
-                    )
+                .Database(MsSqlConfiguration.MsSql2008
+                                            //.ShowSql()
+                                            .ConnectionString(mockedConnectionString.ConnectionString))
+                .Mappings(m =>
+                    {
+                        m.FluentMappings
+                         .AddFromAssemblyOf<ControllUser>();
+                        //m.AutoMappings.ExportTo(schemaExportPath);
+                        //m.FluentMappings.ExportTo(schemaExportPath);
+                    })
+                .Diagnostics(x => x.Enable())
                 .ExposeConfiguration(TreatConfiguration)
                 .BuildConfiguration();
 

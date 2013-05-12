@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Controll.Common;
 using Controll.Hosting.Models;
+using Controll.Hosting.Models.Queue;
 
 namespace Controll.Hosting.Services
 {
@@ -15,7 +16,7 @@ namespace Controll.Hosting.Services
         /// <param name="parameters">The parameters which to pass to the activity</param>
         /// <param name="connectionId">The connection-id of the initiating client</param>
         /// <returns>The queue item ticket</returns>
-        Guid InsertActivityInvocation(Zombie zombie, Activity activity, Dictionary<string, string> parameters, string commandName, string connectionId);
+        QueueItem InsertActivityInvocation(Zombie zombie, Activity activity, IDictionary<string, string> parameters, string commandName, string connectionId);
 
         /// <summary>
         /// Marks the QueueItem as delivered
@@ -28,10 +29,14 @@ namespace Controll.Hosting.Services
         /// Inserts a ping message to a zombie
         /// </summary>
         /// <returns>The ping items queue ticket</returns>
-        Guid InsertPingMessage(Zombie zombie, string senderConnectionId);
+        QueueItem InsertPingMessage(Zombie zombie, string senderConnectionId);
 
         void ProcessUndeliveredMessagesForZombie(Zombie zombie);
+
         void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message);
+
         void InsertActivityResult(Guid ticket, ActivityCommand result);
+
+        void ProcessQueueItem<T>(T queueItem) where T : QueueItem;
     }
 }

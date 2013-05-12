@@ -17,7 +17,10 @@ namespace Controll.Hosting.NHibernate.Mappings
             Id(x => x.Id);
             Map(x => x.Label);
             Map(x => x.Name);
-            HasMany(x => x.ParameterDescriptors).Cascade.All().Not.LazyLoad().Table("ActivityCommandParameterDescriptors");
+            HasMany(x => x.ParameterDescriptors)
+                .Cascade.AllDeleteOrphan()
+                .Not.LazyLoad()
+                .Table("ActivityCommandParameterDescriptors");
         }
     }
 }

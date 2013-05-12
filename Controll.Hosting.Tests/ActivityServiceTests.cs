@@ -16,42 +16,97 @@ namespace Controll.Hosting.Tests
     [TestClass]
     public class ActivityServiceTests
     {
-        /*[TestMethod]
-        public void ShouldBeAbleToAddActivityToZombie()
+        [TestMethod]
+        public void ShouldBeAbleToGetActivityLogMessages()
         {
-            var activityService = new ActivityService(
-                MockedInvocationQueueItemRepostiory.Object,
-                MockedActivityRepository.Object,
-                MockedZombieRepository.Object);
+            var mockedInvocationQueueItemRepostiory = new Mock<IGenericRepository<ActivityInvocationQueueItem>>();
+            var activityService = new ActivityMessageLogService(mockedInvocationQueueItemRepostiory.Object, null);
 
             var activity = new Activity
                 {
-                    Name = "activityname",
-                    Id = Guid.NewGuid()
+                    Name = "activity",
+                    Commands = new List<ActivityCommand>
+                        {
+                            new ActivityCommand
+                                {
+                                    Name = "commandName"
+                                }
+                        }
                 };
-            var zombie = new Zombie
+
+            var zombie = new Zombie()
                 {
-                    Name = "zombiename",
-                    Activities = new List<Activity>()
+                    Name = "zombieName",
+                    Id = 123,
+                    Activities = new List<Activity>{activity}
                 };
-            var user = new ControllUser
+            var deliveredDate = DateTime.Parse("2010-10-10");
+
+            var logMessages = new List<ActivityInvocationLogMessage>
                 {
-                    Zombies = new List<Zombie> {zombie}
+                    new ActivityInvocationLogMessage
+                        {
+                            Date = deliveredDate.AddSeconds(10),
+                            Message = "msg1",
+                            Type = ActivityMessageType.Started
+                        },
+                    new ActivityInvocationLogMessage
+                        {
+                            Date = deliveredDate.AddSeconds(20),
+                            Message = "msg2",
+                            Type = ActivityMessageType.Failed
+                        }
                 };
 
-            MockedZombieRepository.Setup(x => x.Update(It.Is<Zombie>(z => z.Name == "zombiename" && z.Activities.Any(a => a.Id == activity.Id)))).Verifiable();
-            MockedActivityRepository.Setup(x => x.Get(It.Is<Guid>(g => g == activity.Id))).Returns(activity);
+            var queueItems = new List<ActivityInvocationQueueItem>()
+                {
+                    new ActivityInvocationQueueItem()
+                        {
+                            Activity = activity,
+                            CommandName = activity.Commands[0].Name,
+                            Delivered = deliveredDate,
+                            Reciever = zombie,
+                            Parameters = new Dictionary<string, string>
+                                {
+                                    {"param1", "value1"}
+                                },
+                            MessageLog = logMessages
 
-            activityService.AddActivityToZombie(zombie.Name, user, activity.Id);
+                        }
+                };
 
-            MockedZombieRepository.Verify(x => x.Update(It.Is<Zombie>(z => z.Name == "zombiename" && z.Activities.Any(a => a.Id == activity.Id))));
+            mockedInvocationQueueItemRepostiory.SetupGet(x => x.Query).Returns(queueItems.AsQueryable);
+
+            // Get activity log summary for each activity invocation, in this case only one.
+            var result = activityService.GetActivityLog(zombie);
+
+            Assert.AreEqual(queueItems.Count, result.Count);
+
+            var gottenLogBook = result.ElementAt(0);
+
+            Assert.AreEqual(activity.Name, gottenLogBook.ActivityName);
+            Assert.AreEqual(activity.Commands.ElementAt(0).Label, gottenLogBook.CommandLabel);
+
+            Assert.AreEqual(deliveredDate, gottenLogBook.Delivered);
+            Assert.AreEqual(deliveredDate.AddSeconds(10), gottenLogBook.Started);
+            Assert.AreEqual(deliveredDate.AddSeconds(20), gottenLogBook.Finished);
+            
+            for (int msgIndex = 0; msgIndex < logMessages.Count; msgIndex++)
+            {
+                var gottenMessage = gottenLogBook.Messages.ElementAt(msgIndex);
+                var originalMessage = logMessages[msgIndex];
+
+                Assert.AreEqual(originalMessage.Date, gottenMessage.Date);
+                Assert.AreEqual(originalMessage.Message, gottenMessage.Message);
+                Assert.AreEqual(originalMessage.Type, gottenMessage.MessageType);
+            }
         }
-        */
+
         [TestMethod]
         public void ShouldBeAbleToInsertActivityLogMessage()
         {
-            var mockedInvocationQueueItemRepostiory = new Mock<IGenericRepository<QueueItem>>();
-            var activityService = new ActivityMessageLogService(mockedInvocationQueueItemRepostiory.Object);
+            var mockedInvocationQueueItemRepostiory = new Mock<IGenericRepository<ActivityInvocationQueueItem>>();
+            var activityService = new ActivityMessageLogService(mockedInvocationQueueItemRepostiory.Object, null);
 
             var wh = new ManualResetEvent(false);
 
@@ -76,33 +131,80 @@ namespace Controll.Hosting.Tests
                                               l.Message == "notification message" &&
                                                   l.Type == ActivityMessageType.Notification))));
         }
-        /*
         [TestMethod]
-        public void ShouldBeAbleToUpdateActivityResponse()
+        public void ShouldBeAbleToGetUndeliveredIntermidiateCommandResults()
         {
-            var activityService = new ActivityService(
-                MockedInvocationQueueItemRepostiory.Object,
-                MockedActivityRepository.Object,
-                MockedZombieRepository.Object);
+            var mockedInvocationQueueItemRepostiory = new Mock<IGenericRepository<ActivityInvocationQueueItem>>();
+            var mockedActivityResultQueueItemRepostiory = new Mock<IGenericRepository<ActivityResultQueueItem>>();
+            var activityService = new ActivityMessageLogService(
+                mockedInvocationQueueItemRepostiory.Object, 
+                mockedActivityResultQueueItemRepostiory.Object);
+
+            var activity = new Activity
+                {
+                    Name = "activity",
+                    Commands = new List<ActivityCommand>
+                        {
+                            new ActivityCommand
+                                {
+                                    Name = "anotherCommand"
+                                }
+                        }
+                };
+
+            var command = new ActivityCommand
+            {
+                Name = "commandName",
+                Id = Guid.NewGuid(),
+                Label = "commandLabel",
+                ParameterDescriptors = new List<ParameterDescriptor>()
+            };
+
+            var zombie = new Zombie()
+            {
+                Name = "zombieName",
+                Id = 123
+            };
 
             var invocationTicket = Guid.NewGuid();
-
-            MockedInvocationQueueItemRepostiory.Setup(x => x.Get(It.Is<Guid>(g => g == invocationTicket))).Returns(new ActivityInvocationQueueItem
+            var resultTicket = Guid.NewGuid();
+            var queueItems = new List<ActivityResultQueueItem>()
                 {
-                    Activity = new Activity(),
-                    Ticket = invocationTicket,
-                    Parameters = new Dictionary<string, string>(),
-                    MessageLog = new List<ActivityInvocationLogMessage>(),
-                    RecievedAtCloud = DateTime.Now
-                });
+                    new ActivityResultQueueItem()
+                        {
+                            ActivityCommand = command,
+                            Ticket = resultTicket,
+                            InvocationTicket = invocationTicket,
+                            Sender = zombie,
+                            RecievedAtCloud = DateTime.Parse("2010-10-10"),
+                        }
+                };
 
-            MockedInvocationQueueItemRepostiory.Setup(x => x.Update(It.Is<ActivityInvocationQueueItem>(a => a.Response == "response"))).Verifiable();
+            var invocationQueueItems = new List<ActivityInvocationQueueItem>
+                {
+                    new ActivityInvocationQueueItem
+                        {
+                            Ticket = invocationTicket,
+                            Activity = activity
+                        }
+                };
 
-            activityService.UpdateLogWithResponse(invocationTicket, "response");
+            mockedInvocationQueueItemRepostiory.SetupGet(x => x.Query).Returns(invocationQueueItems.AsQueryable);
+            mockedActivityResultQueueItemRepostiory.SetupGet(x => x.Query).Returns(queueItems.AsQueryable);
 
-            MockedInvocationQueueItemRepostiory.Verify(x => x.Update(It.Is<ActivityInvocationQueueItem>(a => a.Response == "response")));
+            var results = activityService.GetUndeliveredIntermidiates(zombie);
+
+            Assert.AreEqual(queueItems.Count, results.Count);
+            Assert.AreEqual(resultTicket, results[0].ResultTicket);
+
+            var mockedItem = queueItems.ElementAt(0).ActivityCommand;
+            var resultItem = results.ElementAt(0);
+            
+            Assert.AreEqual(mockedItem.Name, resultItem.Name);
+            Assert.AreEqual(mockedItem.Label, resultItem.Label);
+            Assert.AreEqual(activity.Name, resultItem.Activity.Name);
         }
-
+      /*
         [TestMethod]
         public void ShouldBeAbleToGetTheLatestStartedActivityForAZombie()
         {
