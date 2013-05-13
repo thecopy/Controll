@@ -15,10 +15,20 @@ namespace Controll.Hosting.NHibernate.Mappings
         public ClientCommunicatorMap()
         {
             Id(x => x.Id);
+
             HasMany(x => x.ConnectedClients)
-                .Component(c => c.Map(x => x.ConnectionId))
-                .KeyColumn("Id")
-                .Cascade.AllDeleteOrphan();
+                .Cascade.SaveUpdate();
+        }
+    }
+
+    public class ControllClientMap : ClassMap<ControllClient>
+    {
+        public ControllClientMap()
+        {
+            Map(x => x.ConnectionId);
+            Id(x => x.Id);
+            References(x => x.ClientCommunicator)
+                .Cascade.None();
         }
     }
 }

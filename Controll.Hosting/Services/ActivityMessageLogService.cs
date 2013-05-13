@@ -46,9 +46,6 @@ namespace Controll.Hosting.Services
         public void InsertActivityLogMessage(Guid ticket, ActivityMessageType type, string message)
         {
             var invocationQueueItem = (ActivityInvocationQueueItem)_invocationQueueItemRepository.Get(ticket);
-#warning se över detta
-            if (invocationQueueItem == null)
-                return;
 
             var messageLogItem = new ActivityInvocationLogMessage
                 {
@@ -56,9 +53,6 @@ namespace Controll.Hosting.Services
                     Type = type,
                     Message = message
                 };
-
-            if(invocationQueueItem.MessageLog == null)
-                invocationQueueItem.MessageLog = new List<ActivityInvocationLogMessage>();
 
             invocationQueueItem.MessageLog.Add(messageLogItem);
 

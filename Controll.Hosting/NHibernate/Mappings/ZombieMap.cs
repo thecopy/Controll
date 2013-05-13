@@ -14,7 +14,7 @@ namespace Controll.Hosting.NHibernate.Mappings
         {
             Map(x => x.Name).Not.Nullable();
             References(x => x.Owner).Not.Nullable().Column("Owner_id");
-            HasManyToMany(x => x.Activities).Not.LazyLoad().Cascade.SaveUpdate();
+            HasManyToMany(x => x.Activities).Cascade.SaveUpdate();
         }
     }
 }

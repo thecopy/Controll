@@ -1,14 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
+using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Controll.Common;
+using Controll.Common.ViewModels;
+using Controll.Hosting;
+using Controll.Hosting.Helpers;
+using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
+using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
+using Microsoft.AspNet.SignalR.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using NHibernate;
 
 namespace Controll.IntegrationTests
 {
@@ -18,18 +25,18 @@ namespace Controll.IntegrationTests
         [TestMethod]
         public void ShouldBeAbleToGetUndeliveredIntermidiateCommandResults()
         {
-            using(var session = SessionFactory.OpenSession())
+            using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var mockedInvocationQueueItemRepostiory = new GenericRepository<ActivityInvocationQueueItem>(session);
-                var mockedActivityResultQueueItemRepostiory = new GenericRepository<ActivityResultQueueItem>(session);
+                var invocationQueueItemRepostiory = new GenericRepository<ActivityInvocationQueueItem>(session);
+                var activityResultQueueItemRepostiory = new GenericRepository<ActivityResultQueueItem>(session);
                 var userRepository = new ControllUserRepository(session);
                 var zombieRepository = new GenericRepository<Zombie>(session);
                 var activityRepostiory = new GenericRepository<Activity>(session);
 
                 var activityService = new ActivityMessageLogService(
-                    mockedInvocationQueueItemRepostiory,
-                    mockedActivityResultQueueItemRepostiory);
+                    invocationQueueItemRepostiory,
+                    activityResultQueueItemRepostiory);
 
                 var user = new ControllUser
                     {
@@ -40,38 +47,38 @@ namespace Controll.IntegrationTests
 
 
                 var activity = new Activity
-                {
-                    Name = "activity",
-                    LastUpdated = DateTime.Parse("2010-10-10"),
-                    Commands = new List<ActivityCommand>
-                        {
-                            new ActivityCommand
-                                {
-                                    Name = "anotherCommand"
-                                }
-                        }
-                };
+                    {
+                        Name = "activity",
+                        LastUpdated = DateTime.Parse("2010-10-10"),
+                        Commands = new List<ActivityCommand>
+                            {
+                                new ActivityCommand
+                                    {
+                                        Name = "anotherCommand"
+                                    }
+                            }
+                    };
 
                 var command = new ActivityCommand
-                {
-                    Name = "commandName",
-                    Label = "commandLabel",
-                    ParameterDescriptors = new List<ParameterDescriptor>()
-                };
+                    {
+                        Name = "commandName",
+                        Label = "commandLabel",
+                        ParameterDescriptors = new List<ParameterDescriptor>()
+                    };
 
                 var zombie = new Zombie()
-                {
-                    Name = "zombieName",
-                    Owner = user
-                };
+                    {
+                        Name = "zombieName",
+                        Owner = user
+                    };
 
-                var activityResultQueueItem =  new ActivityResultQueueItem()
-                        {
-                            ActivityCommand = command,
-                            Sender = zombie,
-                            Reciever = user,
-                            RecievedAtCloud = DateTime.Parse("2010-10-10")
-                        };
+                var activityResultQueueItem = new ActivityResultQueueItem()
+                    {
+                        ActivityCommand = command,
+                        Sender = zombie,
+                        Reciever = user,
+                        RecievedAtCloud = DateTime.Parse("2010-10-10")
+                    };
 
                 var invocationQueueItem = new ActivityInvocationQueueItem
                     {
@@ -85,10 +92,10 @@ namespace Controll.IntegrationTests
                 activityRepostiory.Add(activity);
                 userRepository.Add(user);
                 zombieRepository.Add(zombie);
-                mockedInvocationQueueItemRepostiory.Add(invocationQueueItem);
+                invocationQueueItemRepostiory.Add(invocationQueueItem);
                 activityResultQueueItem.InvocationTicket = invocationQueueItem.Ticket;
 
-                mockedActivityResultQueueItemRepostiory.Add(activityResultQueueItem);
+                activityResultQueueItemRepostiory.Add(activityResultQueueItem);
 
                 var results = activityService.GetUndeliveredIntermidiates(zombie);
 

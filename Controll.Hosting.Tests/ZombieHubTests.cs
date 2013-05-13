@@ -323,9 +323,41 @@ namespace Controll.Hosting.Tests
             hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients.Count == 0)))
                 .Verifiable();
 
-            hub.OnDisconnect();
+            hub.OnDisconnected();
 
             hub.MockedUserRepository.Verify(x => x.GetByUserName(It.Is<string>(s => s == "username")), Times.Once());
+            hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients.Count == 0)), Times.Once());
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToSignOut()
+        {
+            var hub = GetTestableZombieHub();
+            hub.Clients.Caller.ZombieName = "zombie";
+            hub.Clients.Caller.BelongsToUser = "username";
+
+            var user = new ControllUser
+            {
+                UserName = "username",
+                Password = "password",
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    Name = "zombie",
+                                    Id = 1
+                                }
+                        }
+            };
+            user.Zombies[0].ConnectedClients.Add(new ControllClient { ConnectionId = hub.Context.ConnectionId }); // Have something to clean up
+
+            hub.MockedUserRepository.Setup(x => x.GetByUserName(It.Is<string>(s => s == "username")))
+                .Returns(user);
+            hub.MockedUserRepository.Setup(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients.Count == 0)))
+                .Verifiable();
+
+            hub.SignOut();
+
             hub.MockedUserRepository.Verify(r => r.Update(It.Is<ControllUser>(x => x.Zombies[0].ConnectedClients.Count == 0)), Times.Once());
         }
         

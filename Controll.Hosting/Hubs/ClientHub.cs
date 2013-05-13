@@ -55,7 +55,10 @@ namespace Controll.Hosting.Hubs
 
             using (var transaction = Session.BeginTransaction())
             {
+                Session.Save(client);
+
                 _controllUserRepository.Update(user);
+
                 transaction.Commit();
             }
 
@@ -117,7 +120,7 @@ namespace Controll.Hosting.Hubs
         public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
         {
             if (!EnsureUserIsLoggedIn())
-                return default(Guid);
+                throw new Exception("Not authenticated");
 
             var user = GetUser();
 
@@ -125,11 +128,11 @@ namespace Controll.Hosting.Hubs
 
             var zombie = user.GetZombieByName(zombieName);
             if (zombie == null)
-                return default(Guid);
+                throw new Exception("Zombie not found");
 
             var activity = zombie.GetActivity(activityKey);
             if (activity == null)
-                return default(Guid);
+                throw new Exception("Activity not found. Searched for activity with key " + activityKey + ". Zombie has " + zombie.Activities.Count + " installed activities");
 
             using (var transaction = Session.BeginTransaction())
             {
@@ -178,9 +181,10 @@ namespace Controll.Hosting.Hubs
             return true;
         }
 
-        public Task OnDisconnect()
+        public override Task OnDisconnected()
         {
             var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
+            if (user == null) return null;
             var client = user.ConnectedClients.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
 
             Console.Write("One of " + user.UserName + "'s clients disconnected");
@@ -197,21 +201,6 @@ namespace Controll.Hosting.Hubs
             }
 
 
-            return null;
-        }
-
-
-        [ExcludeFromCodeCoverage]
-        public Task OnConnect()
-        {
-            Console.WriteLine("Client connected");
-            return null;
-        }
-
-        [ExcludeFromCodeCoverage]
-        public Task OnReconnect(IEnumerable<string> groups)
-        {
-            Console.WriteLine("Reconnected");
             return null;
         }
     }

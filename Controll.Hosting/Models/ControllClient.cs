@@ -9,6 +9,9 @@ namespace Controll.Hosting.Models
 {
     public class ControllClient
     {
+        public virtual int Id { get; set; }
+
         public virtual string ConnectionId { get; set; }
+        public virtual ClientCommunicator ClientCommunicator { get; set; }
     }
 }

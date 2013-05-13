@@ -74,6 +74,7 @@ namespace Controll.Hosting.Hubs
             if (zombie == null)
                 return false;
 
+            Console.WriteLine("Zombie logged in with connection id" + Context.ConnectionId);
             zombie.ConnectedClients.Add(new ControllClient {ConnectionId = Context.ConnectionId});
 
             using (var transaction = Session.BeginTransaction())
@@ -89,6 +90,34 @@ namespace Controll.Hosting.Hubs
             }
 
             return true;
+        }
+
+        public void SignOut()
+        {
+            if (!EnsureZombieAuthentication())
+                return;
+
+            var state = GetZombieState();
+
+            var user = _controllUserRepository.GetByUserName(state.UserName);
+
+            if (user == null)
+                throw new Exception("User not found");
+
+            var zombie = user.GetZombieByName(state.Name);
+            if (zombie == null)
+                throw new Exception("Zombie not found");
+
+            zombie.ConnectedClients.Where(x => x.ConnectionId == Context.ConnectionId).ToList().ForEach(cc =>
+            {
+                zombie.ConnectedClients.Remove(cc);
+            });
+
+            using (var transaction = Session.BeginTransaction())
+            {
+                _controllUserRepository.Update(user);
+                transaction.Commit();
+            }
         }
 
         public bool QueueItemDelivered(Guid ticket)
@@ -194,7 +223,7 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        public Task OnDisconnect()
+        public override Task OnDisconnected()
         {
             var state = GetZombieState();
 
@@ -220,15 +249,13 @@ namespace Controll.Hosting.Hubs
             return null;
         }
 
-        [ExcludeFromCodeCoverage]
-        public Task OnConnect()
+        public override Task OnConnected()
         {
             Console.WriteLine("Zombie connected");
             return null;
         }
 
-        [ExcludeFromCodeCoverage]
-        public Task OnReconnect(IEnumerable<string> groups)
+        public override Task OnReconnected()
         {
             Console.WriteLine("Reconnected");
             return null;

@@ -143,7 +143,7 @@ namespace Controll.Hosting.Tests
             Assert.AreEqual(1, user.ConnectedClients.Count);
             Assert.AreEqual("conn-id", user.ConnectedClients[0].ConnectionId);
 
-            hub.OnDisconnect();
+            hub.OnDisconnected();
 
             user = userRepository.GetByUserName(user.UserName);
 

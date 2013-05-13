@@ -63,8 +63,8 @@ namespace Controll.Hosting
                   .InThreadScope();
 
             _kernel.Bind<ISession>()
-                  .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
-                  .InThreadScope();
+                   .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
+                   .InThreadScope();
 
             NinjectDependencyResolver = new NinjectDependencyResolver(_kernel);
         }

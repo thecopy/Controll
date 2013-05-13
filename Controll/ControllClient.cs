@@ -24,7 +24,8 @@ namespace Controll
         private void OnMessageDelivered(Guid ticket)
         {
             var handler = MessageDelivered;
-            if (handler != null) handler(this, new MessageDeliveredEventArgs(ticket));
+            if (handler != null)
+                handler(this, new MessageDeliveredEventArgs(ticket));
         }
 
         private void OnActivityMessage(Guid ticket, ActivityMessageType type, string message)
@@ -104,12 +105,12 @@ namespace Controll
 
         public bool LogOn(string userName, string password)
         {
-            _hubProxy["UserName"] = userName;
+            _hubProxy["userName"] = userName;
 
             var result = _hubProxy.Invoke<bool>("LogOn", password).Result;
             if (!result)
             {
-                _hubProxy["UserName"] = "";
+                _hubProxy["userName"] = "";
             }
 
             return result;

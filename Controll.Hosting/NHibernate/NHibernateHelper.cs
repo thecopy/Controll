@@ -25,13 +25,13 @@ namespace Controll.Hosting.NHibernate
 {
     public class NHibernateHelper
     {
-        public static ISessionFactory GetSessionFactoryForConnectionStringAlias(string connectionStringAlias)
+        public static ISessionFactory GetSessionFactoryForConnectionStringAlias(string connectionStringAlias, bool cleanDb = false)
         {
             ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings[connectionStringAlias];
             if (mockedConnectionString == null)
                 throw new ConfigurationErrorsException("No ConnectionString named \"" + connectionStringAlias + "\"");
 
-            var schemaExportPath = Path.Combine(System.Environment.CurrentDirectory, "Mappings");
+            var schemaExportPath = Path.Combine("D:\\", "Mappings");
             if (!Directory.Exists(schemaExportPath))
                 Directory.CreateDirectory(schemaExportPath);
 
@@ -45,18 +45,18 @@ namespace Controll.Hosting.NHibernate
                         m.FluentMappings
                          .AddFromAssemblyOf<ControllUser>();
                         //m.AutoMappings.ExportTo(schemaExportPath);
-                        //m.FluentMappings.ExportTo(schemaExportPath);
+                        m.FluentMappings.ExportTo(schemaExportPath);
                     })
                 .Diagnostics(x => x.Enable())
-                .ExposeConfiguration(TreatConfiguration)
+                .ExposeConfiguration(x => TreatConfiguration(x, cleanDb))
                 .BuildConfiguration();
 
             return config.BuildSessionFactory();
         }
 
-        protected static void TreatConfiguration(Configuration configuration)
+        protected static void TreatConfiguration(Configuration configuration, bool cleanDb)
         {
-            if (true)
+            if (!cleanDb)
             {
                 var update = new SchemaUpdate(configuration);
                 update.Execute(false, true);
@@ -64,15 +64,17 @@ namespace Controll.Hosting.NHibernate
             else
             {
                 var export = new SchemaExport(configuration);
-                export.Drop(true, true);
-                export.Create(true, true);
+                export.Drop(false, true);
+                export.Create(false, true);
             }
         }
 
 
         public static ISessionFactory GetSessionFactoryForTesting()
         {
-            return GetSessionFactoryForConnectionStringAlias("testing");
+            var factory = GetSessionFactoryForConnectionStringAlias("testing", cleanDb:true);
+            
+            return factory;
         }
 
         public static ISessionFactory GetSessionFactoryForMockedData()

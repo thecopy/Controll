@@ -21,7 +21,6 @@ namespace Controll.Hosting.Services
     {
         private readonly IQueueItemRepostiory _queueItemRepository;
         private readonly IConnectionManager _connectionManager;
-
         public MessageQueueService(
             IQueueItemRepostiory queueItemRepository,
             IConnectionManager connectionManager)
@@ -103,8 +102,16 @@ namespace Controll.Hosting.Services
             var queueItem = _queueItemRepository.Get(ticket);
 
             // We want to send this to the sender aka the invocator
+            var user = (ControllUser)queueItem.Sender;
+            Console.WriteLine("Will send message to " + user.UserName + " which have " 
+                + user.ConnectedClients.Count + " clients");
+
             foreach (var connectionId in queueItem.Sender.ConnectedClients.Select(x => x.ConnectionId))
+            {
+                Console.Write("Sending " + type + " to " + connectionId + ": ");
                 SendActivityMessage(connectionId, ticket, type, message);
+                Console.WriteLine(" Done");
+            }
         }
 
         public void InsertActivityResult(Guid ticket, ActivityCommand intermidiateCommand)
@@ -144,7 +151,10 @@ namespace Controll.Hosting.Services
             }
 
             foreach(var connectionId in queueItem.Reciever.ConnectedClients.Select(x => x.ConnectionId))
+            {
                 actions[queueItem.Type](queueItem, connectionId);
+                Console.WriteLine("Sending " + queueItem.Type + " to " + connectionId);
+            }
         }
 
         private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)

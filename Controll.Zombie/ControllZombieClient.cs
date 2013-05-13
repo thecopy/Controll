@@ -53,9 +53,11 @@ namespace Controll
 
         private void OnActivatePlugin(Guid activityId, Guid ticket, IDictionary<string, string> parameters, string commandName)
         {
-            _hubProxy.Invoke("QueueItemDelivered", ticket);
-            EventHandler<ActivityStartedEventArgs> handler = ActivateZombie;
-            if (handler != null) handler(this, new ActivityStartedEventArgs(activityId, ticket, parameters, commandName));
+            _hubProxy.Invoke("QueueItemDelivered", ticket).ContinueWith(t =>
+                {
+                    EventHandler<ActivityStartedEventArgs> handler = ActivateZombie;
+                    if (handler != null) handler(this, new ActivityStartedEventArgs(activityId, ticket, parameters, commandName));
+                });
         }
         #endregion
 
@@ -123,6 +125,11 @@ namespace Controll
         public Task Synchronize(List<ActivityViewModel> activitiyVms)
         {
             return _hubProxy.Invoke("SynchronizeActivities", activitiyVms);
+        }
+
+        public Task SignOut()
+        {
+            return _hubProxy.Invoke("SignOut");
         }
     }
 }

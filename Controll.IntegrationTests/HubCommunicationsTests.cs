@@ -23,57 +23,54 @@ namespace Controll.IntegrationTests
     public class HubCommunicationsTests
     {
         // Add user and zombie in datebase for mocked data is not exists
-        private static bool _userAndZombieExists;
+        private static readonly ISessionFactory Factory = NHibernateHelper.GetSessionFactoryForTesting();
+
         [ClassInitialize]
         public static void ClassInit(TestContext context)
         {
-            if (!_userAndZombieExists)
+            using (var session = Factory.OpenSession())
+            using (var transaction = session.BeginTransaction())
             {
-                using (var session = NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                using (var transaction = session.BeginTransaction())
+                var userRepo = new ControllUserRepository(session);
+                if (userRepo.GetByUserName("username") == null)
                 {
-                    var userRepo = new ControllUserRepository(session);
-                    if (userRepo.GetByUserName("username") == null)
-                    {
-                        userRepo.Add(new ControllUser
-                            {
-                                Email = "email",
-                                Password = "password",
-                                UserName = "username"
-                            });
-                    }
-
-                    var user = userRepo.GetByUserName("username");
-                    
-                    if (user.GetZombieByName("zombieName") == null)
-                    {
-                        user.Zombies.Add(new Zombie
-                            {
-                                Name = "zombieName",
-                                Owner = user
-                            });
-                    }
-
-                    userRepo.Update(user);
-                    transaction.Commit(); 
+                    userRepo.Add(new ControllUser
+                        {
+                            Email = "email",
+                            Password = "password",
+                            UserName = "username"
+                        });
                 }
-                _userAndZombieExists = true;
+
+                var user = userRepo.GetByUserName("username");
+
+                if (user.GetZombieByName("zombieName") == null)
+                {
+                    user.Zombies.Add(new Zombie
+                        {
+                            Name = "zombieName",
+                            Owner = user
+                        });
+                }
+
+                userRepo.Update(user);
+                transaction.Commit();
             }
         }
 
-        private void UseMockedData()
+        private void UseTestData()
         {
             Bootstrapper.Kernel.Rebind<ISession>()
-                .ToMethod(_ => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                .InThreadScope();
+                        .ToMethod(_ => Factory.OpenSession())
+                        .InThreadScope();
         }
 
-        private const string LocalHostUrl = "http://erik-ws:10244"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
-        //[TestMethod]
+        private const string LocalHostUrl = "http://localhost:10244"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
+        [TestMethod]
         public void ShouldBeAbleToLoginAsClient()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-            UseMockedData();
+            UseTestData();
 
             using(server.Start()) // Start listening on /localhost:10244/
             {
@@ -88,11 +85,11 @@ namespace Controll.IntegrationTests
             }
         }
 
-       // [TestMethod]
+        [TestMethod]
         public void ShouldBeAbleToLoginAsZombie()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-            UseMockedData();
+            UseTestData();
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
@@ -110,7 +107,7 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToPing()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-            UseMockedData();
+            UseTestData();
 
             using (server.Start()) // Start listening on localhost:10244/
             {
@@ -156,7 +153,7 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToActivateActivity()
         {
             var server = new ControllStandAloneServer("http://*:10244/");
-            UseMockedData();
+            UseTestData();
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
@@ -296,31 +293,31 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(ticket, activityResultTicket);
 
                 var converted = JsonConvert.DeserializeObject<ActivityCommandViewModel>(recievedObject.ToString());
-                var convertedPD = converted.ParameterDescriptors.First();
-                var convertedPV = convertedPD.PickerValues.First();
-                var convertedParam = convertedPV.Parameters.ElementAt(0);
+                var convertedPd = converted.ParameterDescriptors.First();
+                var convertedPv = convertedPd.PickerValues.First();
+                var convertedParam = convertedPv.Parameters.ElementAt(0);
 
                 var mockedCommand = mockedActivity.Commands.First();
-                var mockedPD = mockedCommand.ParameterDescriptors.First();
-                var mockedPV = mockedPD.PickerValues.First();
-                var mockedParam = mockedPV.Parameters.ElementAt(0);
+                var mockedPd = mockedCommand.ParameterDescriptors.First();
+                var mockedPv = mockedPd.PickerValues.First();
+                var mockedParam = mockedPv.Parameters.ElementAt(0);
 
                 Assert.AreEqual(mockedCommand.Name, converted.Name);
                 Assert.AreEqual(mockedCommand.Label, converted.Label);
                 Assert.AreEqual(converted.ParameterDescriptors.Count(), 1);
 
-                Assert.AreEqual(mockedPD.Name, convertedPD.Name);
-                Assert.AreEqual(mockedPD.Description, convertedPD.Description);
-                Assert.AreEqual(mockedPD.Label, convertedPD.Label);
-                Assert.AreEqual(mockedPD.IsBoolean, convertedPD.IsBoolean);
-                Assert.AreEqual(mockedPD.PickerValues.Count(), convertedPD.PickerValues.Count());
+                Assert.AreEqual(mockedPd.Name, convertedPd.Name);
+                Assert.AreEqual(mockedPd.Description, convertedPd.Description);
+                Assert.AreEqual(mockedPd.Label, convertedPd.Label);
+                Assert.AreEqual(mockedPd.IsBoolean, convertedPd.IsBoolean);
+                Assert.AreEqual(mockedPd.PickerValues.Count(), convertedPd.PickerValues.Count());
 
-                Assert.AreEqual(mockedPV.CommandName, convertedPV.CommandName);
-                Assert.AreEqual(mockedPV.Identifier, convertedPV.Identifier);
-                Assert.AreEqual(mockedPV.Description, convertedPV.Description);
-                Assert.AreEqual(mockedPV.Label, convertedPV.Label);
-                Assert.AreEqual(mockedPV.IsCommand, convertedPV.IsCommand);
-                Assert.AreEqual(mockedPV.Parameters.Count, convertedPV.Parameters.Count);
+                Assert.AreEqual(mockedPv.CommandName, convertedPv.CommandName);
+                Assert.AreEqual(mockedPv.Identifier, convertedPv.Identifier);
+                Assert.AreEqual(mockedPv.Description, convertedPv.Description);
+                Assert.AreEqual(mockedPv.Label, convertedPv.Label);
+                Assert.AreEqual(mockedPv.IsCommand, convertedPv.IsCommand);
+                Assert.AreEqual(mockedPv.Parameters.Count, convertedPv.Parameters.Count);
 
                 Assert.AreEqual(mockedParam.Key, convertedParam.Key);
                 Assert.AreEqual(mockedParam.Value, convertedParam.Value);

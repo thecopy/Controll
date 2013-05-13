@@ -68,5 +68,10 @@ namespace Controll
         {
             return _client.Synchronize(activitiyVms);
         }
+
+        public Task SignOut()
+        {
+            return _client.SignOut();
+        }
     }
 }

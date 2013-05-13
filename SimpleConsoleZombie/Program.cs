@@ -73,6 +73,9 @@ namespace SimpleConsoleZombie
                     case "auth":
                         Authenticate();
                         break;
+                    case "signout":
+                        SignOut();
+                        break;
                     case "register":
                         if (results.Count() == 4)
                         {
@@ -95,6 +98,18 @@ namespace SimpleConsoleZombie
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        private static void SignOut()
+        {
+            if (string.IsNullOrEmpty(service.UserName))
+            {
+                Console.WriteLine("Not signed in!");
+            }
+
+            service.SignOut().Wait();
+            Console.WriteLine("Signed out!");
+            
         }
 
         private static void Sync()
@@ -158,6 +173,11 @@ namespace SimpleConsoleZombie
         }
         private static void Authenticate(string userName, string password, string zombieName)
         {
+            if (!string.IsNullOrEmpty(service.UserName))
+            {
+                Console.WriteLine("Already authed. Signing out...");
+                SignOut();
+            }
             Console.WriteLine("Authenticating...");
             if (string.IsNullOrEmpty(userName))
                 userName = "username";
