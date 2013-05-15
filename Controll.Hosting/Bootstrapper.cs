@@ -56,12 +56,7 @@ namespace Controll.Hosting
                    .DefinesNamedScope(hubScope);
 
             _kernel.Bind<ISession>()
-                   .ToMethod(context =>
-                       {
-                           throw new StaleObjectStateException("Session", "a");
-                           Debug.WriteLine("Getting new session!");
-                           return NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession();
-                       })
+                   .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
                    .InNamedScope(hubScope);
 
             _kernel.Bind(typeof(IGenericRepository<>))
