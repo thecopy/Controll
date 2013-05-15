@@ -103,6 +103,12 @@ namespace Controll
             _hubConnection.Start().Wait();
         }
 
+        public Task<bool> LogOnAsync(string userName, string password)
+        {
+            _hubProxy["userName"] = userName;
+            return _hubProxy.Invoke<bool>("LogOn", password);
+        }
+
         public bool LogOn(string userName, string password)
         {
             _hubProxy["userName"] = userName;

@@ -31,7 +31,9 @@ namespace Controll.Hosting.Repositories
 
         public ControllUser GetByConnectionId(string connectionId)
         {
-            return Query.SingleOrDefault(user => user.ConnectedClients.Any(client => client.ConnectionId == connectionId));
+            return (ControllUser)Session.CreateCriteria<ControllClient>()
+                    .Add(Restrictions.Eq("ConnectionId", connectionId))
+                    .UniqueResult<ControllClient>().ClientCommunicator; 
         }
 
         public ControllUser GetByEMail(string email)

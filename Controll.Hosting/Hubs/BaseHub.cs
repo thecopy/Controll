@@ -5,7 +5,7 @@ namespace Controll.Hosting.Hubs
 {
     public class BaseHub : Hub
     {
-        protected readonly ISession Session;
+        public ISession Session { get; private set; }
 
         public BaseHub(ISession session)
         {

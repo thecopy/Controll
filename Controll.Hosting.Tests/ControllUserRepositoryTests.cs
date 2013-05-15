@@ -29,7 +29,7 @@ namespace Controll.Hosting.Tests
                     };
                 repo.Add(user);
 
-                user.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                user.ConnectedClients.Add(new ControllClient { ConnectionId = "conn", ClientCommunicator = user});
 
                 repo.Update(user);
                 

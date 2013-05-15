@@ -11,9 +11,9 @@ namespace Controll.Hosting
         public ControllStandAloneServer(string url)
         {
             _url = url;
-            Bootstrapper.StrapTheBoot();
+            Bootstrapper.SetupNinject();
+            Bootstrapper.SetupSessionPipelineInjector(); 
             GlobalHost.DependencyResolver = Bootstrapper.NinjectDependencyResolver;
-
         }
 
         public IDisposable Start()
@@ -26,10 +26,14 @@ namespace Controll.Hosting
             public void Configuration(IAppBuilder app)
             {
                 // Turn cross domain on 
-                var config = new HubConfiguration {EnableDetailedErrors = true, EnableCrossDomain = true, Resolver = Bootstrapper.NinjectDependencyResolver };
+                var config = new HubConfiguration
+                    {
+                        EnableDetailedErrors = true, 
+                        EnableCrossDomain = true, 
+                        Resolver = Bootstrapper.NinjectDependencyResolver
+                    };
 
                 // This will map out to http://localhost:8080/signalr by default
-                
                 app.MapHubs(config);
             }
         }

@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Diagnostics;
+using Controll.Hosting.Hubs;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
+using Microsoft.AspNet.SignalR;
+using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using NHibernate;
 using Ninject;
+using Ninject.Extensions.NamedScope;
 
 namespace Controll.Hosting
 {
@@ -26,8 +31,9 @@ namespace Controll.Hosting
             _kernel = kernel;
         }
 
-        public static void StrapTheBoot(string connectionStringAlias = "mocked")
+        public static void SetupNinject(string connectionStringAlias = "mocked")
         {
+            const string hubScope = "Hub";
             if(Kernel == null)
             {
                 _kernel = new StandardKernel();
@@ -38,35 +44,55 @@ namespace Controll.Hosting
             _kernel.Bind<IConnectionManager>()
                   .ToMethod(_ => (IConnectionManager)NinjectDependencyResolver.GetFromBase<IConnectionManager>());
 
+            _kernel.Bind<BaseHub>()
+                   .ToSelf();
+
+            _kernel.Bind<ZombieHub>()
+                   .ToSelf()
+                   .DefinesNamedScope(hubScope);
+
+            _kernel.Bind<ClientHub>()
+                   .ToSelf()
+                   .DefinesNamedScope(hubScope);
+
+            _kernel.Bind<ISession>()
+                   .ToMethod(context =>
+                       {
+                           throw new StaleObjectStateException("Session", "a");
+                           Debug.WriteLine("Getting new session!");
+                           return NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession();
+                       })
+                   .InNamedScope(hubScope);
+
             _kernel.Bind(typeof(IGenericRepository<>))
                   .To(typeof(GenericRepository<>))
-                  .InThreadScope();
+                  .InTransientScope();
 
             _kernel.Bind<IQueueItemRepostiory>()
                   .To<QueueItemRepostiory>()
-                  .InThreadScope();
+                  .InTransientScope();
 
             _kernel.Bind<IControllUserRepository>()
                   .To<ControllUserRepository>()
-                  .InThreadScope();
+                  .InTransientScope();
 
             _kernel.Bind<IMessageQueueService>()
                   .To<MessageQueueService>()
-                  .InThreadScope();
+                  .InTransientScope();
 
             _kernel.Bind<IMembershipService>()
                   .To<MembershipService>()
-                  .InThreadScope();
+                  .InTransientScope();
 
             _kernel.Bind<IActivityMessageLogService>()
                   .To<ActivityMessageLogService>()
-                  .InThreadScope();
-
-            _kernel.Bind<ISession>()
-                   .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
-                   .InThreadScope();
+                  .InTransientScope();
 
             NinjectDependencyResolver = new NinjectDependencyResolver(_kernel);
+        }
+
+        public static void SetupSessionPipelineInjector()
+        {
         }
     }
 }

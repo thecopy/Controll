@@ -27,8 +27,7 @@ namespace Controll.Hosting.NHibernate.Mappings
         {
             Map(x => x.ConnectionId);
             Id(x => x.Id);
-            References(x => x.ClientCommunicator)
-                .Cascade.None();
+            References(x => x.ClientCommunicator).Not.LazyLoad();
         }
     }
 }

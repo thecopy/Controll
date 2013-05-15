@@ -17,15 +17,17 @@ namespace Controll.Hosting.Hubs
 {
     public class ZombieHub : BaseHub
     {
+        public new ISession Session { get; set; }
         private readonly IControllUserRepository _controllUserRepository;
         private readonly IMessageQueueService _messageQueueService;
         private readonly IActivityMessageLogService _activityService;
-
+        
         public ZombieHub(IControllUserRepository controllUserRepository,
                          IMessageQueueService messageQueueService,
                          IActivityMessageLogService activityService,
                          ISession session) : base(session)
         {
+            Session = session;
             _controllUserRepository = controllUserRepository;
             _messageQueueService = messageQueueService;
             _activityService = activityService;

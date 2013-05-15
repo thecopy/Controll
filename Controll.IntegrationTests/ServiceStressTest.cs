@@ -12,6 +12,7 @@ using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
+using Ninject.Extensions.NamedScope;
 using log4net.Config;
 
 namespace Controll.IntegrationTests
@@ -20,7 +21,7 @@ namespace Controll.IntegrationTests
     [TestClass]
     public class ServiceStressTest
     {
-        private const string LocalHostUrl = "http://localhost:10244/"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
+        private const string LocalHostUrl = "http://erik-ws:10244/"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
 
         // Add user and zombie in datebase for mocked data is not exists
         private static bool _userAndZombieExists;
@@ -67,7 +68,7 @@ namespace Controll.IntegrationTests
         {
             Bootstrapper.Kernel.Rebind<ISession>()
                         .ToMethod(_ => Factory.OpenSession())
-                        .InThreadScope();
+                        .InNamedScope("Hub");
         }
 
         [TestMethod]
@@ -377,8 +378,10 @@ namespace Controll.IntegrationTests
         }
 
         [TestMethod]
-        public async Task ShouldBeAbleToHandleNewConnectedClients()
+        public void ShouldBeAbleToHandleNewConnectedClients()
         {
+            // Use Nhibernate Profiler
+            HibernatingRhinos.Profiler.Appender.NHibernate.NHibernateProfiler.Initialize();
             var server = new ControllStandAloneServer("http://*:10244/");
             UseTestData();
 
@@ -394,48 +397,57 @@ namespace Controll.IntegrationTests
                 int reciveCount = 0;
 
                 var resetEvent = new ManualResetEvent(false);
+                var resetEvent2 = new ManualResetEvent(false);
+                var loginEvent = new ManualResetEvent(false);
                 zombie.ActivateZombie += (sender, args) => resetEvent.Set();
 
+                var connectionIdCollection = new ConcurrentDictionary<String, bool>();
+
                 var clients = new ControllClient[range];
-                var timer = new Stopwatch();
-                //¨å'XmlConfigurator.Configure();
-                Enumerable.Range(0, range).ToList().ForEach(i =>
+                var watch = new Stopwatch(); watch.Start();
+                Console.Write("Logging in all clients...");
+                Enumerable.Range(0, range).AsParallel().ForAll(async i =>
                     {
                         clients[i] = new ControllClient(LocalHostUrl);
-                        clients[i].Connect();
-                        if (!clients[i].LogOn("username", "password")) throw new AssertionFailure("Could not log on user " + i);
-                        clients[i].MessageDelivered += (sender, args) =>
+                        clients[i].ActivityMessageRecieved += (sender, args) =>
                         {
                             Interlocked.Increment(ref reciveCount);
-                            Console.WriteLine("Got message at +" + timer.ElapsedMilliseconds + "ms");
+                            if (!connectionIdCollection.TryUpdate(clients[i].HubConnection.ConnectionId, true, false))
+                                throw new AssertionFailure("Could not update ConcurrentDictionary");
+
+                            if (reciveCount == range)
+                                resetEvent2.Set();
                         };
+
+                        clients[i].Connect();
+                        clients[i].LogOn("username", "password");
+
+
+                        if (!connectionIdCollection.TryAdd(clients[i].HubConnection.ConnectionId, false))
+                            throw new AssertionFailure("Could not insert into ConcurrentDictionary");
+
+                        if (connectionIdCollection.Count() == range)
+                        {
+                            loginEvent.Set();
+                            Console.WriteLine(" Every one is logged in at " + watch.ElapsedMilliseconds + " ms");
+                        }
                     });
-
-                var session = (ISession)Bootstrapper.Kernel.GetService(typeof(ISession));
-                var user = session.Get<ControllUser>(1);
-                Assert.AreEqual(range, user.ConnectedClients.Count);
-
+                Assert.IsTrue(loginEvent.WaitOne(TimeSpan.FromSeconds(5)),
+                              "Did not login all clients. Expected " + range + " but got " + connectionIdCollection.Count()); // log in all
+                
                 var ticket = clients[0].StartActivity("zombieName", activity.Key, new Dictionary<string, string>(), "commandName");
 
-                Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(5)));
+                Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(2)));
 
-                timer.Start();
                 zombie.ActivityNotify(ticket, "notify!");
+                
+                var hasRecievedCorrectNumberOfMessages = resetEvent2.WaitOne(TimeSpan.FromSeconds(2));
 
-                var maxWait = TimeSpan.FromSeconds(10);
-                var wait = new TimeSpan(0);
-                while (reciveCount < range)
+                if (!hasRecievedCorrectNumberOfMessages)
                 {
-                    var delay = TimeSpan.FromSeconds(2);
-                    await Task.Delay(delay);
-                    wait += delay;
-
-                    if (wait <= maxWait) continue;
-
-                    timer.Stop();
-                    Assert.Fail("Expected " + range + " messages but got " + reciveCount + " at time +" + timer.ElapsedMilliseconds + "ms");
+                    Console.WriteLine("Expected " + range + " messages but got " + reciveCount);
+                    Assert.Fail("Expected " + range + " messages but got " + reciveCount);
                 }
-                timer.Stop();
             }
         }
         

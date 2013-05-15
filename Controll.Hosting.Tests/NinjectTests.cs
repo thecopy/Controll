@@ -19,10 +19,7 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToResolveHubs()
         {
-            Bootstrapper.StrapTheBoot();
-            Bootstrapper.Kernel.Rebind<ISession>()
-                  .ToMethod(context => NHibernateHelper.GetSessionFactoryForTesting().OpenSession()) 
-                  .InThreadScope();
+            Bootstrapper.SetupNinject("testing");
 
             IDependencyResolver ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
 
@@ -30,6 +27,38 @@ namespace Controll.Hosting.Tests
             var clientHub = ninjectDependencyResolver.Resolve<ClientHub>();
             Assert.IsNotNull(zombieHub);
             Assert.IsNotNull(clientHub);
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToInjectNewSessionInstancesIntoNewHubInstances()
+        {
+            Bootstrapper.SetupNinject("testing");
+
+            IDependencyResolver ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
+
+            const int range = 10;
+            var sessions = new List<ClientHub>();
+            Enumerable.Range(0, range).AsParallel().ForAll(_ =>
+                {
+                    sessions.Add(ninjectDependencyResolver.Resolve<ClientHub>());
+                });
+
+            Assert.AreEqual(range, sessions.Select(x => x.Session).Distinct(new SessionEqualityComparer()).Count());
+            Assert.IsTrue(sessions.All(x => x.Session == x.MessageQueueService.Session));
+        }
+
+        private class SessionEqualityComparer : IEqualityComparer<ISession>
+        {
+            public bool Equals(ISession x, ISession y)
+            {
+                return x != null && y != null &&
+                    x.GetSessionImplementation().SessionId.Equals(y.GetSessionImplementation().SessionId);
+            }
+
+            public int GetHashCode(ISession obj)
+            {
+                return obj.GetSessionImplementation().SessionId.GetHashCode();
+            }
         }
     }
 }

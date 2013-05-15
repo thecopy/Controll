@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Authentication;
+using System.Threading;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
@@ -36,7 +38,7 @@ namespace Controll.Hosting.Hubs
         {
             var userName = (string) Clients.Caller.userName;
 
-            ControllUser user = _controllUserRepository.GetByUserName(userName);
+            var user = _controllUserRepository.GetByUserName(userName);
 
             return user;
         }
@@ -49,16 +51,14 @@ namespace Controll.Hosting.Hubs
             var client = new ControllClient
                 {
                     ConnectionId = Context.ConnectionId,
+                    ClientCommunicator = user
                 };
 
             user.ConnectedClients.Add(client);
 
             using (var transaction = Session.BeginTransaction())
             {
-                Session.Save(client);
-
                 _controllUserRepository.Update(user);
-
                 transaction.Commit();
             }
 
@@ -69,7 +69,7 @@ namespace Controll.Hosting.Hubs
         public IEnumerable<ZombieViewModel> GetAllZombies()
         {
             if (!EnsureUserIsLoggedIn())
-                return Enumerable.Empty<ZombieViewModel>();
+                throw new Exception("Not authed");
 
             var user = GetUser();
             Console.WriteLine(user.UserName + " is fetching all zombies");
@@ -81,7 +81,7 @@ namespace Controll.Hosting.Hubs
         public IEnumerable<ActivityViewModel> GetActivitesInstalledOnZombie(string zombieName)
         {
             if (!EnsureUserIsLoggedIn())
-                return Enumerable.Empty<ActivityViewModel>();
+                throw new Exception("Not authed");
 
             var user = GetUser();
 
@@ -103,7 +103,7 @@ namespace Controll.Hosting.Hubs
         public bool IsZombieOnline(string zombieName)
         {
             if (!EnsureUserIsLoggedIn())
-                return false;
+                throw new Exception("Not authed");
 
             var user = GetUser();
             var zombie = user.GetZombieByName(zombieName);
@@ -136,11 +136,11 @@ namespace Controll.Hosting.Hubs
 
             using (var transaction = Session.BeginTransaction())
             {
-                var queueItem = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                var queueItem = MessageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
-                _messageQueueService.ProcessQueueItem(queueItem);
+                MessageQueueService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
         }
@@ -149,7 +149,7 @@ namespace Controll.Hosting.Hubs
         public Guid PingZombie(string zombieName)
         {
             if (!EnsureUserIsLoggedIn())
-                return default(Guid);
+                throw new Exception("Not authed");
 
             var zombie = GetUser().GetZombieByName(zombieName);
 
@@ -158,10 +158,10 @@ namespace Controll.Hosting.Hubs
 
             using(var transaction = Session.BeginTransaction())
             {
-                var queueItem = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
+                var queueItem = MessageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
                 transaction.Commit();
 
-                _messageQueueService.ProcessQueueItem(queueItem);
+                MessageQueueService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
         }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
+using Microsoft.AspNet.SignalR.Client.Transports;
 
 namespace Controll
 {

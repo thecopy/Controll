@@ -84,8 +84,7 @@ namespace Controll.Hosting.Tests
             hub.Clients.Caller.UserName = "Erik";
 
             // Not logged in.
-            var ticket =  hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: null);
-            Assert.AreEqual(default(Guid), ticket);
+            AssertionHelper.Throws<Exception>(() => hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: null));
         }
 
        
@@ -367,10 +366,10 @@ namespace Controll.Hosting.Tests
 
             hub.Clients.Caller.UserName = "Erik";
             hub.LogOn("password");
+            
+            AssertionHelper.Throws<Exception>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null)); // wrong name
 
-            Assert.AreEqual(default(Guid), hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null)); // wrong name
-
-            Assert.AreEqual(default(Guid), hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null)); // wrong guid
+            AssertionHelper.Throws<Exception>(() => hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null)); // wrong guid
         }
         
         [TestMethod]
@@ -473,7 +472,7 @@ namespace Controll.Hosting.Tests
                     parameters[i] = value;
                 }
                 var closureSafeMethod = method;
-
+                /*
                 if (typeof(IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
                 {
                     IList<object> returned = ((IEnumerable<object>)closureSafeMethod.Invoke(hub, parameters)).ToList(); // .ToList() -> forcing enumeration (and therefore execution) for IEnumerable return types
@@ -484,22 +483,22 @@ namespace Controll.Hosting.Tests
                     var returned = closureSafeMethod.Invoke(hub, parameters);
                     var expected = closureSafeMethod.ReturnType.IsValueType ? Activator.CreateInstance(returned.GetType()) : null;
                     Assert.AreEqual(expected, returned);
-                }
+                }*/
 
                 #region This Should Be Used when SignalR implements exception bubbling
 
-                /*
+                
                 // Checking InnerException because MethodInvocationException would be checked otherwise
                 if (typeof (IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
                 {
-                    AssertionHelper.Throws<AuthenticationException>(() =>
+                    AssertionHelper.Throws<Exception>(() =>
                         ((IEnumerable<object>) closureSafeMethod.Invoke(hub, parameters)).ToList(), innerException:true); // .ToList() -> forcing enumeration (and therefore execution) for IEnumerable return types
                 }
                 else
                 {
-                    AssertionHelper.Throws<AuthenticationException>(() => closureSafeMethod.Invoke(hub, parameters), innerException:true);
+                    AssertionHelper.Throws<Exception>(() => closureSafeMethod.Invoke(hub, parameters), innerException:true);
                 }
- * */
+
 
                 #endregion
             }

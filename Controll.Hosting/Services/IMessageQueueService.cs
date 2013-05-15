@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Controll.Common;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
+using Controll.Hosting.Repositories;
+using NHibernate;
 
 namespace Controll.Hosting.Services
 {
