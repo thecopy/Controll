@@ -44,7 +44,6 @@ namespace Controll.Hosting.Tests
                 });
 
             Assert.AreEqual(range, sessions.Select(x => x.Session).Distinct(new SessionEqualityComparer()).Count());
-            Assert.IsTrue(sessions.All(x => x.Session == x.MessageQueueService.Session));
         }
 
         private class SessionEqualityComparer : IEqualityComparer<ISession>

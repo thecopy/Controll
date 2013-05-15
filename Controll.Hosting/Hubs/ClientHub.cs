@@ -136,11 +136,11 @@ namespace Controll.Hosting.Hubs
 
             using (var transaction = Session.BeginTransaction())
             {
-                var queueItem = MessageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                var queueItem = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
-                MessageQueueService.ProcessQueueItem(queueItem);
+                _messageQueueService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
         }
@@ -158,10 +158,10 @@ namespace Controll.Hosting.Hubs
 
             using(var transaction = Session.BeginTransaction())
             {
-                var queueItem = MessageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
+                var queueItem = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
                 transaction.Commit();
 
-                MessageQueueService.ProcessQueueItem(queueItem);
+                _messageQueueService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
         }
