@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
@@ -8,50 +9,92 @@ using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using NHibernate;
 using Ninject;
-using Ninject.Activation;
+using Ninject.Extensions.NamedScope;
 
 namespace Controll.Hosting
 {
     public static class Bootstrapper
     {
-        public static IKernel Kernel = null;
-        public static NinjectDependencyResolver NinjectDependencyResolver = null;
-
-        public static void StrapTheBoot()
+        internal static String ConnectionStringAlias { get; private set; } 
+        public static IKernel Kernel
         {
-            var kernel = new StandardKernel();
+            get { return _kernel; }
+            private set { _kernel = value; }
+        }
+
+        public static NinjectDependencyResolver NinjectDependencyResolver { get; private set; }
+        private static IKernel _kernel;
+
+        public static void UseKernel(IKernel kernel)
+        {
+            if(_kernel != null)
+                throw new InvalidOperationException("Cannot set kernel. It is already set!");
+            _kernel = kernel;
+        }
+
+        public static void SetupNinject(string connectionStringAlias = "mocked")
+        {
+            ConnectionStringAlias = connectionStringAlias;
+            const string hubScope = "Hub";
+
+            if(Kernel == null)
+            {
+                _kernel = new StandardKernel();
+            }
 
             // Do not use GlobalHost.ConnectionManager. It will try to resolve it with the DependecyResolver
-            // which is THIS. GetFromBase uses the default resolver.
-            kernel.Bind<IConnectionManager>()
+            // which is THIS. GetFromBase uses the default SignalR resolver.
+            _kernel.Bind<IConnectionManager>()
                   .ToMethod(_ => (IConnectionManager)NinjectDependencyResolver.GetFromBase<IConnectionManager>());
 
-            kernel.Bind(typeof (IGenericRepository<>))
-                  .To(typeof (GenericRepository<>))
-                  .InThreadScope();
+            _kernel.Bind<BaseHub>()
+                   .ToSelf();
 
-            kernel.Bind<IQueueItemRepostiory>()
+            _kernel.Bind<ZombieHub>()
+                   .ToSelf()
+                   .DefinesNamedScope(hubScope);
+
+            _kernel.Bind<ClientHub>()
+                   .ToSelf()
+                   .DefinesNamedScope(hubScope);
+
+            _kernel.Bind<ISessionFactory>()
+                   .ToMethod(_ => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(ConnectionStringAlias))
+                   .InSingletonScope();
+
+            _kernel.Bind<ISession>()
+                   .ToMethod(x => x.Kernel.Get<ISessionFactory>().OpenSession())
+                   .InNamedScope(hubScope);
+
+            _kernel.Bind(typeof(IGenericRepository<>))
+                  .To(typeof(GenericRepository<>))
+                  .InTransientScope();
+
+            _kernel.Bind<IQueueItemRepostiory>()
                   .To<QueueItemRepostiory>()
-                  .InThreadScope();
+                  .InTransientScope();
 
-            kernel.Bind<IControllUserRepository>()
+            _kernel.Bind<IControllUserRepository>()
                   .To<ControllUserRepository>()
-                  .InThreadScope();
-            
-            kernel.Bind<IMessageQueueService>()
+                  .InTransientScope();
+
+            _kernel.Bind<IMessageQueueService>()
                   .To<MessageQueueService>()
-                  .InThreadScope();
+                  .InTransientScope();
 
-            kernel.Bind<IActivityService>()
-                  .To<ActivityService>()
-                  .InThreadScope();
+            _kernel.Bind<IMembershipService>()
+                  .To<MembershipService>()
+                  .InTransientScope();
 
-            kernel.Bind<ISession>()
-                  .ToMethod(context => NHibernateHelper.GetSessionFactoryForMockedData().OpenSession())
-                  .InThreadScope();
+            _kernel.Bind<IActivityMessageLogService>()
+                  .To<ActivityMessageLogService>()
+                  .InTransientScope();
 
-            Kernel = kernel;
-            NinjectDependencyResolver = new NinjectDependencyResolver(kernel);
+            NinjectDependencyResolver = new NinjectDependencyResolver(_kernel);
+        }
+
+        public static void SetupSessionPipelineInjector()
+        {
         }
     }
 }

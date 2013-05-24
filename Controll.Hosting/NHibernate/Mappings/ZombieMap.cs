@@ -8,14 +8,13 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ZombieMap : ClassMap<Zombie>
+    internal class ZombieMap : SubclassMap<Zombie>
     {
-        public ZombieMap()
+        internal ZombieMap()
         {
-            Id(x => x.Id);
-            Map(x => x.ConnectionId);
-            Map(x => x.Name);
-            HasManyToMany(x => x.Activities).Not.LazyLoad().Cascade.SaveUpdate();
+            Map(x => x.Name).Not.Nullable();
+            References(x => x.Owner).Not.Nullable().Column("Owner_id");
+            HasManyToMany(x => x.Activities).Cascade.SaveUpdate();
         }
     }
 }

@@ -10,22 +10,15 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ControllUserMap : ClassMap<ControllUser>
+    internal class ControllUserMap : SubclassMap<ControllUser>
     {
-        public ControllUserMap()
+        internal ControllUserMap()
         {
-            Id(x => x.Id);
-            Map(x => x.EMail).Unique();
-            Map(x => x.Password);
-            Map(x => x.UserName).Unique();
-            HasMany(x => x.ConnectedClients).Component(
-                c =>
-                    {
-                        c.Map(x => x.ConnectionId);
-                        c.Map(x => x.DeviceType);
-                    }).Not.LazyLoad().Cascade.All();
+            Map(x => x.Email).Unique().Column("Email");
+            Map(x => x.Password).Not.Nullable().Column("Password"); ;
+            Map(x => x.UserName).Unique().Not.Nullable().Column("Username");
 
-            HasMany(x => x.Zombies).Cascade.All().Not.LazyLoad();
+            HasMany(x => x.Zombies).Cascade.All();
         }
     }
 }

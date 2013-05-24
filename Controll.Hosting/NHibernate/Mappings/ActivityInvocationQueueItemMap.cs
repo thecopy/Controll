@@ -8,9 +8,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ActivityInvocationQueueItemMap : SubclassMap<ActivityInvocationQueueItem>
+    internal class ActivityInvocationQueueItemMap : SubclassMap<ActivityInvocationQueueItem>
     {
-        public ActivityInvocationQueueItemMap()
+        internal ActivityInvocationQueueItemMap()
         {
             References(x => x.Activity);
             Map(x => x.CommandName);
@@ -18,12 +18,14 @@ namespace Controll.Hosting.NHibernate.Mappings
             Map(x => x.Response);
 
             HasMany(x => x.Parameters)
-                .AsMap<string>(index => index.Column("ParameterName").Type<string>(),
-                               element => element.Column("ParameterValue").Type<string>())
+                .AsMap<string>(index => index.Column("InvokedParameterName").Type<string>(),
+                               element => element.Column("InvokedParameterValue").Type<string>())
                 .Table("InvocationParameters")
                 .Cascade.All();
 
             HasMany(x => x.MessageLog)
+                .Cascade.AllDeleteOrphan()
+                .KeyColumn("Id")
                 .Component(c =>
                     {
                         c.Map(x => x.Date);

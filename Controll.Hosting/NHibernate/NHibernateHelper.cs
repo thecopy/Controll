@@ -13,62 +13,73 @@ using Controll.Hosting.NHibernate.Mappings;
 using FluentNHibernate.Automapping;
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Cfg.Db;
+using FluentNHibernate.Conventions.Helpers;
 using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Collection.Generic;
 using NHibernate.Tool.hbm2ddl;
 using Configuration = NHibernate.Cfg.Configuration;
+using ParameterDescriptor = Controll.Hosting.Models.ParameterDescriptor;
 
 namespace Controll.Hosting.NHibernate
 {
     public class NHibernateHelper
     {
-        public static ISessionFactory GetSessionFactoryForTesting()
+        public static ISessionFactory GetSessionFactoryForConnectionStringAlias(string connectionStringAlias, bool cleanDb = false)
         {
-            ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings["testing"];
+            ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings[connectionStringAlias];
             if (mockedConnectionString == null)
-                throw new ConfigurationErrorsException("No ConnectionString named \"testing\"");
+                throw new ConfigurationErrorsException("No ConnectionString named \"" + connectionStringAlias + "\"");
 
-            Configuration config = Fluently.Configure()
-                                           .Database(
-                                               MsSqlConfiguration.MsSql2008.ConnectionString(
-                                                   mockedConnectionString.ConnectionString))
-                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
-                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ParameterDescriptor>())
-                                           .BuildConfiguration();
+            var schemaExportPath = Path.Combine("D:\\", "Mappings");
+            if (!Directory.Exists(schemaExportPath))
+                Directory.CreateDirectory(schemaExportPath);
 
-            //new SchemaExport(config).Drop(false, true);
-            //new SchemaExport(config).Execute(false, true,false); //Kör endast om nödvändigt
-
-            new SchemaValidator(config).Validate();
-            
+            Configuration config = Fluently
+                .Configure()
+                .Database(MsSqlConfiguration.MsSql2008
+                                            //.ShowSql()
+                                            .ConnectionString(mockedConnectionString.ConnectionString))
+                .Mappings(m =>
+                    {
+                        m.FluentMappings
+                         .AddFromAssemblyOf<ControllUser>();
+                        //m.AutoMappings.ExportTo(schemaExportPath);
+                        m.FluentMappings.ExportTo(schemaExportPath);
+                    })
+                .Diagnostics(x => x.Enable())
+                .ExposeConfiguration(x => TreatConfiguration(x, cleanDb))
+                .BuildConfiguration();
 
             return config.BuildSessionFactory();
         }
 
+        protected static void TreatConfiguration(Configuration configuration, bool cleanDb)
+        {
+            if (!cleanDb)
+            {
+                var update = new SchemaUpdate(configuration);
+                update.Execute(false, true);
+            }
+            else
+            {
+                var export = new SchemaExport(configuration);
+                export.Drop(false, true);
+                export.Create(false, true);
+            }
+        }
+
+
+        public static ISessionFactory GetSessionFactoryForTesting()
+        {
+            var factory = GetSessionFactoryForConnectionStringAlias("testing", cleanDb:true);
+            
+            return factory;
+        }
+
         public static ISessionFactory GetSessionFactoryForMockedData()
         {
-            ConnectionStringSettings mockedConnectionString = ConfigurationManager.ConnectionStrings["mocked"];
-            if (mockedConnectionString == null)
-                throw new ConfigurationErrorsException("No ConnectionString named \"mocked\"");
-
-            Configuration config = Fluently.Configure()
-                                           .Database(
-                                               MsSqlConfiguration.MsSql2008.ConnectionString(
-                                                   mockedConnectionString.ConnectionString))
-                                           .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ControllUser>())
-                                           .BuildConfiguration();
-
-            //Kör endast om nödvändigt
-            {
-                //var export = new SchemaExport(config);
-                //export.Drop(true, true);
-                //export.Create(true, true);
-            }
-            new SchemaValidator(config).Validate();
-
-
-            return config.BuildSessionFactory();
+            return GetSessionFactoryForConnectionStringAlias("mocked");
         }
     }
 }

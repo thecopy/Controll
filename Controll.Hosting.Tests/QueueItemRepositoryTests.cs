@@ -21,10 +21,20 @@ namespace Controll.Hosting.Tests
             using (session.BeginTransaction())
             {
                 var zombieRepo = new GenericRepository<Zombie>(session);
+                var user = new ControllUser
+                    {
+                        UserName = "username",
+                        Password = "password",
+                        Email = "email"
+                    };
                 var zombie = new Zombie
                     {
-                        Name = "zombieName"
+                        Name = "zombieName",
+                        Owner = user
                     };
+
+                var userRepo = new ControllUserRepository(session);
+                userRepo.Add(user);
                 zombieRepo.Add(zombie);
 
                 var repo = new QueueItemRepostiory(session);
@@ -32,12 +42,14 @@ namespace Controll.Hosting.Tests
                 var queueItem1 = new PingQueueItem
                     {
                         Reciever = zombie,
+                        Sender = zombie,
                         RecievedAtCloud = DateTime.Now
                     };
 
                 var queueItem2 = new PingQueueItem
                     {
                         Reciever = zombie,
+                        Sender = zombie,
                         RecievedAtCloud = DateTime.Now,
                         Delivered = DateTime.Now
                     };

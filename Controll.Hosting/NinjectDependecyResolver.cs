@@ -34,11 +34,11 @@ namespace Controll.Hosting
 
         public override object GetService(Type serviceType)
         {
-            object result;
-            if (_kernel.TryGet(serviceType) != null)
-                result = _kernel.TryGet(serviceType);
-            else
-                result = base.GetService(serviceType);
+            var result = _kernel.TryGet(serviceType) ?? base.GetService(serviceType);
+
+            //use for debugging ninject binding:
+            //if (result == null) _kernel.Get(serviceType); // Force exception
+
             return result;
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Controll.Common.ViewModels;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
@@ -26,9 +27,15 @@ namespace Controll.Hosting.Tests
                 mockedQueueItemRepostiory.Object,
                 mockedConnectionManager.Object);
 
+            var user = new ControllUser
+                {
+                    UserName = "username"
+                };
+
             var zombie = new Zombie
                 {
-                    Name = "zombiename"
+                    Name = "zombiename",
+                    Owner = user
                 };
             var activity = new Activity
                 {
@@ -43,25 +50,82 @@ namespace Controll.Hosting.Tests
                     It.Is<ActivityInvocationQueueItem>(
                         a =>
                             a.Activity.Name == "activityname" &&
-                                a.Reciever.Name == "zombiename" &&
+                                a.Reciever.GetType() == typeof(Zombie) &&
+                                ((Zombie)a.Reciever).Name == "zombiename" &&
+                                a.Sender.GetType() == typeof(ControllUser) &&
+                                ((ControllUser)a.Sender).UserName == "username" &&
+                                a.CommandName == commandName &&
                                 a.Parameters.Count == 0 &&
                                 a.Type == QueueItemType.ActivityInvocation
                         )))
                 .Callback((QueueItem qi) =>qi.Ticket = Guid.NewGuid())
                 .Verifiable();
 
-            var ticket = messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, "connectionId");
+            var ticket = messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, commandName, "connectionId");
             Assert.AreNotEqual(Guid.Empty, ticket);
 
             mockedQueueItemRepostiory.Verify(x => x.Add(
                     It.Is<ActivityInvocationQueueItem>(
                         a =>
                             a.Activity.Name == "activityname" &&
-                                a.Reciever.Name == "zombiename" &&
+                                a.Reciever.GetType() == typeof(Zombie) &&
+                                ((Zombie)a.Reciever).Name == "zombiename" &&
+                                a.Sender.GetType() == typeof(ControllUser) &&
+                                ((ControllUser)a.Sender).UserName == "username" &&
+                                a.CommandName == commandName &&
                                 a.Parameters.Count == 0 &&
                                 a.Type == QueueItemType.ActivityInvocation &&
-                                a.SenderConnectionId == "connectionId"
+                                a.Sender == user
                         )), Times.Once());
+        }
+        [TestMethod]
+        public void ShouldBeAbleToInsertActivityResultQueueItem()
+        {
+            var mockedQueueItemRepostiory = new Mock<IQueueItemRepostiory>();
+            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var messageQueueService = new MessageQueueService(
+                mockedQueueItemRepostiory.Object,
+                mockedConnectionManager.Object);
+
+            var user = new ControllUser
+            {
+                UserName = "username"
+            };
+
+            var zombie = new Zombie
+            {
+                Name = "zombiename",
+                Owner = user
+            };
+            var activityCommand = new ActivityCommand
+            {
+                Name = "activityname",
+                Label = "labellll"
+            };
+            var ticket = Guid.NewGuid();
+            var communicator = new Mock<ClientCommunicator>();
+            communicator.SetupGet(x => x.ConnectedClients).Returns(new List<ControllClient>());
+            var invocationQueueItem = new ActivityInvocationQueueItem
+                {
+                    Ticket = ticket,
+                    Reciever = communicator.Object,
+                    Sender = communicator.Object
+                };
+
+            mockedQueueItemRepostiory.Setup(x => x.Get(It.Is<Guid>(g => g.Equals(ticket))))
+                .Returns(invocationQueueItem);
+
+            mockedQueueItemRepostiory.Setup(q => q.Add(
+                It.Is<ActivityResultQueueItem>(x =>
+                                               x.ActivityCommand == activityCommand &&
+                                               x.InvocationTicket == ticket))).Verifiable();
+
+            messageQueueService.InsertActivityResult(ticket, activityCommand);
+
+            mockedQueueItemRepostiory.Verify(q => q.Add(
+                It.Is<ActivityResultQueueItem>(x =>
+                                               x.ActivityCommand == activityCommand &&
+                                               x.InvocationTicket == ticket)), Times.Once());
         }
 
         [TestMethod]
@@ -81,7 +145,12 @@ namespace Controll.Hosting.Tests
             var queueItem = new Mock<QueueItem>();
             queueItem.SetupAllProperties();
             queueItem.SetupGet(x => x.Ticket).Returns(ticket);
-            queueItem.SetupGet(x => x.SenderConnectionId).Returns("Connid");
+            queueItem.SetupGet(x => x.Sender).Returns(() =>
+                {
+                    var controllUser = new ControllUser();
+                    controllUser.ConnectedClients.Add(new ControllClient { ConnectionId = "Connid" });
+                    return controllUser;
+                });
 
             // Setup the hubcontext and client objects
             mockedConnectionContext.Setup(x => x.Client(It.IsAny<String>())).Returns(new MockedClient());

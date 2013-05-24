@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Controll.Client.Models;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
-namespace Controll
+namespace Controll.Client
 {
     public class ControllClient
     {
@@ -17,24 +15,32 @@ namespace Controll
 
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
+        public event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
         
         public HubConnection HubConnection { get { return _hubConnection; } }
         
         private void OnMessageDelivered(Guid ticket)
         {
-            EventHandler<MessageDeliveredEventArgs> handler = MessageDelivered;
-            if (handler != null) handler(this, new MessageDeliveredEventArgs(ticket));
+            var handler = MessageDelivered;
+            if (handler != null)
+                handler(this, new MessageDeliveredEventArgs(ticket));
         }
 
         private void OnActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            EventHandler<ActivityLogMessageEventArgs> handler = ActivityMessageRecieved;
+            var handler = ActivityMessageRecieved;
             if (handler != null) handler(this, new ActivityLogMessageEventArgs(ticket, message, type));
         }
 
-        public ControllClient(string url)
+        private void OnActivityResult(Guid ticket, object result)
         {
-            _hubConnection = new HubConnection(url);
+            var handler = ActivityResultRecieved;
+            if (handler != null) handler(this, new ActivityResultEventArgs(ticket, result));
+        }
+
+        public ControllClient(HubConnection hubConnection)
+        {
+            _hubConnection = hubConnection;
             _hubProxy = _hubConnection.CreateHubProxy("clientHub");
 
             SetupEvents();
@@ -65,6 +71,7 @@ namespace Controll
         {
             _hubProxy.On<Guid>("MessageDelivered", OnMessageDelivered);
             _hubProxy.On<Guid, ActivityMessageType, string>("ActivityMessage", OnActivityMessage);
+            _hubProxy.On<Guid, object>("ActivityResult", OnActivityResult);
         }
 
         public IEnumerable<ZombieViewModel> GetAllZombies()
@@ -72,9 +79,9 @@ namespace Controll
             return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
         } 
 
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters)
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
         {
-            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters).Result;
+            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
         }
 
         public Guid Ping(string zombieName)
@@ -89,22 +96,25 @@ namespace Controll
             return _hubProxy.Invoke<Guid>("DownloadActivityAtZombie", zombieName, activityKey).Result;
         }
 
-        public void Connect()
+        public Task<bool> LogOnAsync(string userName, string password)
         {
-            _hubConnection.Start().Wait();
+            _hubProxy["userName"] = userName;
+            return _hubProxy.Invoke<bool>("LogOn", password);
         }
 
-        public bool LogOn(string userName, string password)
+        public Task SignIn()
         {
-            _hubProxy["UserName"] = userName;
+            return _hubConnection.Start().ContinueWith(_ =>
+                {
+                    if (_.IsFaulted)
+                    {
+                        if (_.Exception != null)
+                            throw _.Exception;
+                        throw new Exception("Could not connect to server");
+                    }
 
-            var result = _hubProxy.Invoke<bool>("LogOn", password).Result;
-            if (!result)
-            {
-                _hubProxy["UserName"] = "";
-            }
-
-            return result;
+                    _hubProxy.Invoke("SignIn");
+                });
         }
 
         public bool RegisterUser(string username, string password, string email)
@@ -114,7 +124,7 @@ namespace Controll
 
         public void Disconnect()
         {
-            _hubConnection.Disconnect();
+            _hubConnection.Stop();
         }
     }
 }

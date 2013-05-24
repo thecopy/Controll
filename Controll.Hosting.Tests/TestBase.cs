@@ -11,12 +11,24 @@ namespace Controll.Hosting.Tests
 {
     public class TestBase
     {
-        protected ISessionFactory SessionFactory;
+        private ISessionFactory _sessionFactory;
+
+        protected ISessionFactory SessionFactory
+        {
+            get
+            {
+                if(_sessionFactory == null)
+                    _sessionFactory = NHibernateHelper.GetSessionFactoryForTesting();
+
+                return _sessionFactory;
+            }
+            set { _sessionFactory = value; }
+        }
+
 
         [TestInitialize]
         public void InitializeTestBase()
         {
-            SessionFactory = NHibernateHelper.GetSessionFactoryForTesting();
         }
     }
 }

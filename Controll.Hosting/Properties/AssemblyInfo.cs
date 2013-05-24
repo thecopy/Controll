@@ -13,6 +13,12 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("Copyright ©  2012")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
+[assembly: InternalsVisibleTo("Controll.Hosting.Tests")]
+[assembly: InternalsVisibleTo("Controll.IntegrationTests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
+[assembly: InternalsVisibleTo("NHibernate")]
+[assembly: InternalsVisibleTo("mscorlib")]
+[assembly: InternalsVisibleTo("Ninject")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 

@@ -25,9 +25,9 @@ namespace Controll.Hosting.Repositories
         public IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId)
         {
             return Session.Query<QueueItem>()
-                .Where(qi => qi.Reciever.Id == zombieId && !qi.Delivered.HasValue)
-                .ToList();
-
+                          .Where(qi => qi.Reciever.Id == zombieId && !qi.Delivered.HasValue)
+                          .Take(100)
+                          .ToList();
         }
     }
 }

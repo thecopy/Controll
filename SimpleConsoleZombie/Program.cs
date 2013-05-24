@@ -24,12 +24,27 @@ namespace SimpleConsoleZombie
             {
                 Connect("http://localhost:10244/");
             }
+
+            Console.WriteLine("Connect to localhost:<port> (Y/n)?");
+            result = Console.ReadLine();
+            if (string.IsNullOrEmpty(result) || result.ToLower() == "y")
+            {
+                Console.Write("Enter port: ");
+                string port = Console.ReadLine();
+                Connect("http://localhost:" + int.Parse(port) + "/");
+            }
+            else
+            {
+                Console.Write("Enter url: ");
+                string url = Console.ReadLine();
+                Connect(url);
+            }
         }
 
         private static void Connect(string url)
         {
             Console.WriteLine("Initializing service...");
-            service = new ZombieService("http://localhost:10244/");
+            service = new ZombieService(url);
             Console.WriteLine("Connecting to " + url);
             service.Connect();
             Console.WriteLine("Connected!");
@@ -58,6 +73,9 @@ namespace SimpleConsoleZombie
                     case "auth":
                         Authenticate();
                         break;
+                    case "signout":
+                        SignOut();
+                        break;
                     case "register":
                         if (results.Count() == 4)
                         {
@@ -82,20 +100,27 @@ namespace SimpleConsoleZombie
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
         }
 
+        private static void SignOut()
+        {
+            if (string.IsNullOrEmpty(service.UserName))
+            {
+                Console.WriteLine("Not signed in!");
+            }
+
+            service.SignOut().Wait();
+            Console.WriteLine("Signed out!");
+            
+        }
+
         private static void Sync()
         {
             var activitiyTypes = PluginService.Instance.GetAllActivityTypes().ToList();
             var activitiyVms = new List<ActivityViewModel>(activitiyTypes.Count);
-            activitiyVms.AddRange(activitiyTypes.Select(activity => (IControllPlugin) Activator.CreateInstance(activity)).Select(activityInstance => new ActivityViewModel
-                {
-                    Key = activityInstance.Key, 
-                    Name = activityInstance.Name,
-                    CreatorName = activityInstance.CreatorName,
-                    Description = activityInstance.Description,
-                    LastUpdated = activityInstance.LastUpdated
-                }));
+            activitiyVms.AddRange(activitiyTypes.Select(activity => 
+                (IActivity) Activator.CreateInstance(activity)).Select(activityInstance => 
+                    activityInstance.ViewModel));
 
-            service.Synchronize(activitiyVms);
+            service.Synchronize(activitiyVms).Wait();
             Console.WriteLine("Ok. Synchronized!");
         }
 
@@ -148,6 +173,11 @@ namespace SimpleConsoleZombie
         }
         private static void Authenticate(string userName, string password, string zombieName)
         {
+            if (!string.IsNullOrEmpty(service.UserName))
+            {
+                Console.WriteLine("Already authed. Signing out...");
+                SignOut();
+            }
             Console.WriteLine("Authenticating...");
             if (string.IsNullOrEmpty(userName))
                 userName = "username";

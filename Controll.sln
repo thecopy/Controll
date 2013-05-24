@@ -5,7 +5,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Controll.Hosting", "Control
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Controll.Hosting.Tests", "Controll.Hosting.Tests\Controll.Hosting.Tests.csproj", "{F6364CC7-590A-40EC-B720-2FD9BF63347E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Controll", "Controll\Controll.csproj", "{F299089C-9B7E-4085-ACF4-EB6701FC376A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Controll.Client", "Controll\Controll.Client.csproj", "{F299089C-9B7E-4085-ACF4-EB6701FC376A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Controll.Common", "Controll.Common\Controll.Common.csproj", "{ACD1BF70-B936-4F32-BC70-BE93A4787E41}"
 EndProject

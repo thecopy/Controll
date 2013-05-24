@@ -137,5 +137,39 @@ namespace Controll.Hosting.Tests
             AssertionHelper.AssertEnumerableItemsAreEqual(list1, list2, (zombie, zombie1) => zombie.Name == zombie1.Name);
         }
 
+        [TestMethod]
+        public void ShouldNotAssertFailIfTwoDictionariesAreEqual()
+        {
+            var dict1 = new Dictionary<string, string>();
+            var dict2 = new Dictionary<string, string>();
+
+            dict1.Add("k1", "v1");
+            dict1.Add("k2", "v2");
+
+            dict2.Add("k1", "v1");
+            dict2.Add("k2", "v2");
+
+            Assert.IsTrue(AssertionHelper.IsDictionariesEqual(dict1, dict2));
+        }
+
+        [TestMethod]
+        public void ShouldAssertFailIfTwoDictionariesAreNotEqual()
+        {
+            var dict1 = new Dictionary<string, string>();
+            var dict2 = new Dictionary<string, string>();
+
+            dict1.Add("k1", "v1");
+            dict1.Add("k2", "v2");
+
+            dict2.Add("k1", "v1AAAAAA");
+            dict2.Add("k2", "v2");
+            
+            Assert.IsFalse(AssertionHelper.IsDictionariesEqual(dict1, dict2));
+
+            var dict3 = new Dictionary<string, Exception> {{"k1", null}, {"k2", null}};
+
+            Assert.IsFalse(AssertionHelper.IsDictionariesEqual(dict1, dict3));
+        }
+
     }
 }

@@ -24,18 +24,21 @@ namespace Controll.Hosting.Tests
                 var user = new ControllUser
                     {
                         UserName = "name",
-                        EMail = "mail",
-                        Id = 222,
-                        ConnectedClients = new List<ControllClient> { new ControllClient { ConnectionId = "conn", DeviceType = DeviceType.PC } }
+                        Email = "mail",
+                        Password = "password"
                     };
                 repo.Add(user);
 
+                user.ConnectedClients.Add(new ControllClient { ConnectionId = "conn", ClientCommunicator = user});
+
+                repo.Update(user);
+                
                 var fetched = repo.GetByConnectionId("conn");
 
                 Assert.IsNotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
                 Assert.AreEqual(user.Id, fetched.Id);
-                Assert.AreEqual(user.EMail, fetched.EMail);
+                Assert.AreEqual(user.Email, fetched.Email);
             }
         }
 
@@ -47,7 +50,13 @@ namespace Controll.Hosting.Tests
             {
                 var repo = new ControllUserRepository(session);
 
-                var user = new ControllUser() { UserName = "name", EMail = "mail", Id = 222 };
+                var user = new ControllUser()
+                {
+                    UserName = "name",
+                    Email = "mail",
+                    Id = 222,
+                    Password = "password"
+                };
                 repo.Add(user);
 
                 var fetched = repo.GetByUserName("name");
@@ -55,7 +64,7 @@ namespace Controll.Hosting.Tests
                 Assert.IsNotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
                 Assert.AreEqual(user.Id, fetched.Id);
-                Assert.AreEqual(user.EMail, fetched.EMail);
+                Assert.AreEqual(user.Email, fetched.Email);
             }
         }
 
@@ -67,7 +76,13 @@ namespace Controll.Hosting.Tests
             {
                 var repo = new ControllUserRepository(session);
 
-                var user = new ControllUser() { UserName = "name", EMail = "mail", Id = 222 };
+                var user = new ControllUser()
+                {
+                    UserName = "name",
+                    Email = "mail",
+                    Id = 222,
+                    Password = "password"
+                };
                 repo.Add(user);
 
                 var fetched = repo.GetByEMail("mail");
@@ -75,7 +90,7 @@ namespace Controll.Hosting.Tests
                 Assert.IsNotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
                 Assert.AreEqual(user.Id, fetched.Id);
-                Assert.AreEqual(user.EMail, fetched.EMail);
+                Assert.AreEqual(user.Email, fetched.Email);
             }
         }
     }

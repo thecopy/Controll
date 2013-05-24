@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Hosting.Repositories;
+using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
@@ -17,6 +18,8 @@ namespace Controll.Hosting.Tests
         {
             Collection = new Collection<T>();
         }
+
+        public ISession Session { get; set; }
 
         public void Add(T entity)
         {
@@ -53,5 +56,7 @@ namespace Controll.Hosting.Tests
         {
             return Collection.Take(maxResults).ToList();
         }
+
+        public IQueryable<T> Query { get; private set; }
     }
 }

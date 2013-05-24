@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Controll.Common;
+﻿using System.Collections.Generic;
+using Controll.Common.ViewModels;
 
 namespace Controll.Hosting.Models
 {
-    public class Zombie
+    public class Zombie : ClientCommunicator
     {
-        public virtual int Id { get; set; }
         public virtual string Name { get; set; }
-        public virtual string ConnectionId { get; set; }
-        public virtual IList<Activity> Activities { get; set; } 
+        public virtual IList<Activity> Activities { get; set; }
+        public virtual ControllUser Owner { get; set; }
     }
 }

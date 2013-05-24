@@ -12,5 +12,10 @@ namespace Controll.Common.ViewModels
         public virtual string Description { get; set; }
         public virtual Guid Key { get; set; }
         public IEnumerable<ActivityCommandViewModel> Commands { get; set; }
+
+        public ActivityViewModel()
+        {
+            Commands = new List<ActivityCommandViewModel>();
+        }
     }
 }

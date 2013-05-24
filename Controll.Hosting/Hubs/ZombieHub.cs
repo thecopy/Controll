@@ -1,103 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Security.Authentication;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
+using Controll.Hosting.Helpers;
+using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using NHibernate;
+using NHibernate.Criterion;
 
 namespace Controll.Hosting.Hubs
 {
+    [AuthorizeClaim(ControllClaimTypes.UserIdentifier, ControllClaimTypes.ZombieIdentifier)]
     public class ZombieHub : BaseHub
     {
+        public new ISession Session { get; set; }
         private readonly IControllUserRepository _controllUserRepository;
         private readonly IMessageQueueService _messageQueueService;
+        private readonly IActivityMessageLogService _activityService;
 
         public ZombieHub(IControllUserRepository controllUserRepository,
                          IMessageQueueService messageQueueService,
+                         IActivityMessageLogService activityService,
                          ISession session) : base(session)
         {
+            Session = session;
             _controllUserRepository = controllUserRepository;
             _messageQueueService = messageQueueService;
+            _activityService = activityService;
         }
 
-        private ZombieState GetZombieState()
+        public void SignIn()
         {
-            // TODO: Gör UserName:string -> User:ControllUser
-            var state = new ZombieState
-                {
-                    Name = (string) Clients.Caller.ZombieName,
-                    UserName = (string) Clients.Caller.BelongsToUser
-                };
-
-            return state;
-        }
-
-        private bool EnsureZombieAuthentication()
-        {
-            var claimedBelongingToUserName = (string) Clients.Caller.BelongsToUser;
-            var claimedZombieName = (string) Clients.Caller.ZombieName;
-
-            var user = _controllUserRepository.GetByUserName(claimedBelongingToUserName);
-
-            if (user == null
-                || user.UserName.ToLower() != claimedBelongingToUserName.ToLower()
-                || user.Zombies.SingleOrDefault(z => z.Name == claimedZombieName && z.ConnectionId == Context.ConnectionId) ==
-                null)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        public bool LogOn(string usernName, string password, string zombieName)
-        {
-            var user = _controllUserRepository.GetByUserName(usernName);
-
-            if (user == null)
-                return false;
-
-            if (user.Password != password)
-                return false;
-
-            var zombie = user.GetZombieByName(zombieName);
-            if (zombie == null)
-                return false;
-
-            zombie.ConnectionId = Context.ConnectionId;
-
             using (var transaction = Session.BeginTransaction())
             {
-                _controllUserRepository.Update(user);
-                transaction.Commit();
-            }
-            
-            using (var transaction = Session.BeginTransaction())
-            {
+                var zombie = GetZombie();
+
+                Console.WriteLine("Zombie logged in with connection id" + Context.ConnectionId);
+                zombie.ConnectedClients.Add(new ControllClient {ConnectionId = Context.ConnectionId});
+
+                Session.Update(zombie);
                 _messageQueueService.ProcessUndeliveredMessagesForZombie(zombie);
+
                 transaction.Commit();
             }
-
-            return true;
         }
 
-        public bool QueueItemDelivered(Guid ticket)
+        public void SignOut()
         {
-            if (!EnsureZombieAuthentication())
-                return false;
+            using (var transaction = Session.BeginTransaction())
+            {
+                var zombie = GetZombie();
 
+                zombie.ConnectedClients
+                      .Where(x => x.ConnectionId == Context.ConnectionId).ToList()
+                      .ForEach(x => zombie.ConnectedClients.Remove(x));
+
+                Session.Update(zombie);
+                transaction.Commit();
+            }
+        }
+
+        public void QueueItemDelivered(Guid ticket)
+        {
             using (var transaction = Session.BeginTransaction())
             {
                 Console.WriteLine("A Zombie confirms delivery of ticket " + ticket);
                 _messageQueueService.MarkQueueItemAsDelivered(ticket);
                 transaction.Commit();
-                return true;
             }
         }
 
@@ -113,8 +86,8 @@ namespace Controll.Hosting.Hubs
 
             var zombie = new Zombie
                 {
-                    ConnectionId = Context.ConnectionId,
                     Name = zombieName,
+                    Owner = user,
                     Activities = new List<Activity>()
                 };
 
@@ -131,17 +104,21 @@ namespace Controll.Hosting.Hubs
 
         public void SynchronizeActivities(ICollection<ActivityViewModel> activities)
         {
-            if (false == EnsureZombieAuthentication())
-                return;
+            var zombie = GetZombie();
 
-            var state = GetZombieState();
-            var user = _controllUserRepository.GetByUserName(state.UserName);
-            var zombie = user.GetZombieByName(state.Name);
-
-            Console.WriteLine("Synchronizing activities for zombie " + zombie.Name + " for user " + user.UserName);
+            Console.WriteLine("Synchronizing activities for zombie " + zombie.Name + " for user " + zombie.Owner.UserName);
             
             using (var transaction = Session.BeginTransaction())
             {
+                for (int i = 0; i < zombie.Activities.Count(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 1); i++)
+                {
+                    var syncedActivity = zombie.Activities.ToList().Where(s => activities.Count(a => a.Key == s.Id) == 1).ToList()[i];
+                    Console.WriteLine(syncedActivity.Name + ": existing in database. Updating (ONLY VERSION!!!!)...");
+                    var installedActivity = activities.Single(a => a.Key == syncedActivity.Id);
+
+                    zombie.Activities[i].Version = installedActivity.Version;
+                }
+
                 foreach (var syncedActivity in zombie.Activities.ToList().Where(syncedActivity => activities.Count(a => a.Key == syncedActivity.Id) == 0))
                 {
                     Console.WriteLine(syncedActivity.Name + ": Not installed at zombie. Removing...");
@@ -150,62 +127,59 @@ namespace Controll.Hosting.Hubs
 
                 foreach (var installedActivity in activities.Where(installedActivity => zombie.Activities.Count(a => a.Id == installedActivity.Key) == 0))
                 {
-                    Console.WriteLine(installedActivity.Name + ": Adding activity");
-                    zombie.Activities.Add(new Activity
-                        {
-                            Id = installedActivity.Key,
-                            Name = installedActivity.Name,
-                            LastUpdated = installedActivity.LastUpdated,
-                            CreatorName = installedActivity.CreatorName,
-                            Description = installedActivity.Description
-                        });
+                    Console.WriteLine(installedActivity.Name + ": Adding activity...");
+                    zombie.Activities.Add(installedActivity.CreateConcreteClass());
                 }
 
-                _controllUserRepository.Update(user);
+                Session.Update(zombie);
                 transaction.Commit();
             }
         }
 
         public void ActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            Console.WriteLine("Message from activity: " + message);
-            _messageQueueService.InsertActivityMessage(ticket, type, message);
+            using (var transaction = Session.BeginTransaction())
+            {
+                _activityService.InsertActivityLogMessage(ticket, type, message);
+                _messageQueueService.InsertActivityMessage(ticket, type, message);
+
+                transaction.Commit();
+            }
+            
         }
 
-        public Task OnDisconnect()
+        public void ActivityResult(Guid ticket, ActivityCommandViewModel result)
         {
-            var state = GetZombieState();
-
-            var user = _controllUserRepository.GetByUserName(state.UserName);
-            var zombie = user.Zombies.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
-
-            Console.Write("Zombie ");
-
-            if (zombie != null)
+            Console.WriteLine("Activity result recieved.");
+            using (var transaction = Session.BeginTransaction())
             {
-                using (var transaction = Session.BeginTransaction())
-                {
-                    zombie.ConnectionId = null;
-                    _controllUserRepository.Update(user);
-
-                    transaction.Commit();
-                }
+                _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
+                transaction.Commit();
             }
+        }
 
-            Console.WriteLine("disconnected.");
+        public override Task OnDisconnected()
+        {
+            using (ITransaction transaction = Session.BeginTransaction())
+            {
+                Console.WriteLine("Client " + Context.ConnectionId + " disconnected.");
+                var client = Session.CreateCriteria<ControllClient>()
+                       .Add(Restrictions.Eq("ConnectionId", Context.ConnectionId))
+                       .UniqueResult<ControllClient>();
+                Session.Delete(client);
+                transaction.Commit();
+            }
 
             return null;
         }
 
-        [ExcludeFromCodeCoverage]
-        public Task OnConnect()
+        public override Task OnConnected()
         {
             Console.WriteLine("Zombie connected");
             return null;
         }
 
-        [ExcludeFromCodeCoverage]
-        public Task OnReconnect(IEnumerable<string> groups)
+        public override Task OnReconnected()
         {
             Console.WriteLine("Reconnected");
             return null;

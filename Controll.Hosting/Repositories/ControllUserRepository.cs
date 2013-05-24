@@ -26,21 +26,28 @@ namespace Controll.Hosting.Repositories
         {
                 return Session.CreateCriteria<ControllUser>()
                     .Add(Restrictions.Eq("UserName", userName))
+                    .SetMaxResults(1)
                     .UniqueResult<ControllUser>();            
         }
 
         public ControllUser GetByConnectionId(string connectionId)
         {
-                return Session.CreateCriteria<ControllUser>()
-                    .CreateCriteria("ConnectedClients", "clients")
-                    .Add(Restrictions.Eq("clients.ConnectionId", connectionId))
-                    .UniqueResult<ControllUser>();     
+            var user = Session.CreateCriteria<ControllClient>()
+                    .Add(Restrictions.Eq("ConnectionId", connectionId))
+                    .SetMaxResults(1)
+                    .UniqueResult<ControllClient>();
+
+            if (user == null)
+                return null;
+
+            return user.ClientCommunicator as ControllUser;
         }
 
         public ControllUser GetByEMail(string email)
         {
                 return Session.CreateCriteria<ControllUser>()
-                    .Add(Restrictions.Eq("EMail", email))
+                    .Add(Restrictions.Eq("Email", email))
+                    .SetMaxResults(1)
                     .UniqueResult<ControllUser>();      
         }
     }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
@@ -33,9 +34,10 @@ namespace Controll
             _url = url;
         }
 
-        public void Connect()
+        public void Connect(string username, string password, string zombieName)
         {
-            _client = new ControllZombieClient(_url);
+            var authenticator = new DefaultAuthenticationProvider(_url);
+            _client = new ControllZombieClient(authenticator.Connect(username, password, zombieName).Result);
             _client.ActivateZombie += _client_ActivateZombie;
         }
 
@@ -43,20 +45,8 @@ namespace Controll
         {
             Console.WriteLine("Got activity invocation message!");
             var activity = PluginService.Instance.GetActivityInstance(e.ActivityKey);
-            Console.WriteLine("Activity name: " + activity.Name + ", activating...");
-            activity.Execute(new DelegatePluginContext(e.ActivityTicket, e.Parameter, _client));
-        }
-
-        public bool Authenticate(string username, string password, string zombieName)
-        {
-            var result = _client.LogOn(username, password, zombieName);
-            if (result)
-            {
-                _userName = username;
-                _zombieName = zombieName;
-            }
-
-            return result;
+            Console.WriteLine("Activity name: " + activity.ViewModel.Name + ", activating...");
+            activity.Execute(new DelegateActivityContext(e.ActivityTicket, e.Parameter, e.CommandName, _client));
         }
         
         public bool Register(string userName, string password, string zombieName)
@@ -64,9 +54,14 @@ namespace Controll
             return _client.Register(userName, password, zombieName);
         }
 
-        public void Synchronize(List<ActivityViewModel> activitiyVms)
+        public Task Synchronize(List<ActivityViewModel> activitiyVms)
         {
-            _client.Synchronize(activitiyVms);
+            return _client.Synchronize(activitiyVms);
+        }
+
+        public Task SignOut()
+        {
+            return _client.SignOut();
         }
     }
 }

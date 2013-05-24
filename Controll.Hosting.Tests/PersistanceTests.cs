@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Controll.Common;
@@ -10,6 +11,7 @@ using FizzWare.NBuilder;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FluentNHibernate.Testing;
 using NHibernate;
+using NHibernate.Proxy;
 
 
 namespace Controll.Hosting.Tests
@@ -17,13 +19,77 @@ namespace Controll.Hosting.Tests
     [TestClass]
     public class PersistanceTests : TestBase
     {
+        public class PersistenceSpecificationEqualityComparer : IEqualityComparer
+        {
+            private readonly ISession _session;
+
+            public PersistenceSpecificationEqualityComparer(ISession session)
+            {
+                _session = session;
+            }
+
+            public PersistenceSpecificationEqualityComparer( )
+            {
+            }
+
+            private readonly Dictionary<Type, Delegate> _comparers = new Dictionary<Type, Delegate>();
+
+            public void RegisterComparer<T>(Func<T, object> comparer)
+            {
+                _comparers.Add(typeof(T), comparer);
+            }
+
+            public new bool Equals(object x, object y)
+            {
+                if (x == null || y == null)
+                {
+                    return false;
+                }
+
+                if (_session != null)
+                {
+                    if (x as INHibernateProxy != null)
+                    {
+                        if (!NHibernateUtil.IsInitialized(x))
+                            NHibernateUtil.Initialize(x);
+                        x = _session.GetSessionImplementation().PersistenceContext.Unproxy(x);
+                    }
+
+                    if (y as INHibernateProxy != null)
+                    {
+                        if (!NHibernateUtil.IsInitialized(y))
+                            NHibernateUtil.Initialize(y);
+                        y = _session.GetSessionImplementation().PersistenceContext.Unproxy(y);
+                    }
+                }
+
+                var xType = x.GetType();
+                var yType = y.GetType();
+
+                // check subclass to handle proxies
+                if (_comparers.ContainsKey(xType) && (xType == yType || (yType.IsSubclassOf(xType) || xType.IsSubclassOf(yType))))
+                {
+                    var comparer = _comparers[xType];
+                    var xValue = comparer.DynamicInvoke(new[] { x });
+                    var yValue = comparer.DynamicInvoke(new[] { y });
+                    return xValue.Equals(yValue);
+                }
+                return x.Equals(y);
+            }
+
+            public int GetHashCode(object obj)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         [TestMethod]
         public void ShouldBeAbleToAddAndPersistControllUser()
         {
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
                 new PersistenceSpecification<ControllUser>(session)
-                    .CheckProperty(x => x.EMail, "email")
+                    .CheckProperty(x => x.Email, "email")
                     .CheckProperty(x => x.Password, "password")
                     .CheckProperty(x => x.UserName, "username")
                     .VerifyTheMappings();
@@ -35,17 +101,32 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var zombie = new Zombie {ConnectionId = "conn", Id = 123, Name = "name"};
+                var user = new ControllUser
+                    {
+                        UserName = "username",
+                        Password = "password",
+                        Email = "email"
+                    };
+                var zombie = new Zombie
+                    {
+                        Id = 123, 
+                        Name = "name",
+                        Owner = user
+                    };
+                zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+
+                var userRepo = new ControllUserRepository(session);
+                userRepo.Add(user);
                 var repo = new GenericRepository<Zombie>(session);
                 repo.Add(zombie);
 
                 session.Evict(zombie);
 
                 var gotten = repo.Get(zombie.Id);
-                
+                Assert.AreNotSame(zombie,gotten);
                 Assert.AreEqual(zombie.Name, gotten.Name);
                 Assert.AreEqual(zombie.Id, gotten.Id);
-                Assert.AreEqual(zombie.ConnectionId, gotten.ConnectionId);
+                Assert.IsTrue(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
             }
         }
 
@@ -55,8 +136,13 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var zombie = new Zombie { ConnectionId = "conn", Id = 123, Name = "name" };
-                var user = new ControllUser {UserName = "user", EMail = "mail", Password = "password", Zombies = new List<Zombie>()};
+                var zombie = new Zombie
+                {
+                    Id = 123,
+                    Name = "name"
+                };
+                zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                var user = new ControllUser {UserName = "user", Email = "mail", Password = "password", Zombies = new List<Zombie>()};
 
                 var userRepo = new GenericRepository<ControllUser>(session);
                 userRepo.Add(user);
@@ -72,7 +158,7 @@ namespace Controll.Hosting.Tests
 
                 Assert.AreEqual(zombie.Name, gotten.Zombies[0].Name);
                 Assert.AreEqual(zombie.Id, gotten.Zombies[0].Id);
-                Assert.AreEqual(zombie.ConnectionId, gotten.Zombies[0].ConnectionId);
+                Assert.IsTrue(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
             }
         }
 
@@ -82,8 +168,8 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var activity = TestingHelper.GetListOfZombies()[0].Activities[0]; // Get generated activity with commands and parameters
-                var activityCopy = TestingHelper.GetListOfZombies()[0].Activities[0]; // This is used for comparing since the one above will be the same reference when getting from repo
+                var activity = TestingHelper.GetListOfZombies(1)[0].Activities[0]; // Get generated activity with commands and parameters
+                var activityCopy = TestingHelper.GetListOfZombies(1)[0].Activities[0]; // Get a new copy of the activity so nhibernate wont track it 
                 var repo = new GenericRepository<Activity>(session);
                 repo.Add(activity);
                 
@@ -93,7 +179,6 @@ namespace Controll.Hosting.Tests
 
                 Assert.AreEqual(activityCopy.CreatorName, activityGotten.CreatorName);
                 Assert.AreEqual(activityCopy.Description, activityGotten.Description);
-                Assert.AreEqual(activityCopy.FilePath, activityGotten.FilePath);
                 Assert.AreEqual(activityCopy.LastUpdated, activityGotten.LastUpdated);
                 Assert.AreEqual(activityCopy.Name, activityGotten.Name);
                 Assert.AreEqual(activityCopy.Version, activityGotten.Version);
@@ -105,7 +190,6 @@ namespace Controll.Hosting.Tests
                     var commandGotten = activityGotten.Commands[c];
 
                     Assert.AreEqual(command.Id, commandGotten.Id);
-                    Assert.AreEqual(command.IsQuickCommand, commandGotten.IsQuickCommand);
                     Assert.AreEqual(command.Label, commandGotten.Label);
                     Assert.AreEqual(command.Name, commandGotten.Name);
 
@@ -118,9 +202,24 @@ namespace Controll.Hosting.Tests
                         Assert.AreEqual(param.Description, paramGotten.Description);
                         Assert.AreEqual(param.Id, paramGotten.Id);
                         Assert.AreEqual(param.Label, paramGotten.Label);
+                        Assert.AreEqual(param.IsBoolean, paramGotten.IsBoolean);
                         Assert.AreEqual(param.Name, paramGotten.Name);
 
-                        CollectionAssert.AreEquivalent(param.PickerValues.ToList(), paramGotten.PickerValues.ToList());
+                        Assert.AreEqual(param.PickerValues.Count, paramGotten.PickerValues.Count);
+                        for (int pv = 0; pv < param.PickerValues.Count; pv++)
+                        {
+                            var pickerValue = param.PickerValues[pv];
+                            var pickerValueGotten = paramGotten.PickerValues[pv];
+
+                            Assert.AreEqual(pickerValue.Description, pickerValueGotten.Description);
+                            Assert.AreEqual(pickerValue.Id, pickerValueGotten.Id);
+                            Assert.AreEqual(pickerValue.Label, pickerValueGotten.Label);
+                            Assert.AreEqual(pickerValue.Identifier, pickerValueGotten.Identifier);
+                            Assert.AreEqual(pickerValue.IsCommand, pickerValueGotten.IsCommand);
+
+
+                            AssertionHelper.AssertDictionariesAreEqual(pickerValue.Parameters, pickerValueGotten.Parameters);
+                        }
                     }
                 }
             }
@@ -132,21 +231,34 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                var activities = TestingHelper.GetListOfZombies()[0].Activities;
-                var activitiesCopy = TestingHelper.GetListOfZombies()[0].Activities;
-                var zombie = new Zombie
-                    {
-                        ConnectionId = "conn",
-                        Id = 123,
-                        Name = "name"
-                    };
-                var zombieCopy = new Zombie
+                var activities = TestingHelper.GetListOfZombies(1)[0].Activities;
+                var activitiesCopy = TestingHelper.GetListOfZombies(1)[0].Activities;
+
+                var user = new ControllUser
                 {
-                    ConnectionId = "conn",
+                    UserName = "username",
+                    Password = "password",
+                    Email = "email"
+                };
+                var zombie = new Zombie
+                {
                     Id = 123,
                     Name = "name",
+                    Owner = user
+                };
+
+                var zombieCopy = new Zombie
+                {
+                    Id = 123,
+                    Name = "name",
+                    Owner = user,
                     Activities = activitiesCopy
                 };
+                zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                zombieCopy.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
+                
+                var userRepo = new ControllUserRepository(session);
+                userRepo.Add(user);
 
                 var zombieRepo = new GenericRepository<Zombie>(session);
                 var activityRepo = new GenericRepository<Activity>(session);
@@ -171,7 +283,6 @@ namespace Controll.Hosting.Tests
 
                     Assert.AreEqual(activity.CreatorName, activityGotten.CreatorName);
                     Assert.AreEqual(activity.Description, activityGotten.Description);
-                    Assert.AreEqual(activity.FilePath, activityGotten.FilePath);
                     Assert.AreEqual(activity.LastUpdated, activityGotten.LastUpdated);
                     Assert.AreEqual(activity.Name, activityGotten.Name);
                     Assert.AreEqual(activity.Version, activityGotten.Version);
@@ -183,7 +294,6 @@ namespace Controll.Hosting.Tests
                         var commandGotten = activityGotten.Commands[c];
 
                         Assert.AreEqual(command.Id, commandGotten.Id);
-                        Assert.AreEqual(command.IsQuickCommand, commandGotten.IsQuickCommand);
                         Assert.AreEqual(command.Label, commandGotten.Label);
                         Assert.AreEqual(command.Name, commandGotten.Name);
 
@@ -196,9 +306,24 @@ namespace Controll.Hosting.Tests
                             Assert.AreEqual(param.Description, paramGotten.Description);
                             Assert.AreEqual(param.Id, paramGotten.Id);
                             Assert.AreEqual(param.Label, paramGotten.Label);
+                            Assert.AreEqual(param.IsBoolean, paramGotten.IsBoolean);
                             Assert.AreEqual(param.Name, paramGotten.Name);
 
-                            CollectionAssert.AreEquivalent(param.PickerValues.ToList(), paramGotten.PickerValues.ToList());
+                            Assert.AreEqual(param.PickerValues.Count, paramGotten.PickerValues.Count);
+                            for (int pv = 0; pv < param.PickerValues.Count; pv++)
+                            {
+                                var pickerValue = param.PickerValues[pv];
+                                var pickerValueGotten = paramGotten.PickerValues[pv];
+
+                                Assert.AreEqual(pickerValue.Description, pickerValueGotten.Description);
+                                Assert.AreEqual(pickerValue.Id, pickerValueGotten.Id);
+                                Assert.AreEqual(pickerValue.Label, pickerValueGotten.Label);
+                                Assert.AreEqual(pickerValue.Identifier, pickerValueGotten.Identifier);
+                                Assert.AreEqual(pickerValue.IsCommand, pickerValueGotten.IsCommand);
+
+
+                                AssertionHelper.AssertDictionariesAreEqual(pickerValue.Parameters, pickerValueGotten.Parameters);
+                            }
                         }
                     }
                 }
@@ -214,7 +339,6 @@ namespace Controll.Hosting.Tests
                 new PersistenceSpecification<Activity>(session)
                     .CheckProperty(x => x.CreatorName, "name")
                     .CheckProperty(x => x.Description, "desc")
-                    .CheckProperty(x => x.FilePath, "C:\\")
                     .CheckProperty(x => x.LastUpdated, DateTime.Parse("2012-12-12 12:12:12"))
                     .CheckProperty(x => x.Name, "activity name")
                     .VerifyTheMappings();
@@ -227,15 +351,87 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction())
             {
-                new PersistenceSpecification<PingQueueItem>(session)
+                var user = new ControllUser {UserName = "username", Email = "email", Password = "password"};
+
+                var repo = new ControllUserRepository(session);
+                repo.Add(user);
+
+                var comparer = new PersistenceSpecificationEqualityComparer(session);
+                comparer.RegisterComparer((ControllUser x) => x.Id);
+                comparer.RegisterComparer((ClientCommunicator x) => x.Id);
+                
+                new PersistenceSpecification<PingQueueItem>(session, comparer)
                     .CheckProperty(x => x.Delivered, DateTime.Parse("2004-03-11 13:22:11"))
                     .CheckProperty(x => x.RecievedAtCloud, DateTime.Parse("2004-03-11 13:22:11"))
-                    .CheckProperty(x => x.TimeOut, 20)
-                    .CheckProperty(x => x.SenderConnectionId, "connection-id")
+                    .CheckReference(x => x.Sender, user)
+                    .CheckReference(x => x.Reciever, user)
                     .VerifyTheMappings();
             }
         }
 
+        [TestMethod]
+        public void ShouldBeAbleToAddAndPersistActivityResultQueueItem()
+        {
+            using (var session = SessionFactory.OpenSession())
+            using (session.BeginTransaction())
+            {
+                var user = new ControllUser { UserName = "username", Email = "email", Password = "password" };
+                var activity = new ActivityCommand
+                    {
+                        Name = "some-intermidiate-command"
+                    };
+                var repo = new ControllUserRepository(session);
+                repo.Add(user);
+
+                var comparer = new PersistenceSpecificationEqualityComparer(session);
+                comparer.RegisterComparer((ControllUser x) => x.Id);
+                comparer.RegisterComparer((ClientCommunicator x) => x.Id);
+                comparer.RegisterComparer((ActivityCommand x) => x.Name);
+
+                var ticket = Guid.NewGuid();
+                new PersistenceSpecification<ActivityResultQueueItem>(session, comparer)
+                    .CheckProperty(x => x.Delivered, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckProperty(x => x.RecievedAtCloud, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckReference(x => x.Sender, user)
+                    .CheckReference(x => x.Reciever, user)
+                    .CheckReference(x => x.ActivityCommand, activity)
+                    .CheckProperty(x => x.InvocationTicket, ticket)
+                    .VerifyTheMappings();
+            }
+        }
+
+        [TestMethod]
+        public void ShouldBeAbleToAddAndPersistActivityInvocationQueueItem()
+        {
+            using (var session = SessionFactory.OpenSession())
+            using (session.BeginTransaction())
+            {
+                var user = new ControllUser { UserName = "username", Email = "email", Password = "password" };
+                var activity = new Activity { Name = "mocked", Description = "desc", LastUpdated = DateTime.Parse("2004-03-11 13:22:11")};
+
+                var activityRepo = new GenericRepository<Activity>(session);
+                var userRepo = new ControllUserRepository(session);
+                
+                userRepo.Add(user);
+                activityRepo.Add(activity);
+                
+                var comparer = new PersistenceSpecificationEqualityComparer(session);
+                comparer.RegisterComparer((ControllUser x) => x.Id);
+                comparer.RegisterComparer((ClientCommunicator x) => x.Id);
+                comparer.RegisterComparer((Activity x) => x.Id);
+
+                new PersistenceSpecification<ActivityInvocationQueueItem>(session, comparer)
+                    .CheckProperty(x => x.Delivered, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckProperty(x => x.RecievedAtCloud, DateTime.Parse("2004-03-11 13:22:11"))
+                    .CheckReference(x => x.Sender, user)
+                    .CheckReference(x => x.Reciever, user)
+                    .CheckReference(x => x.Activity, activity)
+                    .CheckProperty(x => x.CommandName, "commandName")
+                     // How to test dictionary persistence?
+                    .VerifyTheMappings();
+            }
+        }
+        
         [TestMethod]
         public void ShouldBeAbleToAddAndPersistCommand()
         {
@@ -244,23 +440,7 @@ namespace Controll.Hosting.Tests
             {
                 new PersistenceSpecification<ActivityCommand>(session)
                     .CheckProperty(x => x.Name, "name")
-                    .CheckProperty(x => x.IsQuickCommand, true)
                     .CheckProperty(x => x.Label, "Label")
-                    .VerifyTheMappings();
-            }
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToAddAndPersistParameterDescriptor()
-        {
-            using (var session = SessionFactory.OpenSession())
-            using (session.BeginTransaction())
-            {
-                new PersistenceSpecification<ParameterDescriptor>(session)
-                    .CheckProperty(x => x.Description, "description")
-                    .CheckProperty(x => x.Label, "label")
-                    .CheckProperty(x => x.Name, "name")
-                    .CheckComponentList(x => x.PickerValues, new[] { "picker 1", "picker 2" })
                     .VerifyTheMappings();
             }
         }
@@ -298,7 +478,7 @@ namespace Controll.Hosting.Tests
 
                 var user = new ControllUser()
                     {
-                        EMail = "emailToRemove",
+                        Email = "emailToRemove",
                         Password = "password",
                         UserName = "userToRemove"
                     };
@@ -322,19 +502,19 @@ namespace Controll.Hosting.Tests
                 var repo = new GenericRepository<ControllUser>(session);
                 var user = new ControllUser()
                     {
-                        EMail = "email",
+                        Email = "email",
                         Password = "password",
                         UserName = "username"
                     };
 
                 repo.Add(user);
 
-                user.EMail = "hehe";
+                user.Email = "hehe";
                 repo.Update(user);
 
                 var user2 = repo.Get(user.Id);
 
-                Assert.AreEqual(user2.EMail, "hehe");
+                Assert.AreEqual(user2.Email, "hehe");
             }
         }
     }

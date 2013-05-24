@@ -24,7 +24,7 @@ namespace Controll.Hosting.Tests
 
         public ControllUser GetByEMail(string email)
         {
-            return Collection.SingleOrDefault(e => e.EMail == email);
+            return Collection.SingleOrDefault(e => e.Email == email);
         }
     }
 }
