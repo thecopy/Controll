@@ -6,6 +6,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Controll;
+using Controll.Client;
+using Controll.Client.Models;
+using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Newtonsoft.Json;
 
@@ -60,11 +63,22 @@ namespace SimpleConsoleClient
         static private void Connect(string host)
         {
             Console.WriteLine("Connecting to " + host);
-            _client = new ControllClient(host);
+
+            var authenticator = new DefaultAuthenticationProvider(host);
+            Console.Write("Provide username('username'): ");
+            var username = Console.ReadLine();
+            if (string.IsNullOrEmpty(username)) username = "username";
+            Console.Write("Provide password('password'): ");
+            var password = Console.ReadLine();
+            if (string.IsNullOrEmpty(password)) password = "password";
+
+            var hubConnection = authenticator.Connect(username, password).Result;
+            _client = new ControllClient(hubConnection);
+
             _client.MessageDelivered += _client_MessageDelivered;
             _client.ActivityMessageRecieved += _client_ActivityMessageRecieved;
             _client.ActivityResultRecieved += _client_ActivityResultRecieved;
-            _client.Connect();
+            _client.SignIn();
 
             Console.WriteLine("Connected");
             Console.WriteLine("Type h or help for more information");
@@ -85,19 +99,10 @@ namespace SimpleConsoleClient
                         Console.WriteLine("* run <zombieName>");
                         Console.WriteLine("* run <zombieName> <activity-name> <commandName>");
                         Console.WriteLine("* intermidiate");
-                        Console.WriteLine("* auth <[user] [password]>\t\tIf no user or password is passed: username:password will be used");
                         Console.WriteLine("* register [username] [password] <email>\tRegister user");
                         Console.WriteLine("* list [zombies|activities <zombieName>]\t\tList all your zombies or a specified zombies installed activities");
                         Console.WriteLine("* ping [zombieName]\t\tSend a ping to the zombie name <zombieName>");
                         Console.WriteLine("* status\t\t\tDispays session status");
-                        break;
-                    case "auth":
-                        if (results.Count() == 1)
-                            Authenticate("username", "password");
-                        else if (results.Count() == 3)
-                            Authenticate(results[1], results[2]);
-                        else
-                            Console.WriteLine("What?");
                         break;
                     case "register":
                         if (results.Count() == 3)
@@ -353,24 +358,6 @@ namespace SimpleConsoleClient
             else
             {
                 Console.WriteLine("Avaiable enumerables: zombies, activities, intermidiates");
-            }
-        }
-
-        static private void Authenticate(string user, string password)
-        {
-            Console.WriteLine("Logging in as " + user + "...");
-            var result = _client.LogOn(user, password);
-            if (result)
-            {
-                Console.WriteLine("Login Successful");
-                _user = user;
-                Console.WriteLine("Syncing zombie list...");
-                List("zombies");
-                Console.WriteLine("Type 'run <zombieName>' to start a wizard for invocing an activity!");
-            }
-            else
-            {
-                Console.WriteLine("Login Failed");
             }
         }
     }

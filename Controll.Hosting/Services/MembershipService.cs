@@ -5,7 +5,7 @@ using Controll.Hosting.Repositories;
 
 namespace Controll.Hosting.Services
 {
-    internal class MembershipService : IMembershipService
+    public class MembershipService : IMembershipService
     {
         private readonly ControllUserRepository _userRepository;
 
@@ -19,7 +19,7 @@ namespace Controll.Hosting.Services
             var user = GetUser(userName);
 
             if (user.Password != password)
-                return null;
+                throw new InvalidOperationException(String.Format("Wrong password."));
 
             return user;
         }

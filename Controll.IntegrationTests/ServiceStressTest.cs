@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Controll.Client;
+using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Controll.Hosting;
 using Controll.Hosting.Models;
@@ -13,7 +15,7 @@ using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
 using Ninject.Extensions.NamedScope;
-using log4net.Config;
+using ControllClient = Controll.Client.ControllClient;
 
 namespace Controll.IntegrationTests
 {
@@ -79,9 +81,9 @@ namespace Controll.IntegrationTests
 
             using (server.Start())
             {
-                var client = new ControllClient(LocalHostUrl);
-                client.Connect();
-                client.LogOn("username", "password");
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+                var client = new ControllClient(auth.Connect("username", "password").Result);
+                client.SignIn().Wait();
                 // Now NHibernate is initialized and warm
 
                 var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
@@ -99,7 +101,7 @@ namespace Controll.IntegrationTests
                 Assert.IsTrue(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
                 client.Disconnect();
 
-                var zombie = new ControllZombieClient(LocalHostUrl);
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
 
                 int reciveCount = 0;
                 zombie.Pinged += (sender, args) =>
@@ -109,8 +111,8 @@ namespace Controll.IntegrationTests
                         reciveCount++;
                     };
 
-                zombie.LogOn("username", "password", "zombieName");
-
+                zombie.SignIn().Wait();
+                
                 while (reciveCount < range)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1));
@@ -132,11 +134,12 @@ namespace Controll.IntegrationTests
             {
                 var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
 
-                var client = new ControllClient(LocalHostUrl);
-                var zombie = new ControllZombieClient(LocalHostUrl);
-                client.Connect();
-                client.LogOn("username", "password");
-                zombie.LogOn("username", "password", "zombieName");
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+                var client = new ControllClient(auth.Connect("username", "password").Result);
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+
+                client.SignIn().Wait();
+                zombie.SignIn().Wait();
 
                 int reciveCount = 0;
                 int reciveCount2 = 0;
@@ -171,7 +174,7 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(range, tickets.Count);
                 Assert.IsTrue(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
 
-                while (reciveCount < range  || reciveCount2 < range)
+                while (reciveCount < range || reciveCount2 < range)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1));
                 }
@@ -193,41 +196,41 @@ namespace Controll.IntegrationTests
 
             using (server.Start())
             {
-                var zombie = new ControllZombieClient(LocalHostUrl);
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
                 var activityKey = Guid.NewGuid();
-                zombie.LogOn("username", "password", "zombieName");
-                zombie.Synchronize(new List<ActivityViewModel> { getActivity(activityKey) } ).Wait();
+                zombie.Synchronize(new List<ActivityViewModel> {getActivity(activityKey)}).Wait();
                 zombie.SignOut().Wait();
                 zombie.HubConnection.Stop(); // Make _sure_ it is not recieving anything
 
-                var client = new ControllClient(LocalHostUrl);
-                client.Connect();
-                client.LogOn("username", "password");
+                var client = new ControllClient(auth.Connect("username", "password").Result);
+                client.SignIn().Wait();
 
                 var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
 
                 const int range = 100;
                 Enumerable.Range(0, range).AsParallel().ForAll(i =>
-                {
-                    var ticket = client.StartActivity("zombieName", activityKey, new Dictionary<string, string>(), "command");
-                    Assert.AreNotEqual(ticket, Guid.Empty, "Returned invocation ticked was Guid.Empty. Run: " + i);
+                    {
+                        var ticket = client.StartActivity("zombieName", activityKey, new Dictionary<string, string>(), "command");
+                        Assert.AreNotEqual(ticket, Guid.Empty, "Returned invocation ticked was Guid.Empty. Run: " + i);
 
-                    tickets.AddOrUpdate(ticket, false, (_, __) => false);
-                });
+                        tickets.AddOrUpdate(ticket, false, (_, __) => false);
+                    });
 
                 Assert.AreEqual(range, tickets.Count);
                 Assert.IsTrue(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
                 client.Disconnect();
-                
+
                 int reciveCount = 0;
-                zombie = new ControllZombieClient(LocalHostUrl);
+                zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
                 zombie.ActivateZombie += (sender, args) =>
-                {
-                    var updateResult = tickets.TryUpdate(args.ActivityTicket, true, false);
-                    Assert.IsTrue(updateResult);
-                    reciveCount++;
-                };
-                Assert.IsTrue(zombie.LogOn("username", "password", "zombieName"));
+                    {
+                        var updateResult = tickets.TryUpdate(args.ActivityTicket, true, false);
+                        Assert.IsTrue(updateResult);
+                        reciveCount++;
+                    };
+                zombie.SignIn().Wait();
 
                 TimeSpan totalWait = TimeSpan.FromSeconds(0);
 
@@ -240,7 +243,7 @@ namespace Controll.IntegrationTests
                     const double waitLimit = 15;
                     if (totalWait > TimeSpan.FromSeconds(waitLimit))
                         Assert.Fail("Did not recieve all invocations after " + waitLimit
-                            + " seconds. Expected: " + range + ", gotten: " + reciveCount);
+                                    + " seconds. Expected: " + range + ", gotten: " + reciveCount);
                 }
 
 
@@ -258,15 +261,16 @@ namespace Controll.IntegrationTests
 
             using (server.Start())
             {
-                var zombie = new ControllZombieClient(LocalHostUrl);
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
                 var activityKey = Guid.NewGuid();
                 var activity = getActivity(activityKey);
-                zombie.LogOn("username", "password", "zombieName");
-                zombie.Synchronize(new List<ActivityViewModel> { activity }).Wait();
 
-                var client = new ControllClient(LocalHostUrl);
-                client.Connect();
-                client.LogOn("username", "password");
+                zombie.SignIn().Wait();
+                zombie.Synchronize(new List<ActivityViewModel> {activity}).Wait();
+
+                var client = new ControllClient(auth.Connect("username", "password").Result);
+                client.SignIn().Wait();
 
                 var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
 
@@ -276,26 +280,23 @@ namespace Controll.IntegrationTests
                 int reciveCount2 = 0;
 
                 zombie.ActivateZombie += (sender, args) =>
-                {
-                    Interlocked.Increment(ref reciveCount);
-                    tickets.TryUpdate(args.ActivityTicket, true, false);
-                };
+                    {
+                        Interlocked.Increment(ref reciveCount);
+                        tickets.TryUpdate(args.ActivityTicket, true, false);
+                    };
 
-                client.MessageDelivered += (sender, args) =>
-                {
-                    Interlocked.Increment(ref reciveCount2);
-                };
+                client.MessageDelivered += (sender, args) => { Interlocked.Increment(ref reciveCount2); };
                 Enumerable.Range(0, range).AsParallel().ForAll(i =>
-                {
-                    var ticket = client.StartActivity("zombieName", activityKey, new Dictionary<string, string>(), "command");
-                    Assert.AreNotEqual(ticket, Guid.Empty, "Returned invocation ticked was Guid.Empty. Run: " + i);
+                    {
+                        var ticket = client.StartActivity("zombieName", activityKey, new Dictionary<string, string>(), "command");
+                        Assert.AreNotEqual(ticket, Guid.Empty, "Returned invocation ticked was Guid.Empty. Run: " + i);
 
-                    tickets.AddOrUpdate(ticket, false, (_, __) => false);
-                });
+                        tickets.AddOrUpdate(ticket, false, (_, __) => false);
+                    });
 
                 Assert.AreEqual(range, tickets.Count);
                 Assert.IsTrue(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
-                
+
                 TimeSpan totalWait = TimeSpan.FromSeconds(0);
 
                 while (reciveCount < range || reciveCount2 < range)
@@ -331,13 +332,13 @@ namespace Controll.IntegrationTests
 
                 client.ActivityMessageRecieved += (sender, args) => Interlocked.Increment(ref recieveCount3);
                 tickets.AsParallel().ForAll(i =>
-                {
+                    {
                         zombie.ActivityNotify(i.Key, "notification");
                         zombie.ActivityCompleted(i.Key, "completed");
                     });
 
                 totalWait = TimeSpan.FromSeconds(0);
-                while (recieveCount3 < range * 2) // times 2 b/c we send both notification and completed
+                while (recieveCount3 < range*2) // times 2 b/c we send both notification and completed
                 {
                     var wait = TimeSpan.FromSeconds(1);
                     await Task.Delay(wait);
@@ -347,7 +348,7 @@ namespace Controll.IntegrationTests
                     if (totalWait <= TimeSpan.FromSeconds(waitLimit)) continue;
 
                     Assert.Fail("Did not recieve all activity messages after " + waitLimit + " seconds." +
-                                "\nExpected activity messages: " + range * 2 + ", gotten: " + recieveCount3);
+                                "\nExpected activity messages: " + range*2 + ", gotten: " + recieveCount3);
                 }
 
                 int recieveCount4 = 0;
@@ -355,10 +356,7 @@ namespace Controll.IntegrationTests
                 Console.WriteLine("Now testing activity results");
 
                 client.ActivityResultRecieved += (sender, args) => Interlocked.Increment(ref recieveCount4);
-                tickets.AsParallel().ForAll(i =>
-                    {
-                        zombie.ActivityResult(i.Key, activity.Commands.First());
-                    });
+                tickets.AsParallel().ForAll(i => { zombie.ActivityResult(i.Key, activity.Commands.First()); });
 
                 totalWait = TimeSpan.FromSeconds(0);
                 while (recieveCount4 < range)
@@ -374,7 +372,6 @@ namespace Controll.IntegrationTests
                                 "\nExpected activity results: " + range + ", gotten: " + recieveCount3);
                 }
             }
-
         }
 
         [TestMethod]
@@ -387,12 +384,14 @@ namespace Controll.IntegrationTests
 
             using (server.Start())
             {
-                var zombie = new ControllZombieClient(LocalHostUrl);
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
                 var activityKey = Guid.NewGuid();
                 var activity = getActivity(activityKey);
-                zombie.LogOn("username", "password", "zombieName");
-                zombie.Synchronize(new List<ActivityViewModel> { activity }).Wait();
-                
+                zombie.SignIn();
+                zombie.Synchronize(new List<ActivityViewModel> {activity}).Wait();
+
                 const int range = 50;
                 int reciveCount = 0;
 
@@ -404,23 +403,22 @@ namespace Controll.IntegrationTests
                 var connectionIdCollection = new ConcurrentDictionary<String, bool>();
 
                 var clients = new ControllClient[range];
-                var watch = new Stopwatch(); watch.Start();
+                var watch = new Stopwatch();
+                watch.Start();
                 Console.Write("Logging in all clients...");
                 Enumerable.Range(0, range).AsParallel().ForAll(async i =>
                     {
-                        clients[i] = new ControllClient(LocalHostUrl);
+                        clients[i] = new ControllClient(auth.Connect("username", "password").Result);
                         clients[i].ActivityMessageRecieved += (sender, args) =>
-                        {
-                            Interlocked.Increment(ref reciveCount);
-                            if (!connectionIdCollection.TryUpdate(clients[i].HubConnection.ConnectionId, true, false))
-                                throw new AssertionFailure("Could not update ConcurrentDictionary");
+                            {
+                                Interlocked.Increment(ref reciveCount);
+                                if (!connectionIdCollection.TryUpdate(clients[i].HubConnection.ConnectionId, true, false))
+                                    throw new AssertionFailure("Could not update ConcurrentDictionary");
 
-                            if (reciveCount == range)
-                                resetEvent2.Set();
-                        };
-
-                        clients[i].Connect();
-                        clients[i].LogOn("username", "password");
+                                if (reciveCount == range)
+                                    resetEvent2.Set();
+                            };
+                        clients[i].SignIn().Wait();
 
 
                         if (!connectionIdCollection.TryAdd(clients[i].HubConnection.ConnectionId, false))
@@ -434,13 +432,13 @@ namespace Controll.IntegrationTests
                     });
                 Assert.IsTrue(loginEvent.WaitOne(TimeSpan.FromSeconds(5)),
                               "Did not login all clients. Expected " + range + " but got " + connectionIdCollection.Count()); // log in all
-                
+
                 var ticket = clients[0].StartActivity("zombieName", activity.Key, new Dictionary<string, string>(), "commandName");
 
                 Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(2)));
 
                 zombie.ActivityNotify(ticket, "notify!");
-                
+
                 var hasRecievedCorrectNumberOfMessages = resetEvent2.WaitOne(TimeSpan.FromSeconds(2));
 
                 if (!hasRecievedCorrectNumberOfMessages)
@@ -450,53 +448,51 @@ namespace Controll.IntegrationTests
                 }
             }
         }
-        
+
         private ActivityViewModel getActivity(Guid key)
         {
             var mockedActivity = new ActivityViewModel
-            {
-                CreatorName = "name",
-                Description = "mocked",
-                Key = key,
-                LastUpdated = DateTime.Now,
-                Name = "Mocked Activity",
-                Version = new Version(1, 2, 3, 4),
-                Commands = new List<ActivityCommandViewModel>
-                            {
-                                new ActivityCommandViewModel
-                                    {
-                                        Label = "command-label",
-                                        Name = "commandName",
-                                        ParameterDescriptors = new List<ParameterDescriptorViewModel>
-                                            {
-                                                new ParameterDescriptorViewModel
-                                                    {
-                                                        Description = "pd-description",
-                                                        IsBoolean = true,
-                                                        Label = "pd-label",
-                                                        Name = "pd-name",
-                                                        PickerValues = new List<PickerValueViewModel>
-                                                            {
-                                                                new PickerValueViewModel
-                                                                    {
-                                                                        CommandName = "pv-commandname",
-                                                                        Description = "pv-description",
-                                                                        Identifier = "pv-id",
-                                                                        IsCommand = true,
-                                                                        Label = "pv-label",
-                                                                        Parameters = new Dictionary<string, string>
-                                                                            {
-                                                                                {"param1", "value1"}
-                                                                            }
-                                                                    }
-                                                            }
-
-                                                        
-                                                    }
-                                            }
-                                    }
-                            }
-            };
+                {
+                    CreatorName = "name",
+                    Description = "mocked",
+                    Key = key,
+                    LastUpdated = DateTime.Now,
+                    Name = "Mocked Activity",
+                    Version = new Version(1, 2, 3, 4),
+                    Commands = new List<ActivityCommandViewModel>
+                        {
+                            new ActivityCommandViewModel
+                                {
+                                    Label = "command-label",
+                                    Name = "commandName",
+                                    ParameterDescriptors = new List<ParameterDescriptorViewModel>
+                                        {
+                                            new ParameterDescriptorViewModel
+                                                {
+                                                    Description = "pd-description",
+                                                    IsBoolean = true,
+                                                    Label = "pd-label",
+                                                    Name = "pd-name",
+                                                    PickerValues = new List<PickerValueViewModel>
+                                                        {
+                                                            new PickerValueViewModel
+                                                                {
+                                                                    CommandName = "pv-commandname",
+                                                                    Description = "pv-description",
+                                                                    Identifier = "pv-id",
+                                                                    IsCommand = true,
+                                                                    Label = "pv-label",
+                                                                    Parameters = new Dictionary<string, string>
+                                                                        {
+                                                                            {"param1", "value1"}
+                                                                        }
+                                                                }
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                };
 
             return mockedActivity;
         }

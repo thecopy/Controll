@@ -4,10 +4,12 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Security.Authentication;
+using System.Security.Claims;
 using System.Security.Principal;
 using Controll.Common.ViewModels;
 using Controll.Hosting.Helpers;
 using Controll.Hosting.Hubs;
+using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
@@ -25,117 +27,24 @@ namespace Controll.Hosting.Tests
     public class ClientHubTests
     {
         [TestMethod]
-        public void ShouldNotBeAbleToAuthenticateWithWrongPassword()
-        {
-            var clientState = new StateChangeTracker();
-            const string clientId = "1";
-
-            var user = new ControllUser
-                {
-                    UserName = "Erik",
-                    Password = "pass123"
-                };
-
-            var repo = new InMemoryControllUserRepository();
-            repo.Add(user);
-
-            var hub = GetTestableClientHub(clientId, clientState, user, repo);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "pass123"))).Returns(user);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u != "Erik"), It.Is<string>(p => p == "pass123"))).Callback(() => { throw new InvalidOperationException(); });
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p != "pass123"))).Callback(() => { throw new InvalidOperationException(); });
-            hub.Clients.Caller.UserName = "Erik";
-
-            AssertionHelper.Throws<InvalidOperationException>(() => hub.LogOn("pass")); // Wrong password
-            hub.Clients.Caller.UserName = "Erika123";
-            AssertionHelper.Throws<InvalidOperationException>(() => hub.LogOn("pass123")); // Wrong username
-
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToAuthenticate()
-        {
-            var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password" };
-
-            userRepository.Add(user);
-
-            var clientState = new StateChangeTracker();
-            const string clientId = "1";
-
-            var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-            hub.Clients.Caller.UserName = "Erik";
-
-            hub.LogOn("password");
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToDetectUserNameSpoof()
-        {
-            var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password"};
-
-            userRepository.Add(user);
-
-            var clientState = new StateChangeTracker();
-            const string clientId = "1";
-
-            var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
-            hub.Clients.Caller.UserName = "Erik";
-
-            // Not logged in.
-            AssertionHelper.Throws<Exception>(() => hub.StartActivity("zombieName", Guid.NewGuid(), parameters: null, commandName: null));
-        }
-
-       
-        [TestMethod]
-        public void ShouldBeAbleGetAllInstalledPluginsOnZombie()
-        {
-            var userRepository = new InMemoryControllUserRepository();
-            var activities = Builder<Activity>.CreateListOfSize(10).All().Do(a => a.Commands = new List<ActivityCommand>()).Build();
-            var user = new ControllUser
-                {
-                    UserName = "Erik",
-                    Password = "password",
-                    Zombies = new List<Zombie>
-                        {
-                            new Zombie {Activities = activities, Name = "zombie"}
-                        }
-                };
-
-            userRepository.Add(user);
-
-            var clientState = new StateChangeTracker();
-            const string clientId = "1";
-
-            var hub = GetTestableClientHub(clientId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-            hub.Clients.Caller.UserName = "Erik";
-            
-            hub.LogOn("password");
-            List<ActivityViewModel> fetchedActivities = hub.GetActivitesInstalledOnZombie("zombie").ToList();
-
-            Assert.IsNotNull(fetchedActivities);
-            AssertionHelper.AssertEnumerableItemsAreEqual(user.Zombies[0].Activities, fetchedActivities,
-                                                          TestingHelper.ActivityViewModelComparer);
-        }
-        
-        [TestMethod]
         public void ShouldBeAbleToAddClientWhenLoggingInAndRemoveClientFromUserWhenDisconnecting()
         {
             var userRepository = new InMemoryControllUserRepository();
-            var user = new ControllUser() { UserName = "Erik", Password = "password" };
+            var user = new ControllUser() { UserName = "Erik", Password = "password", Id = 1 };
 
             userRepository.Add(user);
 
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
-            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-            hub.Clients.Caller.UserName = "Erik";
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
 
-            hub.LogOn("password");
+            hub.Clients.Caller.UserName = "Erik";
+            hub.SignIn();
 
             user = userRepository.GetByUserName(user.UserName);
 
@@ -204,6 +113,7 @@ namespace Controll.Hosting.Tests
             var userRepository = new InMemoryControllUserRepository();
             var user = new ControllUser
             {
+                Id = 1,
                 UserName = "Erik",
                 Password = "password",
                 Email = "mail",
@@ -220,12 +130,13 @@ namespace Controll.Hosting.Tests
 
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
-
-            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-
+            
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
-            hub.LogOn("password");
 
             hub.MockedMessageQueueService
                 .Setup(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)))
@@ -243,6 +154,7 @@ namespace Controll.Hosting.Tests
             var userRepository = new InMemoryControllUserRepository();
             var user = new ControllUser
                 {
+                    Id = 1,
                     UserName = "Erik",
                     Password = "password",
                     Email = "mail",
@@ -260,11 +172,12 @@ namespace Controll.Hosting.Tests
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
-            TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
-             hub.LogOn("password");
 
 
              user.Zombies[0].ConnectedClients.Add(new ControllClient{ ConnectionId = "conn"});
@@ -290,6 +203,7 @@ namespace Controll.Hosting.Tests
             var userRepository = new InMemoryControllUserRepository();
             var user = new ControllUser
             {
+                Id = 1,
                 UserName = "Erik",
                 Password = "password",
                 Email = "mail",
@@ -301,11 +215,14 @@ namespace Controll.Hosting.Tests
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
-            TestableClientHub hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
-            hub.LogOn("password");
+
+            hub.SignIn();
 
             AssertionHelper.Throws<ArgumentException>(() => hub.IsZombieOnline("some_zombie_name"));
         }
@@ -317,6 +234,7 @@ namespace Controll.Hosting.Tests
             var zombieList = TestingHelper.GetListOfZombies().Take(1).ToList();
             var user = new ControllUser
             {
+                Id = 1,
                 UserName = "Erik",
                 Password = "password",
                 Email = "mail",
@@ -328,11 +246,14 @@ namespace Controll.Hosting.Tests
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
-            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
-            hub.LogOn("password");
+
+            hub.SignIn();
 
             var result = hub.GetAllZombies().ToList();
 
@@ -346,6 +267,7 @@ namespace Controll.Hosting.Tests
             var userRepository = new InMemoryControllUserRepository();
             var user = new ControllUser
             {
+                Id = 1,
                 UserName = "Erik",
                 Password = "password",
                 Email = "mail",
@@ -361,11 +283,14 @@ namespace Controll.Hosting.Tests
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
 
-            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
-
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
-            hub.LogOn("password");
+
+            hub.SignIn();
             
             AssertionHelper.Throws<Exception>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null)); // wrong name
 
@@ -385,6 +310,7 @@ namespace Controll.Hosting.Tests
             var userRepository = new InMemoryControllUserRepository();
             var user = new ControllUser
                 {
+                    Id = 1,
                     UserName = "Erik",
                     Password = "password",
                     Zombies = new List<Zombie>
@@ -404,10 +330,15 @@ namespace Controll.Hosting.Tests
 
             var clientState = new StateChangeTracker();
             const string connectionId = "conn-id";
-            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, activityRepository);
-            hub.MembershipService.Setup(s => s.AuthenticateUser(It.Is<string>(u => u == "Erik"), It.Is<string>(p => p == "password"))).Returns(user);
+
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, userRepository, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
-            hub.LogOn("password");
+
+            hub.SignIn();
 
             var dictionary = new Dictionary<string, string>
                 {
@@ -439,72 +370,7 @@ namespace Controll.Hosting.Tests
                     Times.Once());
         }
 
-        [TestMethod]
-        public void ShouldNotBeAbleToInvokeMethodsWhichRequireAuthenticationWhenNotAuthenticated()
-        {
-            var clientState = new StateChangeTracker();
-            const string clientId = "1";
-
-            var user = new ControllUser
-            {
-                UserName = "Erik",
-                Password = "pass123"
-            };
-
-            var repo = new InMemoryControllUserRepository();
-            repo.Add(user);
-
-            var hub = GetTestableClientHub(clientId, clientState, user, repo);
-            hub.Clients.Caller.UserName = "Erik";
-
-            var methods = typeof (ClientHub).GetMethods()
-                              .Where(y => y.GetCustomAttributes().OfType<RequiresAuthorization>().Any());
-            
-            foreach (var method in methods)
-            {
-                var parameterInfos = method.GetParameters();
-                var parameters = new object[parameterInfos.Count()];
-                for (int i = 0; i < parameterInfos.Length; i++)
-                {
-                    var paramter = parameterInfos[i];
-                    var value = paramter.GetType().IsValueType ? Activator.CreateInstance(paramter.GetType()) : null;
-
-                    parameters[i] = value;
-                }
-                var closureSafeMethod = method;
-                /*
-                if (typeof(IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
-                {
-                    IList<object> returned = ((IEnumerable<object>)closureSafeMethod.Invoke(hub, parameters)).ToList(); // .ToList() -> forcing enumeration (and therefore execution) for IEnumerable return types
-                    Assert.AreEqual(0, returned.Count);
-                }
-                else
-                {
-                    var returned = closureSafeMethod.Invoke(hub, parameters);
-                    var expected = closureSafeMethod.ReturnType.IsValueType ? Activator.CreateInstance(returned.GetType()) : null;
-                    Assert.AreEqual(expected, returned);
-                }*/
-
-                #region This Should Be Used when SignalR implements exception bubbling
-
-                
-                // Checking InnerException because MethodInvocationException would be checked otherwise
-                if (typeof (IEnumerable).IsAssignableFrom(closureSafeMethod.ReturnType))
-                {
-                    AssertionHelper.Throws<Exception>(() =>
-                        ((IEnumerable<object>) closureSafeMethod.Invoke(hub, parameters)).ToList(), innerException:true); // .ToList() -> forcing enumeration (and therefore execution) for IEnumerable return types
-                }
-                else
-                {
-                    AssertionHelper.Throws<Exception>(() => closureSafeMethod.Invoke(hub, parameters), innerException:true);
-                }
-
-
-                #endregion
-            }
-        }
-
-        private TestableClientHub GetTestableClientHub(string connectionId, StateChangeTracker clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null, IGenericRepository<QueueItem> queueItemRepository = null)
+        private TestableClientHub GetTestableClientHub(string connectionId, StateChangeTracker clientState, ControllUser user = null, IControllUserRepository clientRepository = null, IGenericRepository<Activity> activityRepository = null, IGenericRepository<QueueItem> queueItemRepository = null, IPrincipal principal = null)
         {
             // setup things needed for chat
             if (clientRepository == null)
@@ -531,12 +397,14 @@ namespace Controll.Hosting.Tests
 
             var mockedConnectionObject = hub.MockedConnection.Object;
 
+            var request = new Mock<IRequest>();
 
             // setup signal agent
-            var prinicipal = new Mock<IPrincipal>();
+            if(principal == null)
+                principal = new Mock<IPrincipal>().Object;
 
-            var request = new Mock<IRequest>();
-            request.Setup(m => m.User).Returns(prinicipal.Object);
+            request.Setup(m => m.User).Returns(principal);
+            mockedSession.Setup(x => x.Get<ControllUser>(It.IsAny<Int32>())).Returns((Int32 c) => clientRepository.Get(c));
 
             // setup client agent
             var mockPipeline = new Mock<IHubPipelineInvoker>();

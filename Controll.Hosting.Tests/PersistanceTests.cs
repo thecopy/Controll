@@ -11,6 +11,7 @@ using FizzWare.NBuilder;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FluentNHibernate.Testing;
 using NHibernate;
+using NHibernate.Proxy;
 
 
 namespace Controll.Hosting.Tests
@@ -20,6 +21,17 @@ namespace Controll.Hosting.Tests
     {
         public class PersistenceSpecificationEqualityComparer : IEqualityComparer
         {
+            private readonly ISession _session;
+
+            public PersistenceSpecificationEqualityComparer(ISession session)
+            {
+                _session = session;
+            }
+
+            public PersistenceSpecificationEqualityComparer( )
+            {
+            }
+
             private readonly Dictionary<Type, Delegate> _comparers = new Dictionary<Type, Delegate>();
 
             public void RegisterComparer<T>(Func<T, object> comparer)
@@ -27,16 +39,35 @@ namespace Controll.Hosting.Tests
                 _comparers.Add(typeof(T), comparer);
             }
 
-            public bool Equals(object x, object y)
+            public new bool Equals(object x, object y)
             {
                 if (x == null || y == null)
                 {
                     return false;
                 }
+
+                if (_session != null)
+                {
+                    if (x as INHibernateProxy != null)
+                    {
+                        if (!NHibernateUtil.IsInitialized(x))
+                            NHibernateUtil.Initialize(x);
+                        x = _session.GetSessionImplementation().PersistenceContext.Unproxy(x);
+                    }
+
+                    if (y as INHibernateProxy != null)
+                    {
+                        if (!NHibernateUtil.IsInitialized(y))
+                            NHibernateUtil.Initialize(y);
+                        y = _session.GetSessionImplementation().PersistenceContext.Unproxy(y);
+                    }
+                }
+
                 var xType = x.GetType();
                 var yType = y.GetType();
+
                 // check subclass to handle proxies
-                if (_comparers.ContainsKey(xType) && (xType == yType || yType.IsSubclassOf(xType)))
+                if (_comparers.ContainsKey(xType) && (xType == yType || (yType.IsSubclassOf(xType) || xType.IsSubclassOf(yType))))
                 {
                     var comparer = _comparers[xType];
                     var xValue = comparer.DynamicInvoke(new[] { x });
@@ -325,7 +356,7 @@ namespace Controll.Hosting.Tests
                 var repo = new ControllUserRepository(session);
                 repo.Add(user);
 
-                var comparer = new PersistenceSpecificationEqualityComparer();
+                var comparer = new PersistenceSpecificationEqualityComparer(session);
                 comparer.RegisterComparer((ControllUser x) => x.Id);
                 comparer.RegisterComparer((ClientCommunicator x) => x.Id);
                 
@@ -352,7 +383,7 @@ namespace Controll.Hosting.Tests
                 var repo = new ControllUserRepository(session);
                 repo.Add(user);
 
-                var comparer = new PersistenceSpecificationEqualityComparer();
+                var comparer = new PersistenceSpecificationEqualityComparer(session);
                 comparer.RegisterComparer((ControllUser x) => x.Id);
                 comparer.RegisterComparer((ClientCommunicator x) => x.Id);
                 comparer.RegisterComparer((ActivityCommand x) => x.Name);
@@ -376,7 +407,7 @@ namespace Controll.Hosting.Tests
             using (session.BeginTransaction())
             {
                 var user = new ControllUser { UserName = "username", Email = "email", Password = "password" };
-                var activity = new Activity {Name = "mocked", Description = "desc", LastUpdated = DateTime.Parse("2004-03-11 13:22:11")};
+                var activity = new Activity { Name = "mocked", Description = "desc", LastUpdated = DateTime.Parse("2004-03-11 13:22:11")};
 
                 var activityRepo = new GenericRepository<Activity>(session);
                 var userRepo = new ControllUserRepository(session);
@@ -384,7 +415,7 @@ namespace Controll.Hosting.Tests
                 userRepo.Add(user);
                 activityRepo.Add(activity);
                 
-                var comparer = new PersistenceSpecificationEqualityComparer();
+                var comparer = new PersistenceSpecificationEqualityComparer(session);
                 comparer.RegisterComparer((ControllUser x) => x.Id);
                 comparer.RegisterComparer((ClientCommunicator x) => x.Id);
                 comparer.RegisterComparer((Activity x) => x.Id);

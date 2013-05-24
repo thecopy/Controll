@@ -10,9 +10,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ControllUserMap : SubclassMap<ControllUser>
+    internal class ControllUserMap : SubclassMap<ControllUser>
     {
-        public ControllUserMap()
+        internal ControllUserMap()
         {
             Map(x => x.Email).Unique().Column("Email");
             Map(x => x.Password).Not.Nullable().Column("Password"); ;

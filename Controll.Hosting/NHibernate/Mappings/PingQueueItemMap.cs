@@ -9,9 +9,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class PingQueueItemMap : SubclassMap<PingQueueItem>
+    internal class PingQueueItemMap : SubclassMap<PingQueueItem>
     {
-        public PingQueueItemMap()
+        internal PingQueueItemMap()
         {
         }
     }

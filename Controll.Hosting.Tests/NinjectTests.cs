@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Controll.Hosting.Hubs;
-using Controll.Hosting.NHibernate;
-using Controll.Hosting.Repositories;
 using Microsoft.AspNet.SignalR;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
@@ -21,12 +15,13 @@ namespace Controll.Hosting.Tests
         {
             Bootstrapper.SetupNinject("testing");
 
-            IDependencyResolver ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
+            var ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
+            
+            var zombieHub = ninjectDependencyResolver.GetService(typeof (ZombieHub));
+            var clientHub = ninjectDependencyResolver.GetService(typeof (ClientHub));
 
-            var zombieHub = ninjectDependencyResolver.Resolve<ZombieHub>();
-            var clientHub = ninjectDependencyResolver.Resolve<ClientHub>();
-            Assert.IsNotNull(zombieHub);
             Assert.IsNotNull(clientHub);
+            Assert.IsNotNull(zombieHub);
         }
 
         [TestMethod]
@@ -45,7 +40,7 @@ namespace Controll.Hosting.Tests
 
             Assert.AreEqual(range, sessions.Select(x => x.Session).Distinct(new SessionEqualityComparer()).Count());
         }
-
+        
         private class SessionEqualityComparer : IEqualityComparer<ISession>
         {
             public bool Equals(ISession x, ISession y)

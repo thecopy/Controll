@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
@@ -33,9 +34,10 @@ namespace Controll
             _url = url;
         }
 
-        public void Connect()
+        public void Connect(string username, string password, string zombieName)
         {
-            _client = new ControllZombieClient(_url);
+            var authenticator = new DefaultAuthenticationProvider(_url);
+            _client = new ControllZombieClient(authenticator.Connect(username, password, zombieName).Result);
             _client.ActivateZombie += _client_ActivateZombie;
         }
 
@@ -45,18 +47,6 @@ namespace Controll
             var activity = PluginService.Instance.GetActivityInstance(e.ActivityKey);
             Console.WriteLine("Activity name: " + activity.ViewModel.Name + ", activating...");
             activity.Execute(new DelegateActivityContext(e.ActivityTicket, e.Parameter, e.CommandName, _client));
-        }
-
-        public bool Authenticate(string username, string password, string zombieName)
-        {
-            var result = _client.LogOn(username, password, zombieName);
-            if (result)
-            {
-                _userName = username;
-                _zombieName = zombieName;
-            }
-
-            return result;
         }
         
         public bool Register(string userName, string password, string zombieName)

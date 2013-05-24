@@ -15,6 +15,7 @@ namespace Controll.Hosting
 {
     public static class Bootstrapper
     {
+        internal static String ConnectionStringAlias { get; private set; } 
         public static IKernel Kernel
         {
             get { return _kernel; }
@@ -33,7 +34,9 @@ namespace Controll.Hosting
 
         public static void SetupNinject(string connectionStringAlias = "mocked")
         {
+            ConnectionStringAlias = connectionStringAlias;
             const string hubScope = "Hub";
+
             if(Kernel == null)
             {
                 _kernel = new StandardKernel();
@@ -55,8 +58,12 @@ namespace Controll.Hosting
                    .ToSelf()
                    .DefinesNamedScope(hubScope);
 
+            _kernel.Bind<ISessionFactory>()
+                   .ToMethod(_ => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(ConnectionStringAlias))
+                   .InSingletonScope();
+
             _kernel.Bind<ISession>()
-                   .ToMethod(context => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(connectionStringAlias).OpenSession())
+                   .ToMethod(x => x.Kernel.Get<ISessionFactory>().OpenSession())
                    .InNamedScope(hubScope);
 
             _kernel.Bind(typeof(IGenericRepository<>))

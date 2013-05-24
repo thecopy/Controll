@@ -17,6 +17,14 @@ namespace SimpleConsoleServer
             const string url = "http://*:10244/";
             var server = new ControllStandAloneServer(url);
 
+            Console.Write("Use NHibernate Profiler? Enter y or Y, else just type anything: ");
+            var read = Console.ReadLine();
+            if (read != null && read.ToLower() == "y")
+            {
+                Console.WriteLine("Ok. Will use NHibernate Profiler");
+                HibernatingRhinos.Profiler.Appender.NHibernate.NHibernateProfiler.Initialize();
+            }
+
             Console.WriteLine("Starting server on " + url);
 
             using (server.Start())

@@ -8,9 +8,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ZombieMap : SubclassMap<Zombie>
+    internal class ZombieMap : SubclassMap<Zombie>
     {
-        public ZombieMap()
+        internal ZombieMap()
         {
             Map(x => x.Name).Not.Nullable();
             References(x => x.Owner).Not.Nullable().Column("Owner_id");

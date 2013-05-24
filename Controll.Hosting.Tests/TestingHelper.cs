@@ -36,7 +36,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        public static IList<Zombie> GetListOfZombies(int count = 3)
+        internal static IList<Zombie> GetListOfZombies(int count = 3)
         {
             IList<ParameterDescriptor> parameters =
                 Builder<ParameterDescriptor>.CreateListOfSize(count)
@@ -60,8 +60,8 @@ namespace Controll.Hosting.Tests
                                                                                                       .And(a => a.Id = Guid.NewGuid())
                                                                                                   .Build()).Build();
             return zombies;
-        } 
-        public static Func<Zombie, ZombieViewModel, bool> ZombieViewModelComparer
+        }
+        internal static Func<Zombie, ZombieViewModel, bool> ZombieViewModelComparer
         {
             get
             {
@@ -72,7 +72,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        public static Func<Activity, ActivityViewModel, bool> ActivityViewModelComparer
+        internal static Func<Activity, ActivityViewModel, bool> ActivityViewModelComparer
         {
             get
             {
@@ -85,7 +85,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        public static Func<ActivityCommand, ActivityCommandViewModel, bool> ActivityCommandViewModelComparer
+        internal static Func<ActivityCommand, ActivityCommandViewModel, bool> ActivityCommandViewModelComparer
         {
             get
             {
@@ -97,7 +97,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        public static Func<ParameterDescriptor, ParameterDescriptorViewModel, bool> ParameterDescriptorViewModelComparer
+        internal static Func<ParameterDescriptor, ParameterDescriptorViewModel, bool> ParameterDescriptorViewModelComparer
         {
             get
             {
@@ -109,7 +109,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        public static Func<PickerValue, PickerValueViewModel, bool> PickerValueViewModelComparer
+        internal static Func<PickerValue, PickerValueViewModel, bool> PickerValueViewModelComparer
         {
             get { return ComparePickerValueToViewModel; }
         } 

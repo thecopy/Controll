@@ -8,12 +8,12 @@ namespace Controll.Hosting.Models
 {
     public static class ZombieExtensions
     {
-        public static bool IsOnline(this Zombie zombie)
+        internal static bool IsOnline(this Zombie zombie)
         {
             return zombie.ConnectedClients != null && zombie.ConnectedClients.Any(x => x.ConnectionId != null);
         }
 
-        public static Activity GetActivity(this Zombie zombie, Guid key)
+        internal static Activity GetActivity(this Zombie zombie, Guid key)
         {
             return zombie.Activities.FirstOrDefault(a => a.Id == key);
         }

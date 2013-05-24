@@ -9,9 +9,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ActivitytResultQueueItemMap : SubclassMap<ActivityResultQueueItem>
+    internal class ActivitytResultQueueItemMap : SubclassMap<ActivityResultQueueItem>
     {
-        public ActivitytResultQueueItemMap()
+        internal ActivitytResultQueueItemMap()
         {
             References(x => x.ActivityCommand).Cascade.All();
             Map(x => x.InvocationTicket).Not.Nullable();

@@ -10,9 +10,9 @@ using ParameterDescriptor = Controll.Hosting.Models.ParameterDescriptor;
 
 namespace Controll.Hosting.Helpers
 {
-    public static class ViewModelHelper
+    internal static class ViewModelHelper
     {
-        public static ZombieViewModel Fill(this ZombieViewModel self, Zombie zombie)
+        internal static ZombieViewModel Fill(this ZombieViewModel self, Zombie zombie)
         {
             self.Activities = zombie.Activities.Select(CreateViewModel);
             self.Name = zombie.Name;
@@ -21,7 +21,7 @@ namespace Controll.Hosting.Helpers
             return self;
         }
 
-        public static ParameterDescriptorViewModel Fill(this ParameterDescriptorViewModel self,
+        internal static ParameterDescriptorViewModel Fill(this ParameterDescriptorViewModel self,
                                                         ParameterDescriptor descriptor)
         {
             self.Description = descriptor.Description;
@@ -43,7 +43,7 @@ namespace Controll.Hosting.Helpers
             return self;
         }
 
-        public static ActivityCommandViewModel Fill(this ActivityCommandViewModel self, ActivityCommand command)
+        internal static ActivityCommandViewModel Fill(this ActivityCommandViewModel self, ActivityCommand command)
         {
             self.Name = command.Name;
             self.Label = command.Label;
@@ -52,7 +52,7 @@ namespace Controll.Hosting.Helpers
             return self;
         }
 
-        public static ActivityViewModel Fill(this ActivityViewModel self, Activity activity)
+        internal static ActivityViewModel Fill(this ActivityViewModel self, Activity activity)
         {
             self.Key = activity.Id;
             self.Name = activity.Name;
@@ -66,27 +66,27 @@ namespace Controll.Hosting.Helpers
         }
 
 
-        public static ActivityCommandViewModel CreateViewModel(this ActivityCommand command)
+        internal static ActivityCommandViewModel CreateViewModel(this ActivityCommand command)
         {
             return new ActivityCommandViewModel().Fill(command);
         }
 
-        public static ActivityViewModel CreateViewModel(this Activity activity)
+        internal static ActivityViewModel CreateViewModel(this Activity activity)
         {
             return new ActivityViewModel().Fill(activity);
         }
 
-        public static ZombieViewModel CreateViewModel(this Zombie zombie)
+        internal static ZombieViewModel CreateViewModel(this Zombie zombie)
         {
             return new ZombieViewModel().Fill(zombie);
         }
 
-        public static ParameterDescriptorViewModel CreateViewModel(this ParameterDescriptor parameterDescriptor)
+        internal static ParameterDescriptorViewModel CreateViewModel(this ParameterDescriptor parameterDescriptor)
         {
             return new ParameterDescriptorViewModel().Fill(parameterDescriptor);
         }
 
-        public static Activity CreateConcreteClass(this ActivityViewModel activityViewModel)
+        internal static Activity CreateConcreteClass(this ActivityViewModel activityViewModel)
         {
             return new Activity
                 {
@@ -100,7 +100,7 @@ namespace Controll.Hosting.Helpers
                 };
         }
 
-        public static ActivityCommand CreateConcreteClass(this ActivityCommandViewModel activityViewModel)
+        internal static ActivityCommand CreateConcreteClass(this ActivityCommandViewModel activityViewModel)
         {
             return new ActivityCommand
                 {

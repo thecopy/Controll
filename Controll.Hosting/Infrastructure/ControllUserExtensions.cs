@@ -8,7 +8,7 @@ namespace Controll.Hosting.Models
 {
     public static class ControllUserExtensions
     {
-        public static Zombie GetZombieByName(this ControllUser user, string zombieName)
+        internal static Zombie GetZombieByName(this ControllUser user, string zombieName)
         {
             return user.Zombies != null
                        ? user.Zombies.SingleOrDefault(z => z.Name == zombieName)

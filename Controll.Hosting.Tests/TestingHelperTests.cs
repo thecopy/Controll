@@ -75,6 +75,7 @@ namespace Controll.Hosting.Tests
                                                .CreateListOfSize(10)
                                                .All().Do(a =>a.Commands =Builder<ActivityCommand>.CreateListOfSize(10).Build())
                                                .Build())
+                                               .And(x => x.ConnectedClients.Add( new ControllClient { ConnectionId = "f"} ))
                                            .Build();
 
             ZombieViewModel vm = ViewModelHelper.CreateViewModel(zombie);

@@ -10,18 +10,18 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ClientCommunicatorMap : ClassMap<ClientCommunicator>
+    internal class ClientCommunicatorMap : ClassMap<ClientCommunicator>
     {
         public ClientCommunicatorMap()
         {
             Id(x => x.Id);
 
             HasMany(x => x.ConnectedClients)
-                .Cascade.SaveUpdate();
+                .Cascade.All();
         }
     }
 
-    public class ControllClientMap : ClassMap<ControllClient>
+    internal class ControllClientMap : ClassMap<ControllClient>
     {
         public ControllClientMap()
         {

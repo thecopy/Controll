@@ -9,9 +9,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class QueueItemMap : ClassMap<QueueItem>
+    internal class QueueItemMap : ClassMap<QueueItem>
     {
-        public QueueItemMap()
+        internal QueueItemMap()
         {
             Id(x => x.Ticket);
             Map(x => x.Delivered);

@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Controll.Client.Models;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
-namespace Controll
+namespace Controll.Client
 {
     public class ControllClient
     {
@@ -40,9 +38,9 @@ namespace Controll
             if (handler != null) handler(this, new ActivityResultEventArgs(ticket, result));
         }
 
-        public ControllClient(string url)
+        public ControllClient(HubConnection hubConnection)
         {
-            _hubConnection = new HubConnection(url);
+            _hubConnection = hubConnection;
             _hubProxy = _hubConnection.CreateHubProxy("clientHub");
 
             SetupEvents();
@@ -98,28 +96,25 @@ namespace Controll
             return _hubProxy.Invoke<Guid>("DownloadActivityAtZombie", zombieName, activityKey).Result;
         }
 
-        public void Connect()
-        {
-            _hubConnection.Start().Wait();
-        }
-
         public Task<bool> LogOnAsync(string userName, string password)
         {
             _hubProxy["userName"] = userName;
             return _hubProxy.Invoke<bool>("LogOn", password);
         }
 
-        public bool LogOn(string userName, string password)
+        public Task SignIn()
         {
-            _hubProxy["userName"] = userName;
+            return _hubConnection.Start().ContinueWith(_ =>
+                {
+                    if (_.IsFaulted)
+                    {
+                        if (_.Exception != null)
+                            throw _.Exception;
+                        throw new Exception("Could not connect to server");
+                    }
 
-            var result = _hubProxy.Invoke<bool>("LogOn", password).Result;
-            if (!result)
-            {
-                _hubProxy["userName"] = "";
-            }
-
-            return result;
+                    _hubProxy.Invoke("SignIn");
+                });
         }
 
         public bool RegisterUser(string username, string password, string email)
@@ -129,7 +124,7 @@ namespace Controll
 
         public void Disconnect()
         {
-            _hubConnection.Disconnect();
+            _hubConnection.Stop();
         }
     }
 }

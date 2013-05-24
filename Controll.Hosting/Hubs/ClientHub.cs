@@ -5,11 +5,13 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Authentication;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.Hosting.Helpers;
+using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
@@ -18,6 +20,7 @@ using NHibernate;
 
 namespace Controll.Hosting.Hubs
 {
+    [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
     public class ClientHub : BaseHub
     {
         private readonly IControllUserRepository _controllUserRepository;
@@ -34,58 +37,39 @@ namespace Controll.Hosting.Hubs
             _messageQueueService = messageQueueService;
         }
 
-        private ControllUser GetUser()
+        public void SignIn()
         {
-            var userName = (string) Clients.Caller.userName;
-
-            var user = _controllUserRepository.GetByUserName(userName);
-
-            return user;
-        }
-
-        public bool LogOn(string password)
-        {
-            string userName = Clients.Caller.userName;
-            var user = _membershipService.AuthenticateUser(userName, password);
-
-            var client = new ControllClient
-                {
-                    ConnectionId = Context.ConnectionId,
-                    ClientCommunicator = user
-                };
-
-            user.ConnectedClients.Add(client);
-
             using (var transaction = Session.BeginTransaction())
             {
+                var user = GetUser();
+
+                var client = new ControllClient
+                    {
+                        ConnectionId = Context.ConnectionId,
+                        ClientCommunicator = user
+                    };
+
+                user.ConnectedClients.Add(client);
+
                 _controllUserRepository.Update(user);
                 transaction.Commit();
             }
-
-            return true;
         }
 
-        [RequiresAuthorization]
         public IEnumerable<ZombieViewModel> GetAllZombies()
         {
-            if (!EnsureUserIsLoggedIn())
-                throw new Exception("Not authed");
+            using (var tx = Session.BeginTransaction())
+            {
+                var user = GetUser();
+                Console.WriteLine(user.UserName + " is fetching all zombies");
 
-            var user = GetUser();
-            Console.WriteLine(user.UserName + " is fetching all zombies");
+                // ToList() -> Enumerate it so that the NHibernate proxy will load in this thread
+                // and not in SignalR's serializer
+                var vms = user.Zombies.Select(ViewModelHelper.CreateViewModel).ToList(); 
+                tx.Commit();
 
-            return user.Zombies.Select(ViewModelHelper.CreateViewModel);
-        }
-
-        [RequiresAuthorization]
-        public IEnumerable<ActivityViewModel> GetActivitesInstalledOnZombie(string zombieName)
-        {
-            if (!EnsureUserIsLoggedIn())
-                throw new Exception("Not authed");
-
-            var user = GetUser();
-
-            return user.GetZombieByName(zombieName).Activities.Select(ViewModelHelper.CreateViewModel);
+                return vms;
+            }
         }
 
         public bool RegisterUser(string userName, string password, string email)
@@ -99,43 +83,41 @@ namespace Controll.Hosting.Hubs
         }
 
 
-        [RequiresAuthorization]
         public bool IsZombieOnline(string zombieName)
         {
-            if (!EnsureUserIsLoggedIn())
-                throw new Exception("Not authed");
-
-            var user = GetUser();
-            var zombie = user.GetZombieByName(zombieName);
-
-            if (zombie == null)
-                throw new ArgumentException("Zombie does not exist", "zombieName");
-
-            Console.WriteLine("Checking online status for zombie " + zombieName + " for user " + user.UserName);
-
-            return zombie.IsOnline();
-        }
-
-        [RequiresAuthorization]
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
-        {
-            if (!EnsureUserIsLoggedIn())
-                throw new Exception("Not authenticated");
-
-            var user = GetUser();
-
-            Console.WriteLine("User '{0}' is requesting to start activity with key {1}", user.UserName, activityKey);
-
-            var zombie = user.GetZombieByName(zombieName);
-            if (zombie == null)
-                throw new Exception("Zombie not found");
-
-            var activity = zombie.GetActivity(activityKey);
-            if (activity == null)
-                throw new Exception("Activity not found. Searched for activity with key " + activityKey + ". Zombie has " + zombie.Activities.Count + " installed activities");
-
             using (var transaction = Session.BeginTransaction())
             {
+                var user = GetUser();
+                var zombie = user.GetZombieByName(zombieName);
+
+                if (zombie == null)
+                    throw new ArgumentException("Zombie does not exist", "zombieName");
+
+                Console.WriteLine("Checking online status for zombie " + zombieName + " for user " + user.UserName);
+
+                NHibernateUtil.Initialize(zombie.ConnectedClients);
+                transaction.Commit();
+
+                return zombie.IsOnline();
+            }
+        }
+
+        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
+        {
+            using (var transaction = Session.BeginTransaction())
+            {
+                var user = GetUser();
+
+                Console.WriteLine("User '{0}' is requesting to start activity with key {1}", user.UserName, activityKey);
+
+                var zombie = user.GetZombieByName(zombieName);
+                if (zombie == null)
+                    throw new Exception("Zombie not found");
+
+                var activity = zombie.GetActivity(activityKey);
+                if (activity == null)
+                    throw new Exception("Activity not found. Searched for activity with key " + activityKey + ". Zombie has " + zombie.Activities.Count + " installed activities");
+
                 var queueItem = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
@@ -145,19 +127,15 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        [RequiresAuthorization]
         public Guid PingZombie(string zombieName)
         {
-            if (!EnsureUserIsLoggedIn())
-                throw new Exception("Not authed");
-
-            var zombie = GetUser().GetZombieByName(zombieName);
-
-            if (zombie == null)
-                return default(Guid);
-
-            using(var transaction = Session.BeginTransaction())
+            using (var transaction = Session.BeginTransaction())
             {
+                var zombie = GetUser().GetZombieByName(zombieName);
+
+                if (zombie == null)
+                    throw new Exception("Could not find zombie " + zombieName);
+
                 var queueItem = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
                 transaction.Commit();
 
@@ -166,32 +144,17 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        private bool EnsureUserIsLoggedIn()
-        {
-            var claimedUserName = (string) Clients.Caller.userName;
-
-            var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
-
-            if (user == null || user.UserName.ToLower() != claimedUserName.ToLower())
-            {
-                Console.WriteLine("User is not authenticated. Claimed username: \"" + claimedUserName + "\"");
-                return false;
-            }
-
-            return true;
-        }
-
         public override Task OnDisconnected()
         {
-            var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
-            if (user == null) return null;
-            var client = user.ConnectedClients.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
-
-            Console.Write("One of " + user.UserName + "'s clients disconnected");
-
-            if (client != null)
+            using (var transaction = Session.BeginTransaction())
             {
-                using (var transaction = Session.BeginTransaction())
+                var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
+                if (user == null) return null;
+                var client = user.ConnectedClients.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
+
+                Console.Write("One of " + user.UserName + "'s clients disconnected");
+
+                if (client != null)
                 {
                     user.ConnectedClients.Remove(client);
                     _controllUserRepository.Update(user);
@@ -199,7 +162,6 @@ namespace Controll.Hosting.Hubs
                     transaction.Commit();
                 }
             }
-
 
             return null;
         }

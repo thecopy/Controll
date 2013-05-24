@@ -19,9 +19,9 @@ namespace Controll
         public event EventHandler<ActivityCompletedEventArgs> ZombieActivityCompleted;
         public event EventHandler<PingEventArgs> Pinged;
 
-        public ControllZombieClient(string url)
+        public ControllZombieClient(HubConnection hubConnection)
         {
-            _hubConnection = new HubConnection(url);
+            _hubConnection = hubConnection;
             _hubProxy = _hubConnection.CreateHubProxy("ZombieHub");
 
             SetupEvents();
@@ -75,16 +75,9 @@ namespace Controll
 
         }
 
-        public bool LogOn(string userName, string password, string zombieName)
+        public Task SignIn()
         {
-            var result = _hubProxy.Invoke<bool>("LogOn", userName, password, zombieName).Result; 
-            if (result)
-            {
-                _hubProxy["BelongsToUser"] = userName;
-                _hubProxy["ZombieName"] = zombieName;
-            }
-
-            return result;
+            return _hubProxy.Invoke("SignIn");
         }
         
         private void OnPing(Guid ticket)

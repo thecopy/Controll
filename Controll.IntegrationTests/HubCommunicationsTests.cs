@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Controll.Common;
+using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Controll.Hosting;
 using Controll.Hosting.Models;
@@ -13,6 +14,8 @@ using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NHibernate;
 using Newtonsoft.Json;
+using Controll.Client;
+using ControllClient = Controll.Client.ControllClient;
 
 namespace Controll.IntegrationTests
 {
@@ -74,14 +77,12 @@ namespace Controll.IntegrationTests
 
             using(server.Start()) // Start listening on /localhost:10244/
             {
-                var client = new ControllClient(LocalHostUrl);
-                client.Connect();
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+                var client = new ControllClient(auth.Connect("username", "password").Result);
 
-                var logonResult = client.LogOn("username", "password");
+                client.SignIn().Wait();
 
-                Assert.IsTrue(logonResult, "Client could not logon");
-
-                client.HubConnection.Disconnect();
+                client.HubConnection.Stop();
             }
         }
 
@@ -93,13 +94,10 @@ namespace Controll.IntegrationTests
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
-                var client = new ControllZombieClient(LocalHostUrl);
-
-                var logonResult = client.LogOn("username", "password", "zombieName");
-
-                Assert.IsTrue(logonResult, "Zombie could not logon");
-
-                client.HubConnection.Disconnect();
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+                var client = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+                client.SignIn().Wait();
+                client.HubConnection.Stop();
             }
         }
 
@@ -111,12 +109,13 @@ namespace Controll.IntegrationTests
 
             using (server.Start()) // Start listening on localhost:10244/
             {
-                var zombie = new ControllZombieClient(LocalHostUrl);
-                var client = new ControllClient(LocalHostUrl);
-                client.Connect();
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
 
-                zombie.LogOn("username", "password", "zombieName");
-                client.LogOn("username", "password");
+                var client = new ControllClient(auth.Connect("username", "password").Result);
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+                
+                client.SignIn().Wait();
+                zombie.SignIn().Wait();
 
                 var pingEvent = new ManualResetEvent(false);
                 var pongEvent = new ManualResetEvent(false);
@@ -143,7 +142,7 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(messageTicket, pingTicket);
                 Assert.AreEqual(messageTicket, pongTicket);
 
-                client.HubConnection.Disconnect();
+                client.HubConnection.Stop();
             }
         }
 
@@ -157,13 +156,12 @@ namespace Controll.IntegrationTests
 
             using (server.Start()) // Start listening on /localhost:10244/
             {
-                var zombie = new ControllZombieClient(LocalHostUrl);
-                var client = new ControllClient(LocalHostUrl);
-                client.Connect();
+                var auth = new DefaultAuthenticationProvider(LocalHostUrl);
+                var client = new ControllClient(auth.Connect("username", "password").Result);
+                var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
 
-                zombie.LogOn("username", "password", "zombieName");
-
-                client.LogOn("username", "password");
+                zombie.SignIn().Wait();
+                client.SignIn().Wait();
 
                 var activatedEvent = new ManualResetEvent(false);
 
@@ -323,7 +321,7 @@ namespace Controll.IntegrationTests
                 Assert.AreEqual(mockedParam.Value, convertedParam.Value);
                 #endregion
 
-                client.HubConnection.Disconnect();
+                client.HubConnection.Stop();
             }
         }
     }

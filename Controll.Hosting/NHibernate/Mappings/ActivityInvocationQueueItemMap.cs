@@ -8,9 +8,9 @@ using FluentNHibernate.Mapping;
 
 namespace Controll.Hosting.NHibernate.Mappings
 {
-    public class ActivityInvocationQueueItemMap : SubclassMap<ActivityInvocationQueueItem>
+    internal class ActivityInvocationQueueItemMap : SubclassMap<ActivityInvocationQueueItem>
     {
-        public ActivityInvocationQueueItemMap()
+        internal ActivityInvocationQueueItemMap()
         {
             References(x => x.Activity);
             Map(x => x.CommandName);
