@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Controll.Hosting.Tests
 {
     [TestClass]
-    public class ControllUserRepositoryTests : TestBase
+    public class ControllRepositoryTests : TestBase
     {
         [TestMethod]
         public void ShouldBeAbleToAddAndGetFromConnectionId()
@@ -19,7 +19,7 @@ namespace Controll.Hosting.Tests
             using(var session = SessionFactory.OpenSession())
             using(session.BeginTransaction())
             {
-                var repo = new ControllUserRepository(session);
+                var repo = new ControllRepository(session);
 
                 var user = new ControllUser
                     {
@@ -27,13 +27,13 @@ namespace Controll.Hosting.Tests
                         Email = "mail",
                         Password = "password"
                     };
-                repo.Add(user);
+                session.Save(user);
 
                 user.ConnectedClients.Add(new ControllClient { ConnectionId = "conn", ClientCommunicator = user});
 
-                repo.Update(user);
+                session.Update(user);
                 
-                var fetched = repo.GetByConnectionId("conn");
+                var fetched = repo.GetClientByConnectionId<ControllUser>("conn");
 
                 Assert.IsNotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
@@ -48,7 +48,7 @@ namespace Controll.Hosting.Tests
             using(var session = SessionFactory.OpenSession())
             using(session.BeginTransaction())
             {
-                var repo = new ControllUserRepository(session);
+                var repo = new ControllRepository(session);
 
                 var user = new ControllUser()
                 {
@@ -57,9 +57,9 @@ namespace Controll.Hosting.Tests
                     Id = 222,
                     Password = "password"
                 };
-                repo.Add(user);
+                session.Save(user);
 
-                var fetched = repo.GetByUserName("name");
+                var fetched = repo.GetUserFromUserName("name");
 
                 Assert.IsNotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
@@ -74,7 +74,7 @@ namespace Controll.Hosting.Tests
             using(var session = SessionFactory.OpenSession())
             using(session.BeginTransaction())
             {
-                var repo = new ControllUserRepository(session);
+                var repo = new ControllRepository(session);
 
                 var user = new ControllUser()
                 {
@@ -83,9 +83,9 @@ namespace Controll.Hosting.Tests
                     Id = 222,
                     Password = "password"
                 };
-                repo.Add(user);
+                session.Save(user);
 
-                var fetched = repo.GetByEMail("mail");
+                var fetched = repo.GetUserFromEmail("mail");
 
                 Assert.IsNotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);

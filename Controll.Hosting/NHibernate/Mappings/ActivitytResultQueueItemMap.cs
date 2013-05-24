@@ -13,6 +13,7 @@ namespace Controll.Hosting.NHibernate.Mappings
     {
         internal ActivitytResultQueueItemMap()
         {
+            References(x => x.Activity);
             References(x => x.ActivityCommand).Cascade.All();
             Map(x => x.InvocationTicket).Not.Nullable();
         }

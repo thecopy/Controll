@@ -18,17 +18,17 @@ namespace Controll.Hosting.Hubs
     public class ZombieHub : BaseHub
     {
         public new ISession Session { get; set; }
-        private readonly IControllUserRepository _controllUserRepository;
+        private readonly IControllRepository _controllRepository;
         private readonly IMessageQueueService _messageQueueService;
         private readonly IActivityMessageLogService _activityService;
 
-        public ZombieHub(IControllUserRepository controllUserRepository,
+        public ZombieHub(IControllRepository controllRepository,
                          IMessageQueueService messageQueueService,
                          IActivityMessageLogService activityService,
                          ISession session) : base(session)
         {
             Session = session;
-            _controllUserRepository = controllUserRepository;
+            _controllRepository = controllRepository;
             _messageQueueService = messageQueueService;
             _activityService = activityService;
         }
@@ -72,34 +72,6 @@ namespace Controll.Hosting.Hubs
                 _messageQueueService.MarkQueueItemAsDelivered(ticket);
                 transaction.Commit();
             }
-        }
-
-        public bool RegisterAsZombie(string userName, string password, string zombieName)
-        {
-            var user = _controllUserRepository.GetByUserName(userName);
-
-            if (user == null || user.Password != password)
-                return false;
-
-            if (user.Zombies.SingleOrDefault(z => z.Name == zombieName) != null)
-                return false;
-
-            var zombie = new Zombie
-                {
-                    Name = zombieName,
-                    Owner = user,
-                    Activities = new List<Activity>()
-                };
-
-            using (var transaction = Session.BeginTransaction())
-            {
-                user.Zombies.Add(zombie);
-                _controllUserRepository.Update(user);
-
-                transaction.Commit();
-            }
-
-            return true;
         }
 
         public void SynchronizeActivities(ICollection<ActivityViewModel> activities)
@@ -162,11 +134,13 @@ namespace Controll.Hosting.Hubs
         {
             using (ITransaction transaction = Session.BeginTransaction())
             {
-                Console.WriteLine("Client " + Context.ConnectionId + " disconnected.");
-                var client = Session.CreateCriteria<ControllClient>()
-                       .Add(Restrictions.Eq("ConnectionId", Context.ConnectionId))
-                       .UniqueResult<ControllClient>();
-                Session.Delete(client);
+                var client = _controllRepository.GetClientByConnectionId(Context.ConnectionId);
+
+                if (client != null)
+                {
+                    client.ConnectedClients.Remove(client.ConnectedClients.Single(cc => cc.ConnectionId == Context.ConnectionId));
+                    Session.Update(client);
+                }
                 transaction.Commit();
             }
 

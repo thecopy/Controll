@@ -9,6 +9,7 @@ namespace Controll.Hosting.Models.Queue
 {
     public class ActivityResultQueueItem : QueueItem
     {
+        public virtual Activity Activity { get; set; }
         public virtual ActivityCommand ActivityCommand { get; set; }
         public virtual Guid InvocationTicket { get; set; }
 

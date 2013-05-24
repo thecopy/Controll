@@ -37,10 +37,10 @@ namespace Controll.IntegrationTests
                 using (var session = Factory.OpenSession())
                 using (var transaction = session.BeginTransaction())
                 {
-                    var userRepo = new ControllUserRepository(session);
-                    if (userRepo.GetByUserName("username") == null)
+                    var repo = new ControllRepository(session);
+                    if (repo.GetUserFromUserName("username") == null)
                     {
-                        userRepo.Add(new ControllUser
+                        session.Save(new ControllUser
                             {
                                 Email = "email",
                                 Password = "password",
@@ -48,7 +48,7 @@ namespace Controll.IntegrationTests
                             });
                     }
 
-                    var user = userRepo.GetByUserName("username");
+                    var user = repo.GetUserFromUserName("username");
 
                     if (user.GetZombieByName("zombieName") == null)
                     {
@@ -59,7 +59,7 @@ namespace Controll.IntegrationTests
                             });
                     }
 
-                    userRepo.Update(user);
+                    session.Update(user);
                     transaction.Commit();
                 }
                 _userAndZombieExists = true;
@@ -378,7 +378,7 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToHandleNewConnectedClients()
         {
             // Use Nhibernate Profiler
-            HibernatingRhinos.Profiler.Appender.NHibernate.NHibernateProfiler.Initialize();
+            // HibernatingRhinos.Profiler.Appender.NHibernate.NHibernateProfiler.Initialize();
             var server = new ControllStandAloneServer("http://*:10244/");
             UseTestData();
 

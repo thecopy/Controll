@@ -115,14 +115,12 @@ namespace Controll.Hosting.Tests
                     };
                 zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
 
-                var userRepo = new ControllUserRepository(session);
-                userRepo.Add(user);
-                var repo = new GenericRepository<Zombie>(session);
-                repo.Add(zombie);
+                session.Save(user);
+                session.Save(zombie);
 
                 session.Evict(zombie);
 
-                var gotten = repo.Get(zombie.Id);
+                var gotten = session.Get<Zombie>(zombie.Id);
                 Assert.AreNotSame(zombie,gotten);
                 Assert.AreEqual(zombie.Name, gotten.Name);
                 Assert.AreEqual(zombie.Id, gotten.Id);
@@ -144,17 +142,14 @@ namespace Controll.Hosting.Tests
                 zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
                 var user = new ControllUser {UserName = "user", Email = "mail", Password = "password", Zombies = new List<Zombie>()};
 
-                var userRepo = new GenericRepository<ControllUser>(session);
-                userRepo.Add(user);
+                session.Save(user);
                 var id = user.Id;
 
                 user.Zombies.Add(zombie);
 
-                userRepo.Update(user);
+                session.Update(user);
 
-                user = null;
-
-                var gotten = userRepo.Get(id);
+                var gotten = session.Get<ControllUser>(id);
 
                 Assert.AreEqual(zombie.Name, gotten.Zombies[0].Name);
                 Assert.AreEqual(zombie.Id, gotten.Zombies[0].Id);
@@ -170,10 +165,10 @@ namespace Controll.Hosting.Tests
             {
                 var activity = TestingHelper.GetListOfZombies(1)[0].Activities[0]; // Get generated activity with commands and parameters
                 var activityCopy = TestingHelper.GetListOfZombies(1)[0].Activities[0]; // Get a new copy of the activity so nhibernate wont track it 
-                var repo = new GenericRepository<Activity>(session);
-                repo.Add(activity);
+
+                session.Save(activity);
                 
-                var activityGotten = repo.Get(activity.Id);
+                var activityGotten = session.Get<Activity>(activity.Id);
 
                 Assert.AreNotSame(activityGotten, activityCopy); // Check not same reference
 
@@ -257,22 +252,18 @@ namespace Controll.Hosting.Tests
                 zombie.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
                 zombieCopy.ConnectedClients.Add(new ControllClient { ConnectionId = "conn" });
                 
-                var userRepo = new ControllUserRepository(session);
-                userRepo.Add(user);
-
-                var zombieRepo = new GenericRepository<Zombie>(session);
-                var activityRepo = new GenericRepository<Activity>(session);
+                session.Save(user);
                 
                 // Add everything to repo
-                zombieRepo.Add(zombie);
+                session.Save(zombie);
                 foreach(var activity in activities)
-                    activityRepo.Add(activity);
+                    session.Save(activity);
 
                 // Set zombies activities and update DB
                 zombie.Activities = activities;
-                zombieRepo.Update(zombie);
+                session.Update(zombie);
                 
-                var gotten = zombieRepo.Get(zombie.Id);
+                var gotten = session.Get<Zombie>(zombie.Id);
 
                 Assert.AreNotSame(zombieCopy, gotten);
                 Assert.AreEqual(zombieCopy.Activities.Count, gotten.Activities.Count);
@@ -353,8 +344,7 @@ namespace Controll.Hosting.Tests
             {
                 var user = new ControllUser {UserName = "username", Email = "email", Password = "password"};
 
-                var repo = new ControllUserRepository(session);
-                repo.Add(user);
+                session.Save(user);
 
                 var comparer = new PersistenceSpecificationEqualityComparer(session);
                 comparer.RegisterComparer((ControllUser x) => x.Id);
@@ -380,8 +370,7 @@ namespace Controll.Hosting.Tests
                     {
                         Name = "some-intermidiate-command"
                     };
-                var repo = new ControllUserRepository(session);
-                repo.Add(user);
+                session.Save(user);
 
                 var comparer = new PersistenceSpecificationEqualityComparer(session);
                 comparer.RegisterComparer((ControllUser x) => x.Id);
@@ -408,12 +397,9 @@ namespace Controll.Hosting.Tests
             {
                 var user = new ControllUser { UserName = "username", Email = "email", Password = "password" };
                 var activity = new Activity { Name = "mocked", Description = "desc", LastUpdated = DateTime.Parse("2004-03-11 13:22:11")};
-
-                var activityRepo = new GenericRepository<Activity>(session);
-                var userRepo = new ControllUserRepository(session);
                 
-                userRepo.Add(user);
-                activityRepo.Add(activity);
+                session.Save(user);
+                session.Save(activity);
                 
                 var comparer = new PersistenceSpecificationEqualityComparer(session);
                 comparer.RegisterComparer((ControllUser x) => x.Id);
@@ -442,79 +428,6 @@ namespace Controll.Hosting.Tests
                     .CheckProperty(x => x.Name, "name")
                     .CheckProperty(x => x.Label, "Label")
                     .VerifyTheMappings();
-            }
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToAddGetAll()
-        {
-            using (var session = SessionFactory.OpenSession())
-            using (session.BeginTransaction())
-            {
-                var objects = Builder<Activity>
-                    .CreateListOfSize(50)
-                    .All()
-                    .With(x => x.Id = Guid.NewGuid())
-                    .Build();
-
-                var repo = new GenericRepository<Activity>(session);
-
-                foreach(var obj in objects)
-                    repo.Add(obj);
-
-                var fetched = repo.GetAll(33);
-
-                Assert.AreEqual(33, fetched.Count);
-            }
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToRemoveEntity()
-        {
-            using (var session = SessionFactory.OpenSession())
-            using (session.BeginTransaction())
-            {
-                var repo = new GenericRepository<ControllUser>(session);
-
-                var user = new ControllUser()
-                    {
-                        Email = "emailToRemove",
-                        Password = "password",
-                        UserName = "userToRemove"
-                    };
-
-                repo.Add(user);
-
-                repo.Remove(user);
-
-                var user2 = repo.Get(user.Id);
-
-                Assert.IsNull(user2);
-            }
-        }
-
-        [TestMethod]
-        public void ShouldBeAbleToUpdateEntity()
-        {
-            using(var session = SessionFactory.OpenSession())
-            using(session.BeginTransaction())
-            {
-                var repo = new GenericRepository<ControllUser>(session);
-                var user = new ControllUser()
-                    {
-                        Email = "email",
-                        Password = "password",
-                        UserName = "username"
-                    };
-
-                repo.Add(user);
-
-                user.Email = "hehe";
-                repo.Update(user);
-
-                var user2 = repo.Get(user.Id);
-
-                Assert.AreEqual(user2.Email, "hehe");
             }
         }
     }

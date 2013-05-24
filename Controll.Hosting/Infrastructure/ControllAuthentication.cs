@@ -43,7 +43,7 @@ namespace Controll.Hosting.Infrastructure
             try
             {
                 // Perform check on username and password
-                var membershipService = new MembershipService(new ControllUserRepository(session));
+                var membershipService = new MembershipService(session, new ControllRepository(session));
                 user = membershipService.AuthenticateUser(username, pass);
 
                 if (zombie != null && user.GetZombieByName(zombie) == null)
@@ -73,6 +73,7 @@ namespace Controll.Hosting.Infrastructure
         public static void RegisterUser(OwinRequest req, OwinResponse res, ISession session)
         {
             throw new NotImplementedException();
+            
         }
     }
 }

@@ -179,9 +179,7 @@
     <Compile Include="NHibernate\NHibernateHelper.cs" />
     <Compile Include="NinjectDependecyResolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Repositories\ControllUserRepository.cs" />
-    <Compile Include="Repositories\GenericRepository.cs" />
-    <Compile Include="Repositories\QueueItemRepostiory.cs" />
+    <Compile Include="Repositories\ControllRepository.cs" />
     <Compile Include="Services\ActivityMessageLogService.cs" />
     <Compile Include="Services\IActivityMessageLogService.cs" />
     <Compile Include="Services\IMembershipService.cs" />

@@ -23,16 +23,16 @@ namespace Controll.Hosting.Hubs
     [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
     public class ClientHub : BaseHub
     {
-        private readonly IControllUserRepository _controllUserRepository;
+        private readonly IControllRepository _controllRepository;
         private readonly IMembershipService _membershipService;
         private readonly IMessageQueueService _messageQueueService;
 
-        public ClientHub(IControllUserRepository controllUserRepository,
+        public ClientHub(IControllRepository controllRepository,
                          IMembershipService membershipService,
                          IMessageQueueService messageQueueService,
                          ISession session) : base(session)
         {
-            _controllUserRepository = controllUserRepository;
+            _controllRepository = controllRepository;
             _membershipService = membershipService;
             _messageQueueService = messageQueueService;
         }
@@ -51,7 +51,7 @@ namespace Controll.Hosting.Hubs
 
                 user.ConnectedClients.Add(client);
 
-                _controllUserRepository.Update(user);
+                Session.Update(user);
                 transaction.Commit();
             }
         }
@@ -148,17 +148,11 @@ namespace Controll.Hosting.Hubs
         {
             using (var transaction = Session.BeginTransaction())
             {
-                var user = _controllUserRepository.GetByConnectionId(Context.ConnectionId);
-                if (user == null) return null;
-                var client = user.ConnectedClients.SingleOrDefault(z => z.ConnectionId == Context.ConnectionId);
-
-                Console.Write("One of " + user.UserName + "'s clients disconnected");
-
+                var client = _controllRepository.GetClientByConnectionId(Context.ConnectionId);
                 if (client != null)
                 {
-                    user.ConnectedClients.Remove(client);
-                    _controllUserRepository.Update(user);
-
+                    client.ConnectedClients.Remove(client.ConnectedClients.Single(cc => cc.ConnectionId == Context.ConnectionId));
+                    Session.Update(client);
                     transaction.Commit();
                 }
             }

@@ -27,37 +27,42 @@ namespace Controll.IntegrationTests
     {
         // Add user and zombie in datebase for mocked data is not exists
         private static readonly ISessionFactory Factory = NHibernateHelper.GetSessionFactoryForTesting();
+        private static bool _userAndZombieExists;
 
         [ClassInitialize]
         public static void ClassInit(TestContext context)
         {
-            using (var session = Factory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            if (!_userAndZombieExists)
             {
-                var userRepo = new ControllUserRepository(session);
-                if (userRepo.GetByUserName("username") == null)
+                using (var session = Factory.OpenSession())
+                using (var transaction = session.BeginTransaction())
                 {
-                    userRepo.Add(new ControllUser
-                        {
-                            Email = "email",
-                            Password = "password",
-                            UserName = "username"
-                        });
+                    var repo = new ControllRepository(session);
+                    if (repo.GetUserFromUserName("username") == null)
+                    {
+                        session.Save(new ControllUser
+                            {
+                                Email = "email",
+                                Password = "password",
+                                UserName = "username"
+                            });
+                    }
+
+                    var user = repo.GetUserFromUserName("username");
+
+                    if (user.GetZombieByName("zombieName") == null)
+                    {
+                        user.Zombies.Add(new Zombie
+                            {
+                                Name = "zombieName",
+                                Owner = user
+                            });
+                    }
+
+                    session.Update(user);
+                    transaction.Commit();
                 }
-
-                var user = userRepo.GetByUserName("username");
-
-                if (user.GetZombieByName("zombieName") == null)
-                {
-                    user.Zombies.Add(new Zombie
-                        {
-                            Name = "zombieName",
-                            Owner = user
-                        });
-                }
-
-                userRepo.Update(user);
-                transaction.Commit();
+                _userAndZombieExists = true;
             }
         }
 

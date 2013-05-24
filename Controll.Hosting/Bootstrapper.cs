@@ -66,16 +66,8 @@ namespace Controll.Hosting
                    .ToMethod(x => x.Kernel.Get<ISessionFactory>().OpenSession())
                    .InNamedScope(hubScope);
 
-            _kernel.Bind(typeof(IGenericRepository<>))
-                  .To(typeof(GenericRepository<>))
-                  .InTransientScope();
-
-            _kernel.Bind<IQueueItemRepostiory>()
-                  .To<QueueItemRepostiory>()
-                  .InTransientScope();
-
-            _kernel.Bind<IControllUserRepository>()
-                  .To<ControllUserRepository>()
+            _kernel.Bind<IControllRepository>()
+                  .To<ControllRepository>()
                   .InTransientScope();
 
             _kernel.Bind<IMessageQueueService>()

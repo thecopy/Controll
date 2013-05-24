@@ -77,7 +77,6 @@ namespace Controll.Hosting.Tests
 
             var ticket = Guid.NewGuid();
 
-            hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
             hub.MockedMessageQueueService.Setup(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND"))).Verifiable();
 
             hub.SignIn();
@@ -108,7 +107,6 @@ namespace Controll.Hosting.Tests
 
             var ticket = Guid.NewGuid();
 
-            hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
             hub.MockedMessageQueueService.Setup(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket)))).Verifiable();
 
             hub.SignIn();
@@ -229,17 +227,20 @@ namespace Controll.Hosting.Tests
             };
 
             var hub = GetTestableZombieHub();
-            hub.MockedRequest.SetupGet(x => x.User).Returns(GetPrincial(1, 1));
-            hub.MockedSession.Setup(x => x.Get<Zombie>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => zombie);
-            
-            zombie.ConnectedClients.Add(new ControllClient { ConnectionId = hub.Context.ConnectionId }); // Have something to clean up
+            zombie.ConnectedClients.Add(new ControllClient { ClientCommunicator = zombie, ConnectionId = hub.Context.ConnectionId }); // Have something to clean up
 
-            hub.MockedSession.Setup(r => r.Update(It.Is<Zombie>(x => x.ConnectedClients.Count == 0)))
+            hub.MockedControllRepository
+                .Setup(x => x.GetClientByConnectionId(It.Is<String>(s => s == hub.Context.ConnectionId)))
+                .Returns(zombie.ConnectedClients[0].ClientCommunicator)
+                .Verifiable();
+
+            hub.MockedSession
+                .Setup(r => r.Update(It.Is<ClientCommunicator>(x => x.ConnectedClients.Count == 0)))
                 .Verifiable();
 
             hub.OnDisconnected();
 
-            hub.MockedSession.Verify(r => r.Update(It.Is<Zombie>(x => x.ConnectedClients.Count == 0)), Times.Once());
+            hub.MockedSession.Verify(r => r.Update(It.Is<ClientCommunicator>(x => x.ConnectedClients.Count == 0)), Times.Once());
         }
 
         [TestMethod]
@@ -263,71 +264,17 @@ namespace Controll.Hosting.Tests
             hub.MockedSession.Verify(r => r.Update(It.Is<Zombie>(x => x.ConnectedClients.Count == 0)), Times.Once());
         }
         
-        [TestMethod]
-        public void ShouldBeAbleToRegisterAsZombie()
-        {
-            var hub = GetTestableZombieHub();
-            
-
-            hub.Clients.Caller.BelongsToUser = "Erik";
-            hub.Clients.Caller.ZombieName = "ZombieName";
-
-            var user = new ControllUser
-                {
-                    UserName = "Erik",
-                    Password = "password",
-                    Zombies = new List<Zombie>()
-                };
-
-            hub.MockedUserRepository.Setup(x => x.GetByUserName("Erik")).Returns(user);
-            
-            hub.MockedUserRepository.Setup(x => x.Update(It.Is<ControllUser>(u => u.Zombies.Any(z => z.Name == "ZombieName")))).Verifiable();
-
-            var result = hub.RegisterAsZombie("Erik", "password", "ZombieName");
-
-            hub.MockedUserRepository.Verify(x => x.Update(It.Is<ControllUser>(u => u.Zombies.Any(z => z.Name == "ZombieName"))));
-
-            Assert.IsTrue(result);
-        }
-        
-        [TestMethod]
-        public void ShouldNotBeAbleToRegisterAsZombie()
-        {
-            var hub = GetTestableZombieHub();
-            var user = new ControllUser
-            {
-                UserName = "username",
-                Password = "password",
-                Zombies = new List<Zombie>
-                    {
-                        new Zombie
-                            {
-                                Name = "existing_zombie"
-                            }
-                    }
-            };
-
-            hub.MockedUserRepository.Setup(x => x.GetByUserName("username")).Returns(user);
-
-            Assert.IsFalse(hub.RegisterAsZombie("wrong_username", "password", "zombie")); // Username wrong but correct password
-            Assert.IsFalse(hub.RegisterAsZombie("wrong_username", "wrong_password", "zombie")); // Username wrong and incorrect password
-
-            Assert.IsFalse(hub.RegisterAsZombie("username", "wrong_password", "zombie")); // Username correct but incorrect password
-            Assert.IsFalse(hub.RegisterAsZombie("username", "wrong_password", "existing_zombie"));    // Username correct and correct password but zombie name already existing
-        }
-
         private TestableZombieHub GetTestableZombieHub()
         {
             var mockedActivityService = new Mock<IActivityMessageLogService>();
-            var mockedUserRepository = new Mock<IControllUserRepository>();
-            var mockedActivityRepository = new Mock<IGenericRepository<Activity>>();
+            var mockedControllRepository = new Mock<IControllRepository>();
             var mockedMessageQueueService = new Mock<IMessageQueueService>();
             var mockPipeline = new Mock<IHubPipelineInvoker>();
             var mockedConnectionObject = new Mock<IConnection>();
             var mockedSession = new Mock<ISession>();
             mockedSession.Setup(s => s.BeginTransaction()).Returns(new Mock<ITransaction>().Object);
-           
-            var hub = new TestableZombieHub(mockedUserRepository, mockedActivityService, mockedActivityRepository, mockedMessageQueueService, mockedSession)
+
+            var hub = new TestableZombieHub(mockedControllRepository, mockedActivityService, mockedMessageQueueService, mockedSession)
                 {
                     Clients = new HubConnectionContext(mockPipeline.Object, mockedConnectionObject.Object, "ZombieHub", "conn-id", new StateChangeTracker())
                 };
@@ -337,24 +284,21 @@ namespace Controll.Hosting.Tests
 
         private class TestableZombieHub : ZombieHub
         {
-            public Mock<IControllUserRepository> MockedUserRepository { get; set; }
+            public Mock<IControllRepository> MockedControllRepository { get; private set; }
             public Mock<IActivityMessageLogService> MockedActivityService { get; set; }
-            public Mock<IGenericRepository<Activity>> MockedActivityRepository { get; set; }
-            public Mock<IMessageQueueService> MockedMessageQueueService { get; set; }
-            public Mock<ISession> MockedSession { get; set; }
-            public Mock<IRequest> MockedRequest { get; set; }
+            public Mock<IMessageQueueService> MockedMessageQueueService { get; private set; }
+            public Mock<ISession> MockedSession { get; private set; }
+            public Mock<IRequest> MockedRequest { get; private set; }
 
             public TestableZombieHub(
-                Mock<IControllUserRepository> mockedUserRepository, 
+                Mock<IControllRepository> mockedUserRepository, 
                 Mock<IActivityMessageLogService> mockedActivityService, 
-                Mock<IGenericRepository<Activity>> mockedActivityRepository,
                 Mock<IMessageQueueService> mockedMessageQueueService,
                 Mock<ISession> mockedSession)
                 : base(mockedUserRepository.Object, mockedMessageQueueService.Object, mockedActivityService.Object, mockedSession.Object)
             {
-                MockedUserRepository = mockedUserRepository;
+                MockedControllRepository = mockedUserRepository;
                 MockedActivityService = mockedActivityService;
-                MockedActivityRepository = mockedActivityRepository;
                 MockedMessageQueueService = mockedMessageQueueService;
                 MockedSession = mockedSession;
 

@@ -14,7 +14,9 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NHibernate;
 using NHibernate.Criterion;
+using NHibernate.Linq;
 using Remotion.Linq.Collections;
 using ActivityInvocationLogMessage = Controll.Hosting.Models.ActivityInvocationLogMessage;
 
@@ -22,30 +24,26 @@ namespace Controll.Hosting.Services
 {
     public class ActivityMessageLogService : IActivityMessageLogService
     {
-        private readonly IGenericRepository<ActivityInvocationQueueItem> _invocationQueueItemRepository;
-        private readonly IGenericRepository<ActivityResultQueueItem> _resultQueueItemRepostiory;
+        private readonly ISession _session;
 
-        public ActivityMessageLogService(
-            IGenericRepository<ActivityInvocationQueueItem> invocationQueuItemRepository,
-            IGenericRepository<ActivityResultQueueItem> resultQueueItemRepostiory)
+        public ActivityMessageLogService(ISession session)
         {
-            this._invocationQueueItemRepository = invocationQueuItemRepository;
-            _resultQueueItemRepostiory = resultQueueItemRepostiory;
+            _session = session;
         }
 
         public void UpdateLogWithResponse(Guid ticket, string response)
         {
-            var queueItem = (ActivityInvocationQueueItem)_invocationQueueItemRepository.Get(ticket);
+            var queueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
 
             queueItem.Responded = DateTime.Now;
             queueItem.Response = response;
 
-            _invocationQueueItemRepository.Update(queueItem);
+            _session.Update(queueItem);
         }
 
         public void InsertActivityLogMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            var invocationQueueItem = (ActivityInvocationQueueItem)_invocationQueueItemRepository.Get(ticket);
+            var invocationQueueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
 
             var messageLogItem = new ActivityInvocationLogMessage
                 {
@@ -56,28 +54,29 @@ namespace Controll.Hosting.Services
 
             invocationQueueItem.MessageLog.Add(messageLogItem);
 
-            _invocationQueueItemRepository.Update(invocationQueueItem);
+            _session.Update(invocationQueueItem);
         }
 
         public ICollection<ActivityInvocationLogMessage> GetActivityMessagesForInvocationTicket(Guid ticket)
         {
-            var invocationQueueItem = (ActivityInvocationQueueItem)_invocationQueueItemRepository.Get(ticket);
+            var invocationQueueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
 
             return invocationQueueItem.MessageLog;
         }
 
         public ActivityInvocationQueueItem GetActivityInvocationFromTicket(Guid ticket)
         {
-            var invocationQueueItem = (ActivityInvocationQueueItem)_invocationQueueItemRepository.Get(ticket);
+            var invocationQueueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
 
             return invocationQueueItem;
         }
 
         public IList<ActivityInvocationLogBookViewModel> GetActivityLog(Zombie zombie)
         {
-            var queueItems = _invocationQueueItemRepository.Query
-                                                           .Where(x => x.Reciever.Id == zombie.Id)
-                                                           .ToList();
+            var queueItems = _session.CreateCriteria<ActivityInvocationQueueItem>()
+                                     .CreateCriteria("Reciever")
+                                     .Add(Restrictions.Eq("Id", zombie.Id))
+                                     .List<ActivityInvocationQueueItem>();
 
             var returnList = new List<ActivityInvocationLogBookViewModel>();
             foreach (var queueItem in queueItems)
@@ -106,17 +105,16 @@ namespace Controll.Hosting.Services
 
         public IList<ActivityIntermidiateCommandViewModel> GetUndeliveredIntermidiates(Zombie zombie)
         {
-            var resultItems = _resultQueueItemRepostiory.Query;
-            var invocationItems = _invocationQueueItemRepository.Query;
+            var queueItems = _session.CreateCriteria<ActivityResultQueueItem>()
+                         .CreateCriteria("Sender")
+                         .Add(Restrictions.Eq("Id", zombie.Id))
+                         .List<ActivityResultQueueItem>();
 
-            var joinedSequence = from x in resultItems
-                                 join y in invocationItems on x.InvocationTicket equals y.Ticket
-                                 select new ActivityIntermidiateCommandViewModel(
-                                     x.ActivityCommand.CreateViewModel(), 
-                                     y.Activity.CreateViewModel(),
-                                     x.Ticket);
-            
-            return joinedSequence.ToList();
+            return queueItems.Select(qi => new ActivityIntermidiateCommandViewModel(
+                                               qi.ActivityCommand.CreateViewModel(),
+                                               qi.Activity.CreateViewModel(),
+                                               qi.InvocationTicket
+                                               )).ToList();
         }
     }
 

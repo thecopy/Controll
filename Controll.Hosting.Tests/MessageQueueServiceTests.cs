@@ -12,6 +12,7 @@ using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
@@ -21,11 +22,14 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToInsertActivityInvocationQueueItem()
         {
-            var mockedQueueItemRepostiory = new Mock<IQueueItemRepostiory>();
+            var mockedSession = new Mock<ISession>();
             var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedControllRepository = new Mock<IControllRepository>();
+
             var messageQueueService = new MessageQueueService(
-                mockedQueueItemRepostiory.Object,
-                mockedConnectionManager.Object);
+                mockedSession.Object,
+                mockedConnectionManager.Object,
+                mockedControllRepository.Object);
 
             var user = new ControllUser
                 {
@@ -45,26 +49,24 @@ namespace Controll.Hosting.Tests
             const string commandName = "commandName";
             zombie.Activities = new [] {activity};
 
-            mockedQueueItemRepostiory
-                .Setup(x => x.Add(
+            mockedSession
+                .Setup(x => x.Save(
                     It.Is<ActivityInvocationQueueItem>(
                         a =>
-                            a.Activity.Name == "activityname" &&
-                                a.Reciever.GetType() == typeof(Zombie) &&
-                                ((Zombie)a.Reciever).Name == "zombiename" &&
-                                a.Sender.GetType() == typeof(ControllUser) &&
-                                ((ControllUser)a.Sender).UserName == "username" &&
-                                a.CommandName == commandName &&
-                                a.Parameters.Count == 0 &&
-                                a.Type == QueueItemType.ActivityInvocation
+                        a.Activity.Name == "activityname" &&
+                        a.Reciever.GetType() == typeof (Zombie) &&
+                        ((Zombie) a.Reciever).Name == "zombiename" &&
+                        a.Sender.GetType() == typeof (ControllUser) &&
+                        ((ControllUser) a.Sender).UserName == "username" &&
+                        a.CommandName == commandName &&
+                        a.Parameters.Count == 0 &&
+                        a.Type == QueueItemType.ActivityInvocation
                         )))
-                .Callback((QueueItem qi) =>qi.Ticket = Guid.NewGuid())
                 .Verifiable();
 
-            var ticket = messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, commandName, "connectionId");
-            Assert.AreNotEqual(Guid.Empty, ticket);
+            messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, commandName, "connectionId");
 
-            mockedQueueItemRepostiory.Verify(x => x.Add(
+            mockedSession.Verify(x => x.Save(
                     It.Is<ActivityInvocationQueueItem>(
                         a =>
                             a.Activity.Name == "activityname" &&
@@ -81,11 +83,14 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToInsertActivityResultQueueItem()
         {
-            var mockedQueueItemRepostiory = new Mock<IQueueItemRepostiory>();
+            var mockedSession = new Mock<ISession>();
             var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedControllRepository = new Mock<IControllRepository>();
+
             var messageQueueService = new MessageQueueService(
-                mockedQueueItemRepostiory.Object,
-                mockedConnectionManager.Object);
+                mockedSession.Object,
+                mockedConnectionManager.Object,
+                mockedControllRepository.Object);
 
             var user = new ControllUser
             {
@@ -112,17 +117,17 @@ namespace Controll.Hosting.Tests
                     Sender = communicator.Object
                 };
 
-            mockedQueueItemRepostiory.Setup(x => x.Get(It.Is<Guid>(g => g.Equals(ticket))))
+            mockedSession.Setup(x => x.Get<ActivityInvocationQueueItem>(It.Is<Guid>(g => g.Equals(ticket))))
                 .Returns(invocationQueueItem);
 
-            mockedQueueItemRepostiory.Setup(q => q.Add(
+            mockedSession.Setup(q => q.Save(
                 It.Is<ActivityResultQueueItem>(x =>
                                                x.ActivityCommand == activityCommand &&
                                                x.InvocationTicket == ticket))).Verifiable();
 
             messageQueueService.InsertActivityResult(ticket, activityCommand);
 
-            mockedQueueItemRepostiory.Verify(q => q.Add(
+            mockedSession.Verify(q => q.Save(
                 It.Is<ActivityResultQueueItem>(x =>
                                                x.ActivityCommand == activityCommand &&
                                                x.InvocationTicket == ticket)), Times.Once());
@@ -131,14 +136,18 @@ namespace Controll.Hosting.Tests
         [TestMethod]
         public void ShouldBeAbleToMarkQueueItemAsDelivered()
         {
-            var mockedQueueItemRepostiory = new Mock<IQueueItemRepostiory>();
             var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedSession = new Mock<ISession>();
+            var mockedControllRepository = new Mock<IControllRepository>();
+
             var mockedHubContext = new Mock<IHubContext>();
             var mockedConnectionContext = new Mock<IHubConnectionContext>();
 
             var messageQueueService = new MessageQueueService(
-                mockedQueueItemRepostiory.Object,
-                mockedConnectionManager.Object);
+                mockedSession.Object,
+                mockedConnectionManager.Object,
+                mockedControllRepository.Object);
+
 
             var ticket = Guid.NewGuid();
 
@@ -157,12 +166,12 @@ namespace Controll.Hosting.Tests
             mockedHubContext.Setup(x => x.Clients).Returns(mockedConnectionContext.Object);
             mockedConnectionManager.Setup(x => x.GetHubContext<ClientHub>()).Returns(mockedHubContext.Object); 
 
-            mockedQueueItemRepostiory.Setup(x => x.Get(ticket)).Returns(queueItem.Object);
-            mockedQueueItemRepostiory.Setup(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue))).Verifiable();
+            mockedSession.Setup(x => x.Get<QueueItem>(ticket)).Returns(queueItem.Object);
+            mockedSession.Setup(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue))).Verifiable();
 
             messageQueueService.MarkQueueItemAsDelivered(ticket);
 
-            mockedQueueItemRepostiory.Verify(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue)), Times.Once());
+            mockedSession.Verify(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue)), Times.Once());
         }
 
         public class MockedClient

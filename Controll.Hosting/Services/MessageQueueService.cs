@@ -19,15 +19,18 @@ namespace Controll.Hosting.Services
 {
     public sealed class MessageQueueService : IMessageQueueService
     {
-        private readonly IQueueItemRepostiory _queueItemRepository;
+        private readonly ISession _session;
         private readonly IConnectionManager _connectionManager;
+        private readonly IControllRepository _controllRepository;
 
         public MessageQueueService(
-            IQueueItemRepostiory queueItemRepository,
-            IConnectionManager connectionManager)
+            ISession session,
+            IConnectionManager connectionManager,
+            IControllRepository controllRepository)
         {
-            _queueItemRepository = queueItemRepository;
+            _session = session;
             _connectionManager = connectionManager;
+            _controllRepository = controllRepository;
         }
 
         /// <summary>
@@ -50,7 +53,7 @@ namespace Controll.Hosting.Services
                     Sender = zombie.Owner,
                     RecievedAtCloud = DateTime.Now
                 };
-            _queueItemRepository.Add(queueItem);
+            _session.Save(queueItem);
 
             return queueItem;
         }
@@ -61,10 +64,10 @@ namespace Controll.Hosting.Services
         /// <param name="ticket">The ticket of the QueueItem which to mark as delivered</param>
         public void MarkQueueItemAsDelivered(Guid ticket)
         {
-            var queueItem = _queueItemRepository.Get(ticket);
+            var queueItem = _session.Get<QueueItem>(ticket);
             
             queueItem.Delivered = DateTime.Now;
-            _queueItemRepository.Update(queueItem);
+            _session.Update(queueItem);
 
             // Do not add the delivered queue item into the queue. This should only be sent to the original sender
             // of the message which has been marked as delivered. And if he is not online we dont care.
@@ -83,14 +86,14 @@ namespace Controll.Hosting.Services
                 RecievedAtCloud = DateTime.Now
             };
 
-            _queueItemRepository.Add(queueItem);
+            _session.Save(queueItem);
 
             return queueItem;
         }
 
         public void ProcessUndeliveredMessagesForZombie(Zombie zombie)
         {
-            var queueItems = _queueItemRepository.GetUndeliveredQueueItemsForZombie(zombie.Id);
+            var queueItems = _controllRepository.GetUndeliveredQueueItemsForZombie(zombie.Id);
 
             foreach (var queueItem in queueItems)
             {
@@ -101,7 +104,7 @@ namespace Controll.Hosting.Services
         public void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
             // _session.Clear();
-            var queueItem = _queueItemRepository.Get(ticket);
+            var queueItem = _session.Get<QueueItem>(ticket);
             // We want to send this to the sender aka the invocator
             var connectedClients = queueItem.Sender.ConnectedClients;
             Console.WriteLine("Will send message to someone which have "
@@ -117,8 +120,9 @@ namespace Controll.Hosting.Services
 
         public void InsertActivityResult(Guid ticket, ActivityCommand intermidiateCommand)
         {
-            var queueItem = _queueItemRepository.Get(ticket);
+            var queueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
 
+            // Notice: Switch sender and reciever
             var activityResultQueueItem = new ActivityResultQueueItem
                 {
                     ActivityCommand = intermidiateCommand,
@@ -128,7 +132,7 @@ namespace Controll.Hosting.Services
                     InvocationTicket = ticket
                 };
 
-            _queueItemRepository.Add(activityResultQueueItem);
+            _session.Save(activityResultQueueItem);
             
             ProcessQueueItem(activityResultQueueItem);
         }
