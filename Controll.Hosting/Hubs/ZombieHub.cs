@@ -17,18 +17,15 @@ namespace Controll.Hosting.Hubs
     [AuthorizeClaim(ControllClaimTypes.UserIdentifier, ControllClaimTypes.ZombieIdentifier)]
     public class ZombieHub : BaseHub
     {
-        public new ISession Session { get; set; }
-        private readonly IControllRepository _controllRepository;
         private readonly IMessageQueueService _messageQueueService;
         private readonly IActivityMessageLogService _activityService;
 
         public ZombieHub(IControllRepository controllRepository,
                          IMessageQueueService messageQueueService,
                          IActivityMessageLogService activityService,
-                         ISession session) : base(session)
+                         ISession session)
+            : base(session, controllRepository)
         {
-            Session = session;
-            _controllRepository = controllRepository;
             _messageQueueService = messageQueueService;
             _activityService = activityService;
         }
@@ -128,23 +125,6 @@ namespace Controll.Hosting.Hubs
                 _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
                 transaction.Commit();
             }
-        }
-
-        public override Task OnDisconnected()
-        {
-            using (ITransaction transaction = Session.BeginTransaction())
-            {
-                var client = _controllRepository.GetClientByConnectionId(Context.ConnectionId);
-
-                if (client != null)
-                {
-                    client.ConnectedClients.Remove(client.ConnectedClients.Single(cc => cc.ConnectionId == Context.ConnectionId));
-                    Session.Update(client);
-                }
-                transaction.Commit();
-            }
-
-            return null;
         }
 
         public override Task OnConnected()

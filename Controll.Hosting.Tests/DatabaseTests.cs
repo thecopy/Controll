@@ -1,14 +1,14 @@
 ﻿using System;
 using Controll.Hosting.NHibernate;
 using NHibernate;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class DatabaseTests : TestBase
     {
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToCreateNHibernateSession()
         {
             SessionFactory.OpenSession();

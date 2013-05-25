@@ -25,16 +25,34 @@ namespace Controll.Hosting
     public class ControllStandAloneServer
     {
         private readonly string _url;
+
+        private BootstrapConfiguration _configuration;
+
+        public ControllStandAloneServer UseBootstrapConfiguration(BootstrapConfiguration configuration)
+        {
+            _configuration = configuration;
+
+            return this;
+        }
+
         public ControllStandAloneServer(string url)
         {
             _url = url;
-            Bootstrapper.SetupNinject();
-            Bootstrapper.SetupSessionPipelineInjector(); 
-            GlobalHost.DependencyResolver = Bootstrapper.NinjectDependencyResolver;
+
+            _configuration = new BootstrapConfiguration
+                {
+                    ClearDatabase = false,
+                    ConnectionStringAlias = "mocked",
+                    UseCustomSessionFactory = false
+                };
         }
 
         public IDisposable Start()
         {
+            Bootstrapper.ApplyConfiguration(_configuration);
+
+            GlobalHost.DependencyResolver = Bootstrapper.NinjectDependencyResolver;
+
             return WebApp.Start<Startup>(_url);
         }
 

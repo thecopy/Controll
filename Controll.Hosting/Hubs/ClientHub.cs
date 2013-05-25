@@ -23,16 +23,15 @@ namespace Controll.Hosting.Hubs
     [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
     public class ClientHub : BaseHub
     {
-        private readonly IControllRepository _controllRepository;
         private readonly IMembershipService _membershipService;
         private readonly IMessageQueueService _messageQueueService;
 
         public ClientHub(IControllRepository controllRepository,
                          IMembershipService membershipService,
                          IMessageQueueService messageQueueService,
-                         ISession session) : base(session)
+                         ISession session)
+            : base(session, controllRepository)
         {
-            _controllRepository = controllRepository;
             _membershipService = membershipService;
             _messageQueueService = messageQueueService;
         }
@@ -49,9 +48,7 @@ namespace Controll.Hosting.Hubs
                         ClientCommunicator = user
                     };
 
-                user.ConnectedClients.Add(client);
-
-                Session.Update(user);
+                Session.Save(client);
                 transaction.Commit();
             }
         }
@@ -142,22 +139,6 @@ namespace Controll.Hosting.Hubs
                 _messageQueueService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
-        }
-
-        public override Task OnDisconnected()
-        {
-            using (var transaction = Session.BeginTransaction())
-            {
-                var client = _controllRepository.GetClientByConnectionId(Context.ConnectionId);
-                if (client != null)
-                {
-                    client.ConnectedClients.Remove(client.ConnectedClients.Single(cc => cc.ConnectionId == Context.ConnectionId));
-                    Session.Update(client);
-                    transaction.Commit();
-                }
-            }
-
-            return null;
         }
     }
 }

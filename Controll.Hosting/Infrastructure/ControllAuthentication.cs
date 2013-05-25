@@ -43,13 +43,18 @@ namespace Controll.Hosting.Infrastructure
             try
             {
                 // Perform check on username and password
-                var membershipService = new MembershipService(session, new ControllRepository(session));
-                user = membershipService.AuthenticateUser(username, pass);
-
-                if (zombie != null && user.GetZombieByName(zombie) == null)
+                using (var tx = session.BeginTransaction())
                 {
-                    res.ReasonPhrase = "Zombie Not Found";
-                    return;
+                    var membershipService = new MembershipService(session, new ControllRepository(session));
+                    user = membershipService.AuthenticateUser(username, pass);
+
+                    if (zombie != null && user.GetZombieByName(zombie) == null)
+                    {
+                        res.ReasonPhrase = "Zombie Not Found";
+                        return;
+                    }
+
+                    tx.Commit();
                 }
             }
             catch (InvalidOperationException)

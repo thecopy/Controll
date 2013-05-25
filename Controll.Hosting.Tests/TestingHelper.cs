@@ -7,7 +7,7 @@ using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.Hosting.Models;
 using FizzWare.NBuilder;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Controll.Hosting.Tests
 {

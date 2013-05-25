@@ -1,6 +1,4 @@
-﻿using Controll.Hosting.NHibernate;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NHibernate;
+﻿using Controll.Hosting.NHibernate;using NHibernate;
 
 namespace Controll.IntegrationTests
 {
@@ -18,12 +16,6 @@ namespace Controll.IntegrationTests
                 return _sessionFactory;
             }
             set { _sessionFactory = value; }
-        }
-
-
-        [TestInitialize]
-        public void InitializeTestBase()
-        {
         }
     }
 }

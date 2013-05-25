@@ -10,17 +10,17 @@ using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using FizzWare.NBuilder;
 using HibernatingRhinos.Profiler.Appender.NHibernate;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Moq;
 using NHibernate;
 using NHibernate.Linq;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class ActivityServiceTests : TestBase
     {
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToGetActivityLogMessages()
         {
             
@@ -121,7 +121,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToInsertActivityLogMessage()
         {
             var mockedSession = new Mock<ISession>();
@@ -149,7 +149,7 @@ namespace Controll.Hosting.Tests
                                                   l.Type == ActivityMessageType.Notification))));
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToGetUndeliveredIntermidiateCommandResults()
         {
             using (var session = SessionFactory.OpenSession())

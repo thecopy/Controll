@@ -13,7 +13,7 @@ namespace Controll.Hosting.Repositories
 {
     public interface IControllRepository
     {
-        ClientCommunicator GetClientByConnectionId(string connectionId);
+        ControllClient GetClientByConnectionId(string connectionId);
         T GetClientByConnectionId<T>(string connectionId) where T:ClientCommunicator;
 
         ControllUser GetUserFromUserName(string username);
@@ -31,17 +31,19 @@ namespace Controll.Hosting.Repositories
             _session = session;
         }
 
-        public ClientCommunicator GetClientByConnectionId(string connectionId)
-        {
-            return GetClientByConnectionId<ClientCommunicator>(connectionId);
-        }
-
-        public T GetClientByConnectionId<T>(string connectionId) where T : ClientCommunicator
+        public ControllClient GetClientByConnectionId(string connectionId)
         {
             var client = _session.CreateCriteria<ControllClient>()
                     .Add(Restrictions.Eq("ConnectionId", connectionId))
                     .SetMaxResults(1)
                     .UniqueResult<ControllClient>();
+
+            return client;
+        }
+
+        public T GetClientByConnectionId<T>(string connectionId) where T : ClientCommunicator
+        {
+            var client = GetClientByConnectionId(connectionId);
 
             if (client == null)
                 return null;

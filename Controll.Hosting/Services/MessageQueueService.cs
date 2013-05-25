@@ -103,7 +103,6 @@ namespace Controll.Hosting.Services
 
         public void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            // _session.Clear();
             var queueItem = _session.Get<QueueItem>(ticket);
             // We want to send this to the sender aka the invocator
             var connectedClients = queueItem.Sender.ConnectedClients;

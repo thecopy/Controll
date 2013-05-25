@@ -10,16 +10,16 @@ using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.AspNet.SignalR.Infrastructure;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Moq;
 using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class MessageQueueServiceTests
     {
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToInsertActivityInvocationQueueItem()
         {
             var mockedSession = new Mock<ISession>();
@@ -80,7 +80,7 @@ namespace Controll.Hosting.Tests
                                 a.Sender == user
                         )), Times.Once());
         }
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToInsertActivityResultQueueItem()
         {
             var mockedSession = new Mock<ISession>();
@@ -133,7 +133,7 @@ namespace Controll.Hosting.Tests
                                                x.InvocationTicket == ticket)), Times.Once());
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToMarkQueueItemAsDelivered()
         {
             var mockedConnectionManager = new Mock<IConnectionManager>();

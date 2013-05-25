@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR;
+using Microsoft.AspNet.SignalR.Hubs;
 using Ninject;
 
 namespace Controll.Hosting
@@ -37,8 +39,12 @@ namespace Controll.Hosting
             var result = _kernel.TryGet(serviceType) ?? base.GetService(serviceType);
 
             //use for debugging ninject binding:
-            //if (result == null) _kernel.Get(serviceType); // Force exception
-
+            if (result == null && serviceType != typeof (IJavaScriptMinifier))
+            {
+                var bindings = _kernel.GetBindings(serviceType);
+                _kernel.Get(serviceType); // Force exception
+            }
+        
             return result;
         }
 

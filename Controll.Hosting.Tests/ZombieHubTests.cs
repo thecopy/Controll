@@ -13,13 +13,13 @@ using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Moq;
 using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class ZombieHubTests
     {
         private IPrincipal GetPrincial(int userId, int zombieId)
@@ -31,7 +31,7 @@ namespace Controll.Hosting.Tests
                 }, Constants.ControllAuthType));
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToSignIn()
         {
             var zombie = new Zombie
@@ -52,7 +52,7 @@ namespace Controll.Hosting.Tests
             hub.MockedSession.Verify(x => x.Update(It.Is<Zombie>(z => z == zombie && z.ConnectedClients.Any(cc => cc.ConnectionId == "conn-id"))), Times.Once());
         }
         
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToRespondWithArbritraryActivityResult()
         {
             var zombie = new Zombie
@@ -85,7 +85,7 @@ namespace Controll.Hosting.Tests
             hub.MockedMessageQueueService.Verify(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND")), Times.Once());
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToSetMessageAsDelivered()
         {
             var zombie = new Zombie
@@ -117,7 +117,7 @@ namespace Controll.Hosting.Tests
 
 
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddWhenSynchronizingActivityList()
         {
             var zombie = new Zombie
@@ -159,7 +159,7 @@ namespace Controll.Hosting.Tests
             hub.MockedSession.Verify(x => x.Update(It.Is<Zombie>(z => z.Activities.Count == 1 && z.Activities[0].Id.Equals(activityKey))), Times.Once());
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToRemoveWhenSynchronizingActivityList()
         {
             var activityKey = Guid.NewGuid();
@@ -217,33 +217,7 @@ namespace Controll.Hosting.Tests
             hub.MockedSession.Verify(x => x.Update(It.Is<Zombie>(z => z.Activities.Count == 1 && z.Activities[0].Id.Equals(activityKey2))), Times.Exactly(1));
         }
         
-        [TestMethod]
-        public void ShouldBeAbleToCleanUpAfterZombieDisconnect()
-        {
-            var zombie = new Zombie
-            {
-                Name = "zombie",
-                Id = 1
-            };
-
-            var hub = GetTestableZombieHub();
-            zombie.ConnectedClients.Add(new ControllClient { ClientCommunicator = zombie, ConnectionId = hub.Context.ConnectionId }); // Have something to clean up
-
-            hub.MockedControllRepository
-                .Setup(x => x.GetClientByConnectionId(It.Is<String>(s => s == hub.Context.ConnectionId)))
-                .Returns(zombie.ConnectedClients[0].ClientCommunicator)
-                .Verifiable();
-
-            hub.MockedSession
-                .Setup(r => r.Update(It.Is<ClientCommunicator>(x => x.ConnectedClients.Count == 0)))
-                .Verifiable();
-
-            hub.OnDisconnected();
-
-            hub.MockedSession.Verify(r => r.Update(It.Is<ClientCommunicator>(x => x.ConnectedClients.Count == 0)), Times.Once());
-        }
-
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToSignOut()
         {
             var zombie = new Zombie

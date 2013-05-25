@@ -8,14 +8,14 @@ using Controll.Common.ViewModels;
 using Controll.Hosting.Helpers;
 using Controll.Hosting.Models;
 using FizzWare.NBuilder;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class TestingHelperTests
     {
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToCompareConcreteToViewModel()
         {
             var parameters =
@@ -37,10 +37,10 @@ namespace Controll.Hosting.Tests
 
             var zombies = TestingHelper.GetListOfZombies();
             var zombieVms = zombies.Select(ViewModelHelper.CreateViewModel);
-            Assert.IsTrue(AssertionHelper.IsEnumerableItemsEqual(zombies, zombieVms, TestingHelper.ZombieViewModelComparer));
+            Assert.True(AssertionHelper.IsEnumerableItemsEqual(zombies, zombieVms, TestingHelper.ZombieViewModelComparer));
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToCreateActivityViewModel()
         {
             var lastUpdate = DateTime.Now;
@@ -65,7 +65,7 @@ namespace Controll.Hosting.Tests
             Assert.AreEqual(activity.Commands.Count, vm.Commands.Count());
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToCreateZombieViewModel()
         {
             DateTime lastUpdate = DateTime.Now;
@@ -85,7 +85,7 @@ namespace Controll.Hosting.Tests
             Assert.AreEqual(zombie.Activities.Count, vm.Activities.Count());
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToCreateConcreteFromViewModel()
         {
             var parameters =
@@ -105,10 +105,10 @@ namespace Controll.Hosting.Tests
             var activityVm = activity.CreateViewModel();
             var activityConcreteFromVm = activityVm.CreateConcreteClass();
 
-            Assert.IsTrue(TestingHelper.ActivityViewModelComparer(activityConcreteFromVm, activityVm));
+            Assert.True(TestingHelper.ActivityViewModelComparer(activityConcreteFromVm, activityVm));
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldSetKeyOnActivityAttribute()
         {
             var key = Guid.NewGuid();

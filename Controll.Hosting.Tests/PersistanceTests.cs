@@ -8,7 +8,7 @@ using Controll.Hosting.Models.Queue;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using FizzWare.NBuilder;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using FluentNHibernate.Testing;
 using NHibernate;
 using NHibernate.Proxy;
@@ -16,7 +16,7 @@ using NHibernate.Proxy;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class PersistanceTests : TestBase
     {
         public class PersistenceSpecificationEqualityComparer : IEqualityComparer
@@ -83,7 +83,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistControllUser()
         {
             using (var session = SessionFactory.OpenSession())
@@ -95,7 +95,7 @@ namespace Controll.Hosting.Tests
                     .VerifyTheMappings();
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistZombie()
         {
             using (var session = SessionFactory.OpenSession())
@@ -124,11 +124,11 @@ namespace Controll.Hosting.Tests
                 Assert.AreNotSame(zombie,gotten);
                 Assert.AreEqual(zombie.Name, gotten.Name);
                 Assert.AreEqual(zombie.Id, gotten.Id);
-                Assert.IsTrue(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
+                Assert.True(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistZombieToControllUser()
         {
             using (var session = SessionFactory.OpenSession())
@@ -153,11 +153,11 @@ namespace Controll.Hosting.Tests
 
                 Assert.AreEqual(zombie.Name, gotten.Zombies[0].Name);
                 Assert.AreEqual(zombie.Id, gotten.Zombies[0].Id);
-                Assert.IsTrue(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
+                Assert.True(zombie.ConnectedClients.Any(c => c.ConnectionId == "conn"));
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistActivityDeep()
         {
             using (var session = SessionFactory.OpenSession())
@@ -220,7 +220,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToUpdateAndPersistZombe()
         {
             using (var session = SessionFactory.OpenSession())
@@ -321,7 +321,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistActivity()
         {
             using (var session = SessionFactory.OpenSession())
@@ -336,7 +336,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistPingQueueItem()
         {
             using (var session = SessionFactory.OpenSession())
@@ -359,7 +359,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistActivityResultQueueItem()
         {
             using (var session = SessionFactory.OpenSession())
@@ -389,7 +389,7 @@ namespace Controll.Hosting.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistActivityInvocationQueueItem()
         {
             using (var session = SessionFactory.OpenSession())
@@ -418,7 +418,7 @@ namespace Controll.Hosting.Tests
             }
         }
         
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndPersistCommand()
         {
             using (var session = SessionFactory.OpenSession())

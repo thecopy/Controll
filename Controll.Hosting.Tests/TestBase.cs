@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll.Hosting.NHibernate;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using NHibernate;
 
 namespace Controll.Hosting.Tests
@@ -15,20 +15,9 @@ namespace Controll.Hosting.Tests
 
         protected ISessionFactory SessionFactory
         {
-            get
-            {
-                if(_sessionFactory == null)
-                    _sessionFactory = NHibernateHelper.GetSessionFactoryForTesting();
-
-                return _sessionFactory;
-            }
+            get { return _sessionFactory ?? (_sessionFactory = NHibernateHelper.GetSessionFactoryForTesting()); }
             set { _sessionFactory = value; }
         }
-
-
-        [TestInitialize]
-        public void InitializeTestBase()
-        {
-        }
+        
     }
 }

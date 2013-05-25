@@ -1,33 +1,42 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Controll.Hosting.Hubs;
+using Controll.Hosting.Infrastructure;
 using Microsoft.AspNet.SignalR;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
+using NUnit.Framework;
 using NHibernate;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
     public class NinjectTests
     {
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToResolveHubs()
         {
-            Bootstrapper.SetupNinject("testing");
+            Bootstrapper.Kernel = null;
+            Bootstrapper.ApplyConfiguration(new BootstrapConfiguration
+                {
+                    ConnectionStringAlias = "testing"
+                });
 
             var ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
             
             var zombieHub = ninjectDependencyResolver.GetService(typeof (ZombieHub));
             var clientHub = ninjectDependencyResolver.GetService(typeof (ClientHub));
 
-            Assert.IsNotNull(clientHub);
-            Assert.IsNotNull(zombieHub);
+            Assert.NotNull(clientHub);
+            Assert.NotNull(zombieHub);
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToInjectNewSessionInstancesIntoNewHubInstances()
         {
-            Bootstrapper.SetupNinject("testing");
+            Bootstrapper.Kernel = null;
+            Bootstrapper.ApplyConfiguration(new BootstrapConfiguration
+            {
+                ConnectionStringAlias = "testing"
+            });
 
             IDependencyResolver ninjectDependencyResolver = Bootstrapper.NinjectDependencyResolver;
 

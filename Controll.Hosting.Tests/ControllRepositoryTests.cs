@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
+    
     public class ControllRepositoryTests : TestBase
     {
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddAndGetFromConnectionId()
         {
             using(var session = SessionFactory.OpenSession())
@@ -35,14 +35,14 @@ namespace Controll.Hosting.Tests
                 
                 var fetched = repo.GetClientByConnectionId<ControllUser>("conn");
 
-                Assert.IsNotNull(fetched);
+                Assert.NotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
                 Assert.AreEqual(user.Id, fetched.Id);
                 Assert.AreEqual(user.Email, fetched.Email);
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddGetUserFromUserName()
         {
             using(var session = SessionFactory.OpenSession())
@@ -61,14 +61,14 @@ namespace Controll.Hosting.Tests
 
                 var fetched = repo.GetUserFromUserName("name");
 
-                Assert.IsNotNull(fetched);
+                Assert.NotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
                 Assert.AreEqual(user.Id, fetched.Id);
                 Assert.AreEqual(user.Email, fetched.Email);
             }
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToAddGetUserFromEMail()
         {
             using(var session = SessionFactory.OpenSession())
@@ -87,7 +87,7 @@ namespace Controll.Hosting.Tests
 
                 var fetched = repo.GetUserFromEmail("mail");
 
-                Assert.IsNotNull(fetched);
+                Assert.NotNull(fetched);
                 Assert.AreEqual(user.UserName, fetched.UserName);
                 Assert.AreEqual(user.Id, fetched.Id);
                 Assert.AreEqual(user.Email, fetched.Email);

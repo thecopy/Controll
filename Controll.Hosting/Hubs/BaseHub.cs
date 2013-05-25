@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
+using Controll.Hosting.Repositories;
 using Microsoft.AspNet.SignalR;
 using NHibernate;
 
@@ -9,10 +11,12 @@ namespace Controll.Hosting.Hubs
 {
     public class BaseHub : Hub
     {
+        protected readonly IControllRepository ControllRepository;
         public ISession Session { get; private set; }
 
-        public BaseHub(ISession session)
+        public BaseHub(ISession session, IControllRepository controllRepository)
         {
+            ControllRepository = controllRepository;
             Session = session;
         }
 
@@ -38,6 +42,22 @@ namespace Controll.Hosting.Hubs
                 throw new InvalidOperationException("Did not find zombie with id " + userPrincial.GetClaim(ControllClaimTypes.ZombieIdentifier));
 
             return zombie;
+        }
+
+        public override Task OnDisconnected()
+        {
+            using (var transaction = Session.BeginTransaction())
+            {
+                var client = ControllRepository.GetClientByConnectionId(Context.ConnectionId);
+
+                if (client != null)
+                {
+                    Session.Delete(client);
+                }
+                transaction.Commit();
+            }
+
+            return null;
         }
     }
 }

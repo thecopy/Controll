@@ -1,33 +1,25 @@
 ﻿using System;
-using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Security.Authentication;
 using System.Security.Claims;
-using System.Security.Principal;
-using Controll.Common.ViewModels;
-using Controll.Hosting.Helpers;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
-using FizzWare.NBuilder;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using NHibernate;
+using NUnit.Framework;
 
 namespace Controll.Hosting.Tests
 {
-    [TestClass]
     public class ClientHubTests
     {
-        [TestMethod]
-        public void ShouldBeAbleToAddClientWhenLoggingInAndRemoveClientFromUserWhenDisconnecting()
+        [Test]
+        public void ShouldAddClientWhenLoggingIn()
         {
             var mockedRepository = new Mock<IControllRepository>();
             var user = new ControllUser() { UserName = "Erik", Password = "password", Id = 1 };
@@ -42,19 +34,14 @@ namespace Controll.Hosting.Tests
 
             var hub = GetTestableClientHub(connectionId, clientState, user, mockedRepository.Object, principal: mockedPrinicipal);
 
+            hub.MockedSession.Setup(x => x.Save(It.Is<ControllClient>(cc => cc.ConnectionId == hub.Context.ConnectionId))).Verifiable();
+
             hub.SignIn();
-            
-            Assert.AreEqual(1, user.ConnectedClients.Count);
-            Assert.AreEqual(connectionId, user.ConnectedClients[0].ConnectionId);
 
-            mockedRepository.Setup(x => x.GetClientByConnectionId(It.Is<String>(s => s == connectionId))).Returns(user.ConnectedClients[0].ClientCommunicator);
-
-            hub.OnDisconnected();
-
-            Assert.AreEqual(0, user.ConnectedClients.Count);
+            hub.MockedSession.Verify(x => x.Save(It.Is<ControllClient>(cc => cc.ConnectionId == hub.Context.ConnectionId)), Times.Once());
         }
         
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToPingZombie()
         {
             var user = new ControllUser
@@ -89,11 +76,11 @@ namespace Controll.Hosting.Tests
 
             var ticket = hub.PingZombie("zombie");
 
-            Assert.AreNotEqual(Guid.Empty, ticket, "Ping Ticket was emtpy");
+            Assert.AreNotEqual(Guid.Empty, ticket);
             hub.MockedMessageQueueService.Verify(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)), Times.Once());
         }
         
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToGetZombieOnlineStatus()
         {
             var user = new ControllUser
@@ -125,21 +112,21 @@ namespace Controll.Hosting.Tests
              user.Zombies[0].ConnectedClients.Add(new ControllClient{ ConnectionId = "conn"});
 
             var result = hub.IsZombieOnline("zombie");
-            Assert.IsTrue(result);
+            Assert.True(result);
 
             user.Zombies[0].ConnectedClients[0].ConnectionId = null;
             result = hub.IsZombieOnline("zombie");
 
-            Assert.IsFalse(result);
+            Assert.False(result);
 
             user.Zombies[0].ConnectedClients.Clear();
             result = hub.IsZombieOnline("zombie");
 
-            Assert.IsFalse(result);
+            Assert.False(result);
         }
 
 
-        [TestMethod]
+        [Test]
         public void ShouldThrowWhenGettingZombieOnlineStatusOnNonExistingZombie()
         {
             var user = new ControllUser
@@ -163,10 +150,10 @@ namespace Controll.Hosting.Tests
 
             hub.SignIn();
 
-            AssertionHelper.Throws<ArgumentException>(() => hub.IsZombieOnline("some_zombie_name"));
+            Assert.Throws<ArgumentException>(() => hub.IsZombieOnline("some_zombie_name"));
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToGetAllZombiesForUser()
         {
             var zombieList = TestingHelper.GetListOfZombies().Take(1).ToList();
@@ -197,7 +184,7 @@ namespace Controll.Hosting.Tests
             Assert.AreEqual(zombieList.ElementAt(0).Activities.Count, result.ElementAt(0).Activities.Count());
         }
 
-        [TestMethod]
+        [Test]
         public void ShouldNotBeAbleToStartActivityOnZombieWhichDoesNotExistOrWhereActivityDoesNotExist()
         {;
             var user = new ControllUser
@@ -225,12 +212,12 @@ namespace Controll.Hosting.Tests
 
             hub.SignIn();
             
-            AssertionHelper.Throws<Exception>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null)); // wrong name
+            Assert.Throws<Exception>(() => hub.StartActivity("invalid_zombie_name", Guid.Empty, null, null)); // wrong name
 
-            AssertionHelper.Throws<Exception>(() => hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null)); // wrong guid
+            Assert.Throws<Exception>(() => hub.StartActivity("valid_zombie_name", Guid.NewGuid(), null, null)); // wrong guid
         }
         
-        [TestMethod]
+        [Test]
         public void ShouldBeAbleToActivateZombie()
         {
             var activity = new Activity
