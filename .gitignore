@@ -2,8 +2,8 @@
 *.tex
 *.aux
 *.gz
-/packages/
-
+packages/
+Documents/
 
 #################
 ## Eclipse
