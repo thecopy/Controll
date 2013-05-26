@@ -64,5 +64,10 @@ namespace Controll.Common.Authentication
                     return connection;
                 });
         }
+
+        public Task RegisterUser(string userName, string password, string email)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

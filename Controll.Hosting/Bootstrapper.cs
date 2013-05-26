@@ -30,8 +30,6 @@ namespace Controll.Hosting
             }
 
             _kernel = new StandardKernel();
-            _kernel.Bind<IConnectionManager>()
-                  .ToMethod(_ => (IConnectionManager)NinjectDependencyResolver.GetFromBase<IConnectionManager>());
 
             if (configuration.UseCustomSessionFactory)
             {
@@ -45,6 +43,9 @@ namespace Controll.Hosting
                        .ToMethod(_ => NHibernateHelper.GetSessionFactoryForConnectionStringAlias(configuration.ConnectionStringAlias, configuration.ClearDatabase))
                        .InSingletonScope();
             }
+
+            _kernel.Bind<IConnectionManager>()
+                  .ToMethod(_ => (IConnectionManager)NinjectDependencyResolver.GetFromBase<IConnectionManager>());
 
             _kernel.Bind<BaseHub>()
                    .ToSelf()

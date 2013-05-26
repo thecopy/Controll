@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Security.Claims;
-using System.Security.Principal;
-using System.Text;
-using Controll.Hosting.Models;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR;
@@ -16,7 +12,6 @@ using Microsoft.Owin.Security.DataProtection;
 using Microsoft.Owin.Security.Forms;
 using NHibernate;
 using Owin;
-using Owin.Types;
 using Owin.Types.Extensions;
 using Controll.Hosting.Infrastructure;
 
@@ -75,7 +70,7 @@ namespace Controll.Hosting
             }
 
             // Used for auth
-            private static ISessionFactory _sessionFactory;
+            private static readonly ISessionFactory SessionFactory = Bootstrapper.NinjectDependencyResolver.Resolve<ISessionFactory>();
             private void SetupAuth(IAppBuilder app)
             {
                 var options = new FormsAuthenticationOptions
@@ -93,38 +88,79 @@ namespace Controll.Hosting
                 };
                 app.SetDataProtectionProvider(new DpapiDataProtectionProvider());
                 app.UseFormsAuthentication(options);
+
                 app.MapPath("/auth", builder => builder.UseHandler((req, res) =>
                     {
                         res.AddHeader("Cache-Control", "no-cache");
 
                         if (req.Method == "POST")
                         {
-                            if (_sessionFactory == null)
-                                _sessionFactory = Bootstrapper.NinjectDependencyResolver.Resolve<ISessionFactory>();
+                            var body = new StreamReader(req.Body).ReadToEnd();
 
-                            res.StatusCode = (int) HttpStatusCode.Forbidden;
-                            res.ReasonPhrase = "Authentication Failed";
+                            var username = RequestHelper.GetBodyRequestPart(body, "username");
+                            var pass = RequestHelper.GetBodyRequestPart(body, "password");
+                            var zombie = RequestHelper.GetBodyRequestPart(body, "zombie");
+                            
+                            try
+                            {
+                                using (var session = SessionFactory.OpenSession())
+                                {
+                                    var controllRepository = new ControllRepository(session);
+                                    var membershipService = new MembershipService(session, controllRepository);
 
-                            ControllAuthentication.AuthenticateForms(req, res, _sessionFactory.OpenSession());
+                                    var identity = ControllAuthentication.AuthenticateForms(username, pass, zombie, membershipService);
+                                    res.SignIn(new ClaimsPrincipal(identity));
+                                    res.StatusCode = (int) HttpStatusCode.NoContent;
+                                }
+                            }
+                            catch (InvalidOperationException ex)
+                            {
+                                res.StatusCode = (int)HttpStatusCode.Forbidden;
+                                res.ReasonPhrase = "Authentication Failed: " + ex.Message;
+                            }
                         }
                         else
                         {
                             res.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
-                            res.ReasonPhrase = "Use POST";
                         }
                     }));
-                //app.UseDenyAnonymous();
-                app.MapPath("/authed", builder => builder.UseHandler((req, res) =>
-                    {
-                        var claimsPrincipal = req.User as ClaimsPrincipal;
-                        byte[] body = claimsPrincipal == null 
-                                          ? Encoding.ASCII.GetBytes("Somehow your IPrincipal is null!???!")
-                                          : Encoding.ASCII.GetBytes("You can apparently be here, so you must be authed since this is after \"UseDenyAnonymous\" :)\nClaims: " + req.User.Identity);
 
-                        res.Body.Write(body, 0, body.Length);
-                        res.StatusCode = 200;
-                        res.ReasonPhrase = "OK";
-                    }));
+                app.MapPath("/registeruser", builder => builder.UseHandler((req, res) =>
+                {
+                    res.AddHeader("Cache-Control", "no-cache");
+
+                    if (req.Method == "POST")
+                        {
+                            var body = new StreamReader(req.Body).ReadToEnd();
+
+                            var username = RequestHelper.GetBodyRequestPart(body, "username");
+                            var pass = RequestHelper.GetBodyRequestPart(body, "password");
+                            var email = RequestHelper.GetBodyRequestPart(body, "email");
+                            
+                            try
+                            {
+                                using (var session = SessionFactory.OpenSession())
+                                {
+                                    var controllRepository = new ControllRepository(session);
+                                    var membershipService = new MembershipService(session, controllRepository);
+
+                                    membershipService.AddUser(username, pass, email);
+                                    res.StatusCode = (int) HttpStatusCode.NoContent;
+                                }
+                            }
+                            catch (InvalidOperationException ex)
+                            {
+                                res.StatusCode = (int)HttpStatusCode.Forbidden;
+                                res.ReasonPhrase = "Registration Failed: " + ex.Message;
+                            }
+                        }
+                        else
+                        {
+                            res.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                        }
+                }));
+
+                app.UseDenyAnonymous();
             }
         }
     }

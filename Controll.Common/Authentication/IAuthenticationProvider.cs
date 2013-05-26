@@ -9,5 +9,6 @@ namespace Controll.Common.Authentication
     public interface IAuthenticationProvider
     {
         Task<HubConnection> Connect(string userName, string password, string zombie);
+        Task RegisterUser(string userName, string password, string email);
     }
 }

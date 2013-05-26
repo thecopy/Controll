@@ -97,6 +97,7 @@
     <Compile Include="BaseHubTests.cs" />
     <Compile Include="BootstrapConfigurationTests.cs" />
     <Compile Include="ClientHubTests.cs" />
+    <Compile Include="MembershipServiceTests.cs" />
     <Compile Include="TestingHelperTests.cs" />
     <Compile Include="ControllRepositoryTests.cs" />
     <Compile Include="MessageQueueServiceTests.cs" />

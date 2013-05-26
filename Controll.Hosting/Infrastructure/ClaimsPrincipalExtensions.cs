@@ -15,14 +15,11 @@ namespace Controll.Hosting.Infrastructure
         }
         public static bool HasClaim(this ClaimsPrincipal self, params string[] claimTypes)
         {
-            // Easier to read imo
-            // ReSharper disable LoopCanBeConvertedToQuery
             foreach (var claimType in claimTypes)
             {
                 if (self.Claims.Any(x => x.Type == claimType))
                     return true;
             }
-            // ReSharper restore LoopCanBeConvertedToQuery
 
             return false;
         }

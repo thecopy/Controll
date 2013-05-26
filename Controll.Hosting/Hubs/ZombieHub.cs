@@ -14,7 +14,7 @@ using NHibernate.Criterion;
 
 namespace Controll.Hosting.Hubs
 {
-    [AuthorizeClaim(ControllClaimTypes.UserIdentifier, ControllClaimTypes.ZombieIdentifier)]
+    [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
     public class ZombieHub : BaseHub
     {
         private readonly IMessageQueueService _messageQueueService;
@@ -23,13 +23,34 @@ namespace Controll.Hosting.Hubs
         public ZombieHub(IControllRepository controllRepository,
                          IMessageQueueService messageQueueService,
                          IActivityMessageLogService activityService,
-                         ISession session)
-            : base(session, controllRepository)
+                         ISession session): base(session, controllRepository)
         {
             _messageQueueService = messageQueueService;
             _activityService = activityService;
         }
 
+        public void AddZombie(string zombieName)
+        {
+            using (var transaction = Session.BeginTransaction())
+            {
+                var user = GetUser();
+
+                if (user.GetZombieByName(zombieName) != null)
+                    throw new InvalidOperationException(
+                        String.Format("A zombie with name {0} already exists for user {1}", zombieName, user.UserName));
+
+                var zombie = new Zombie
+                    {
+                        Owner = user,
+                        Name = zombieName
+                    };
+
+                Session.Save(zombie);
+                transaction.Commit();
+            }
+        }
+
+        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SignIn()
         {
             using (var transaction = Session.BeginTransaction())
@@ -46,6 +67,7 @@ namespace Controll.Hosting.Hubs
             }
         }
 
+        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SignOut()
         {
             using (var transaction = Session.BeginTransaction())
@@ -61,6 +83,7 @@ namespace Controll.Hosting.Hubs
             }
         }
 
+        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void QueueItemDelivered(Guid ticket)
         {
             using (var transaction = Session.BeginTransaction())
@@ -71,6 +94,7 @@ namespace Controll.Hosting.Hubs
             }
         }
 
+        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SynchronizeActivities(ICollection<ActivityViewModel> activities)
         {
             var zombie = GetZombie();
@@ -105,6 +129,7 @@ namespace Controll.Hosting.Hubs
             }
         }
 
+        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void ActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
             using (var transaction = Session.BeginTransaction())
@@ -117,6 +142,7 @@ namespace Controll.Hosting.Hubs
             
         }
 
+        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void ActivityResult(Guid ticket, ActivityCommandViewModel result)
         {
             Console.WriteLine("Activity result recieved.");
@@ -125,18 +151,6 @@ namespace Controll.Hosting.Hubs
                 _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
                 transaction.Commit();
             }
-        }
-
-        public override Task OnConnected()
-        {
-            Console.WriteLine("Zombie connected");
-            return null;
-        }
-
-        public override Task OnReconnected()
-        {
-            Console.WriteLine("Reconnected");
-            return null;
         }
     }
 }

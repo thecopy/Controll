@@ -139,7 +139,7 @@
   <ItemGroup>
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="ControllStandAloneServer.cs" />
-    <Compile Include="Helpers\RequiresAuthorization.cs" />
+    <Compile Include="Helpers\OwinRequestExtensions.cs" />
     <Compile Include="Helpers\ViewModelHelper.cs" />
     <Compile Include="Hubs\BaseHub.cs" />
     <Compile Include="Hubs\ClientHub.cs" />
@@ -149,7 +149,7 @@
     <Compile Include="Infrastructure\ClaimsPrincipalExtensions.cs" />
     <Compile Include="Infrastructure\Constants.cs" />
     <Compile Include="Infrastructure\AuthorizeClaim.cs" />
-    <Compile Include="Infrastructure\TaskAsyncHelper.cs" />
+    <Compile Include="Helpers\TaskAsyncHelper.cs" />
     <Compile Include="Models\Activity.cs" />
     <Compile Include="Models\ActivityCommand.cs" />
     <Compile Include="Models\ParameterDescriptor.cs" />

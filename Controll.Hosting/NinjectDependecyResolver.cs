@@ -39,11 +39,11 @@ namespace Controll.Hosting
             var result = _kernel.TryGet(serviceType) ?? base.GetService(serviceType);
 
             //use for debugging ninject binding:
-            if (result == null && serviceType != typeof (IJavaScriptMinifier))
-            {
-                var bindings = _kernel.GetBindings(serviceType);
-                _kernel.Get(serviceType); // Force exception
-            }
+            //if (result == null && serviceType != typeof (IJavaScriptMinifier))
+            //{
+            //    var bindings = _kernel.GetBindings(serviceType);
+            //    _kernel.Get(serviceType); // Force exception
+            //}
         
             return result;
         }

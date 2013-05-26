@@ -20,7 +20,10 @@ namespace Controll.Hosting.Services
 
         public ControllUser AuthenticateUser(string userName, string password)
         {
-            var user = GetUser(userName);
+            var user = _controllRepository.GetUserFromUserName(userName);
+
+            if(user == null)
+                throw new InvalidOperationException(String.Format("Not found: {0}", userName));
 
             if (user.Password != password)
                 throw new InvalidOperationException(String.Format("Wrong password."));
@@ -44,32 +47,17 @@ namespace Controll.Hosting.Services
             return user;
         }
         
-        private ControllUser GetUser(string userName)
-        {
-            var user = _controllRepository.GetUserFromUserName(userName);
-            if (user == null)
-                throw new InvalidOperationException(String.Format("Unable to find user {0}.", userName));
-            return user;
-        }
 
         private void EnsureUserDontExist(string userName)
         {
-            var rowcount = (int) _session.CreateCriteria<ControllUser>()
-                                         .Add(Restrictions.Eq("UserName", userName))
-                                         .SetProjection(Projections.RowCountInt64())
-                                         .UniqueResult();
-            if (rowcount > 0)
+            if(_controllRepository.GetUserFromUserName(userName) != null)
                 ThrowUserExists(userName);
         }
 
         private void EnsureMailDontExist(string email)
         {
-            var rowcount = (int)_session.CreateCriteria<ControllUser>()
-                                         .Add(Restrictions.Eq("Email", email))
-                                         .SetProjection(Projections.RowCountInt64())
-                                         .UniqueResult();
-            if (rowcount > 0)
-                ThrowUserExists(email);
+            if (_controllRepository.GetUserFromEmail(email) != null)
+                ThrowMailExists(email);
         }
 
         internal static void ThrowUserExists(string userName)

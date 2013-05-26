@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Security.Authentication;
 using System.Security.Claims;
 using System.Security.Principal;
 using Controll.Common.ViewModels;
@@ -30,7 +29,7 @@ namespace Controll.Hosting.Tests
                     new Claim(ControllClaimTypes.ZombieIdentifier, zombieId.ToString(CultureInfo.InvariantCulture)),
                 }, Constants.ControllAuthType));
         }
-
+            
         [Test]
         public void ShouldBeAbleToSignIn()
         {
@@ -215,6 +214,44 @@ namespace Controll.Hosting.Tests
             hub.SynchronizeActivities(activities);
 
             hub.MockedSession.Verify(x => x.Update(It.Is<Zombie>(z => z.Activities.Count == 1 && z.Activities[0].Id.Equals(activityKey2))), Times.Exactly(1));
+        }
+
+        [Test]
+        public void ShouldBeAbleToAddZombie()
+        {
+            var user = new ControllUser()
+            {
+                UserName = "user",
+                Zombies = new List<Zombie>(),
+                Id = 1
+            };
+
+            var hub = GetTestableZombieHub();
+            hub.MockedRequest.SetupGet(x => x.User).Returns(GetPrincial(1, 1));
+            hub.MockedSession.Setup(x => x.Load<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
+
+            hub.MockedSession.Setup(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user))).Verifiable();
+
+            hub.AddZombie("zombieName");
+
+            hub.MockedSession.Verify(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user)), Times.Once());
+        }
+
+        [Test]
+        public void ShouldNotBeAbleToAddZombieIfNameAlreadyExists()
+        {
+            var user = new ControllUser()
+            {
+                UserName = "user",
+                Zombies = new List<Zombie>{ new Zombie { Name = "zombieName"} },
+                Id = 1
+            };
+
+            var hub = GetTestableZombieHub();
+            hub.MockedRequest.SetupGet(x => x.User).Returns(GetPrincial(1, 1));
+            hub.MockedSession.Setup(x => x.Load<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
+
+            Assert.Throws<InvalidOperationException>(() => hub.AddZombie("zombieName"));
         }
         
         [Test]
