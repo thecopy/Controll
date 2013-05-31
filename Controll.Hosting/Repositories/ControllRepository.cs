@@ -22,12 +22,9 @@ namespace Controll.Hosting.Repositories
 
         public ControllClient GetClientByConnectionId(string connectionId)
         {
-            var client = _session.CreateCriteria<ControllClient>()
-                    .Add(Restrictions.Eq("ConnectionId", connectionId))
-                    .SetMaxResults(1)
-                    .UniqueResult<ControllClient>();
-
-            return client;
+            return _session.QueryOver<ControllClient>()
+                                 .Where(x => x.ConnectionId == connectionId)
+                                 .SingleOrDefault();
         }
 
         public T GetClientByConnectionId<T>(string connectionId) where T : ClientCommunicator
@@ -43,26 +40,28 @@ namespace Controll.Hosting.Repositories
 
         public ControllUser GetUserFromUserName(string username)
         {
-            return _session.CreateCriteria<ControllUser>()
-                                 .Add(Restrictions.Eq("UserName", username))
-                                 .SetMaxResults(1)
-                                 .UniqueResult<ControllUser>();
+            return _session.QueryOver<ControllUser>()
+                           .Where(x => x.UserName == username)
+                           .SingleOrDefault();
         }
 
         public ControllUser GetUserFromEmail(string email)
         {
-            return _session.CreateCriteria<ControllUser>()
-                     .Add(Restrictions.Eq("Email", email))
-                     .SetMaxResults(1)
-                     .UniqueResult<ControllUser>();
+            return _session.QueryOver<ControllUser>()
+                           .Where(x => x.Email == email)
+                           .SingleOrDefault();
         }
 
-        public IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId)
+        public IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId, int take = 100, int skip = 0)
         {
-            return _session.Query<QueueItem>()
+            if(take > 100)
+                throw new InvalidOperationException("Cannot take more than 100 queue items. Specify a number of items to skip instead.");
+
+            return _session.QueryOver<QueueItem>()
                           .Where(qi => qi.Reciever.Id == zombieId && !qi.Delivered.HasValue)
-                          .Take(100)
-                          .ToList();
+                          .Skip(skip)
+                          .Take(take)
+                          .List();
         }
     }
 }

@@ -19,11 +19,7 @@ namespace Controll.IntegrationTests
     public class ServiceStressTest : StandAloneFixtureBase
     {
         private const string LocalHostUrl = "http://erik-ws:10244/"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
-
-        // Add user and zombie in datebase for mocked data is not exists
-        private static bool _userAndZombieExists;
-        private static readonly ISessionFactory Factory = NHibernateHelper.GetSessionFactoryForTesting();
-
+        
 
         [Test]
         public async Task ShouldBeAbleToHandle100SimultaneousOfflinePingMessages()

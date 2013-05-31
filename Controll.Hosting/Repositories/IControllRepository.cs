@@ -12,6 +12,6 @@ namespace Controll.Hosting.Repositories
         ControllUser GetUserFromUserName(string username);
         ControllUser GetUserFromEmail(string email);
 
-        IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId);
+        IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId, int take, int skip);
     }
 }

@@ -80,7 +80,7 @@ namespace Controll.Hosting.Services
 
         public void ProcessUndeliveredMessagesForZombie(Zombie zombie)
         {
-            var queueItems = _controllRepository.GetUndeliveredQueueItemsForZombie(zombie.Id);
+            var queueItems = _controllRepository.GetUndeliveredQueueItemsForZombie(zombie.Id, 100, 0);
 
             foreach (var queueItem in queueItems)
             {
@@ -173,21 +173,7 @@ namespace Controll.Hosting.Services
                 Console.WriteLine("Sending " + queueItem.Type + " to " + connectionId);
             }
         }
-
-        public IList<ActivityIntermidiateCommandViewModel> GetUndeliveredIntermidiates(Zombie zombie)
-        {
-            var queueItems = _session.CreateCriteria<ActivityResultQueueItem>()
-                         .CreateCriteria("Sender")
-                         .Add(Restrictions.Eq("Id", zombie.Id))
-                         .List<ActivityResultQueueItem>();
-
-            return queueItems.Select(qi => new ActivityIntermidiateCommandViewModel(
-                                               qi.ActivityCommand.CreateViewModel(),
-                                               qi.Activity.CreateViewModel(),
-                                               qi.InvocationTicket
-                                               )).ToList();
-        }
-
+        
         private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
         {
             _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
