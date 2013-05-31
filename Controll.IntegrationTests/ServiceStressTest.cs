@@ -151,8 +151,8 @@ namespace Controll.IntegrationTests
             zombie = new ZombieClient(LocalHostUrl);
             zombie.InvocationRequest += (info) =>
                 {
-                    var updateResult = tickets.TryUpdate(info.ActivityTicket, true, false);
-                    Assert.True(updateResult);
+                    tickets.TryUpdate(info.ActivityTicket, true, false);
+                    zombie.ConfirmMessageDelivery(info.ActivityTicket);
                     reciveCount++;
                 };
             zombie.Connect("username", "password", "zombieName").Wait();
