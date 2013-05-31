@@ -29,27 +29,6 @@ namespace Controll.Hosting.Hubs
             _activityService = activityService;
         }
 
-        public void AddZombie(string zombieName)
-        {
-            using (var transaction = Session.BeginTransaction())
-            {
-                var user = GetUser();
-
-                if (user.GetZombieByName(zombieName) != null)
-                    throw new InvalidOperationException(
-                        String.Format("A zombie with name {0} already exists for user {1}", zombieName, user.UserName));
-
-                var zombie = new Zombie
-                    {
-                        Owner = user,
-                        Name = zombieName
-                    };
-
-                Session.Save(zombie);
-                transaction.Commit();
-            }
-        }
-
         [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SignIn()
         {

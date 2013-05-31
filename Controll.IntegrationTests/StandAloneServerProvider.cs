@@ -49,7 +49,7 @@ namespace Controll.IntegrationTests
                     });
 
                 var user = repo.GetUserFromUserName("username");
-                var zombie = new Zombie
+                var zombie = new Hosting.Models.Zombie
                     {
                         Name = "zombieName",
                         Owner = user,

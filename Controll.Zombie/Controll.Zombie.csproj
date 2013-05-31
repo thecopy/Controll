@@ -68,16 +68,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Models\ActivityCompletedEventArgs.cs" />
-    <Compile Include="Models\ActivityDownloadOrderEventArgs.cs" />
-    <Compile Include="Models\ActivitySessionLog.cs" />
-    <Compile Include="ControllZombieClient.cs" />
-    <Compile Include="Models\PingEventArgs.cs" />
-    <Compile Include="Models\ActivityStartedEventArgs.cs" />
-    <Compile Include="Models\DelegatePluginContext.cs" />
+    <Compile Include="IZombieClient.cs" />
+    <Compile Include="Infrastructure\ActivityCompletedEventArgs.cs" />
+    <Compile Include="Infrastructure\ActivityDownloadOrderEventArgs.cs" />
+    <Compile Include="Infrastructure\ActivitySessionLog.cs" />
+    <Compile Include="ZombieClient.cs" />
+    <Compile Include="Infrastructure\PingEventArgs.cs" />
+    <Compile Include="Infrastructure\InvocationInformation.cs" />
+    <Compile Include="Infrastructure\DelegatePluginContext.cs" />
     <Compile Include="Services\PluginService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ZombieService.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">

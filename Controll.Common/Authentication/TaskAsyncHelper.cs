@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Controll.Common.Authentication
+namespace Controll.Common
 {
-    internal static class TaskAsyncHelper
+    public static class TaskAsyncHelper
     {
         private static readonly Task _emptyTask = MakeTask<object>(null);
         private static readonly Task<bool> _trueTask = MakeTask<bool>(true);

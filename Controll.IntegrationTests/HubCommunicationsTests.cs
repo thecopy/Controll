@@ -9,6 +9,7 @@ using Controll.Hosting;
 using Controll.Hosting.Models;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
+using Controll.Zombie;
 using NHibernate;
 using NUnit.Framework;
 using Newtonsoft.Json;
@@ -38,8 +39,8 @@ namespace Controll.IntegrationTests
         public void ShouldBeAbleToLoginAsZombie()
         {
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-            var client = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
-            client.SignIn().Wait();
+            var client = new ZombieClient(LocalHostUrl);
+            client.Connect("username", "password", "zombieName").Wait();
             client.HubConnection.Stop();
         }
 
@@ -49,10 +50,10 @@ namespace Controll.IntegrationTests
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
 
             var client = new ControllClient(auth.Connect("username", "password").Result);
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+            var zombie = new ZombieClient(LocalHostUrl);
 
             client.SignIn().Wait();
-            zombie.SignIn().Wait();
+            zombie.Connect("username", "password", "zombieName").Wait();
 
             var pingEvent = new ManualResetEvent(false);
             var pongEvent = new ManualResetEvent(false);
@@ -60,15 +61,19 @@ namespace Controll.IntegrationTests
             var pingTicket = Guid.Empty;
             var pongTicket = Guid.Empty;
 
-            zombie.Pinged += (sender, args) =>
+            zombie.Pinged += (ticket) =>
                 {
-                    pingTicket = args.Ticket;
+                    pingTicket = ticket;
                     pingEvent.Set();
+
+                    zombie.ConfirmMessageDelivery(ticket);
                 };
+
             client.MessageDelivered += (sender, args) =>
                 {
                     pongTicket = args.DeliveredTicket;
                     pongEvent.Set();
+                    Console.WriteLine("Client Recieved Ping!");
                 };
 
             Guid messageTicket = client.Ping("zombieName");
@@ -89,9 +94,9 @@ namespace Controll.IntegrationTests
         {
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
             var client = new ControllClient(auth.Connect("username", "password").Result);
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+            var zombie = new ZombieClient(LocalHostUrl);
 
-            zombie.SignIn().Wait();
+            zombie.Connect("username", "password", "zombieName").Wait();
             client.SignIn().Wait();
 
             var activatedEvent = new ManualResetEvent(false);
@@ -102,13 +107,13 @@ namespace Controll.IntegrationTests
             IDictionary<string, string> activityParamters = null;
 
             #region Send Activity Invocation
-
-            zombie.ActivateZombie += (sender, args) =>
+            
+            zombie.InvocationRequest += (invocationInfo) =>
                 {
-                    activityKey = args.ActivityKey;
-                    activityTicket = args.ActivityTicket;
-                    activityParamters = args.Parameter;
-                    activityCommandName = args.CommandName;
+                    activityKey = invocationInfo.ActivityKey;
+                    activityTicket = invocationInfo.ActivityTicket;
+                    activityParamters = invocationInfo.Parameter;
+                    activityCommandName = invocationInfo.CommandName;
 
                     activatedEvent.Set();
                 };
@@ -213,7 +218,7 @@ namespace Controll.IntegrationTests
 
             activityMessageEvent.Reset();
             zombie.ActivityResult(activityTicket, mockedActivity.Commands.First());
-            zombie.ActivityCompleted(activityTicket, "result");
+            zombie.ActivityCompletedMessage(activityTicket, "result");
 
             Assert.True(activityMessageEvent.WaitOne(6000), "Client did not recieve activity finished message");
             Assert.AreEqual(ActivityMessageType.Completed, messageType);

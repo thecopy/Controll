@@ -5,16 +5,51 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Controll.Common.Authentication
+namespace Controll.Common
 {
     internal static class HttpHelper
     {
+        public static WebResponse BetterEndGetResponse(this WebRequest request, IAsyncResult asyncResult)
+        {
+            try
+            {
+                return request.EndGetResponse(asyncResult);
+            }
+            catch (WebException wex)
+            { 
+                // Do not throw on StatusCodes not being 100 or 200. Stupid Microsoft
+                // If we have a response then this method has done what it is
+                // supposed to. 
+                if (wex.Response != null)
+                {
+                    return wex.Response;
+                }
+                throw;
+            }
+        }
+
+        public static WebResponse BetterGetResponse(this WebRequest request)
+        {
+            try
+            {
+                return request.GetResponse();
+            }
+            catch (WebException wex)
+            {
+                if (wex.Response != null)
+                {
+                    return wex.Response;
+                }
+                throw;
+            }
+        }
+
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "Exceptions are flowed back to the caller.")]
         public static Task<HttpWebResponse> GetHttpResponseAsync(this HttpWebRequest request)
         {
             try
             {
-                return Task.Factory.FromAsync<HttpWebResponse>(request.BeginGetResponse, ar => (HttpWebResponse)request.EndGetResponse(ar), null);
+                return Task.Factory.FromAsync<HttpWebResponse>(request.BeginGetResponse, ar => (HttpWebResponse)request.BetterEndGetResponse(ar), null);
             }
             catch (Exception ex)
             {

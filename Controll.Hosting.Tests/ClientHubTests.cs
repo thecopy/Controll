@@ -42,6 +42,56 @@ namespace Controll.Hosting.Tests
         }
         
         [Test]
+        public void ShouldBeAbleToAddZombie()
+        {
+            var mockedRepository = new Mock<IControllRepository>();
+            var user = new ControllUser() { UserName = "Erik", Password = "password", Id = 1 };
+
+            var clientState = new StateChangeTracker();
+            const string connectionId = "conn-id";
+
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+
+            var hub = GetTestableClientHub(connectionId, clientState, user, mockedRepository.Object, principal: mockedPrinicipal);
+
+            hub.MockedSession.Setup(x => x.Load<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
+            hub.MockedSession.Setup(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user))).Verifiable();
+
+            hub.AddZombie("zombieName");
+
+            hub.MockedSession.Verify(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user)), Times.Once());
+        }
+        [Test]
+        public void ShouldNotBeAbleToAddZombieIfNameAlreadyExists()
+        {
+            var user = new ControllUser()
+            {
+                UserName = "user",
+                Zombies = new List<Zombie> { new Zombie { Name = "zombieName" } },
+                Id = 1
+            };
+
+            var mockedRepository = new Mock<IControllRepository>();
+
+            var clientState = new StateChangeTracker();
+            const string connectionId = "conn-id";
+
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+
+            var hub = GetTestableClientHub(connectionId, clientState, user, mockedRepository.Object, principal: mockedPrinicipal);
+
+            hub.MockedSession.Setup(x => x.Load<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
+
+            Assert.Throws<InvalidOperationException>(() => hub.AddZombie("zombieName"));
+        }
+        
+        [Test]
         public void ShouldBeAbleToPingZombie()
         {
             var user = new ControllUser

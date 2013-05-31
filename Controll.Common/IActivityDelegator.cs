@@ -1,13 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Controll.Common
 {
     public interface IActivityDelegator
     {
-        void ActivityResult(Guid ticket, object result);
-        void ActivityCompleted(Guid ticket, string resultMessage);
-        void ActivityError(Guid ticket, string errorMessage);
-        void ActivityNotify(Guid ticket, string notificationMessage);
-        void ActivityStarted(Guid ticket);
+        Task ActivityMessage(Guid ticket, ActivityMessageType type, string message = null);
+        Task ActivityResult(Guid ticket, object result);
     }
 }

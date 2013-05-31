@@ -18,7 +18,9 @@ namespace SimpleConsoleClient
     {
         private static IList<ZombieViewModel> _zombies;
         private static IDictionary<Guid, Tuple<string, Guid>> _invokedActivities; // string = zombieName, Guid = activity key
-        private static IDictionary<Guid, ActivityCommandViewModel> _waitningIntermidiates; 
+        private static IDictionary<Guid, ActivityCommandViewModel> _waitningIntermidiates;
+        private static String _url;
+
         static void Main(string[] args)
         {
             _zombies = new List<ZombieViewModel>();
@@ -62,9 +64,25 @@ namespace SimpleConsoleClient
         private static string _user = "";
         static private void Connect(string host)
         {
+            _url = host;
             Console.WriteLine("Connecting to " + host);
 
             var authenticator = new DefaultAuthenticationProvider(host);
+            Console.Write("Login or register (L/r): ");
+            var r = Console.ReadLine();
+            if (!string.IsNullOrEmpty(r) && r.ToLower() == "r")
+            {
+                try
+                {
+                    RegisterUser();
+                    Console.WriteLine("User registration successfull!");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error: " + ex.GetBaseException().Message);
+                }
+            }
+
             Console.Write("Provide username('username'): ");
             var username = Console.ReadLine();
             if (string.IsNullOrEmpty(username)) username = "username";
@@ -103,14 +121,7 @@ namespace SimpleConsoleClient
                         Console.WriteLine("* list [zombies|activities <zombieName>]\t\tList all your zombies or a specified zombies installed activities");
                         Console.WriteLine("* ping [zombieName]\t\tSend a ping to the zombie name <zombieName>");
                         Console.WriteLine("* status\t\t\tDispays session status");
-                        break;
-                    case "register":
-                        if (results.Count() == 3)
-                            RegisterUser(results[1], results[2]);
-                        else if (results.Count() == 4)
-                            RegisterUser(results[1], results[2], results[3]);
-                        else
-                            Console.WriteLine("Parameter syntax error");
+                        Console.WriteLine("* addzombie <zombieName>\t\t\tAdds a zombie to use currently authenticated user");
                         break;
                     case "intermidiate":
                         if(_waitningIntermidiates.Count > 0)
@@ -138,6 +149,17 @@ namespace SimpleConsoleClient
                         break;
                     case "status":
                         PrintStatus();
+                        break;
+                    case "addzombie":
+                        try
+                        {
+                            _client.AddZombie(results[1]).Wait();
+                            Console.WriteLine("Zombie '{0}' added.", results[1]);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                        }
                         break;
                     default:
                         Console.WriteLine("Unkown command " + results[0]);
@@ -236,7 +258,7 @@ namespace SimpleConsoleClient
             var command = activity.Commands.SingleOrDefault(c => c.Name == commandName);
             if (command == null)
             {
-                Console.WriteLine("No command named " + command + " found. If you are sure it exists please run \"list zombies\" to sync");
+                Console.WriteLine("No command named " + commandName + " found. If you are sure it exists please run \"list zombies\" to sync");
                 return;
             }
 
@@ -294,13 +316,18 @@ namespace SimpleConsoleClient
             //Console.WriteLine("Message recieved: " + e.Message);
         }
 
-        private static void RegisterUser(string username, string password, string email = "")
+        private static void RegisterUser()
         {
-            var result = _client.RegisterUser(username, password, email);
-            if(result)
-                Console.WriteLine("Successfully registered user " + username + "!");
-            else
-                Console.WriteLine("Could now register user! Username or mail already in use.");
+            Console.Write("Username: ");
+            var username = Console.ReadLine();
+            Console.Write("Password: ");
+            var password = Console.ReadLine();
+            Console.Write("Email: ");
+            var email = Console.ReadLine();
+
+            var authenticator = new DefaultAuthenticationProvider(_url);
+
+            authenticator.RegisterUser(username, password, email).Wait();
         }
 
         private static void PrintStatus()

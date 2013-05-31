@@ -18,7 +18,7 @@ namespace Controll.Hosting.NHibernate.Mappings
             Map(x => x.Password).Not.Nullable().Column("Password"); ;
             Map(x => x.UserName).Unique().Not.Nullable().Column("Username");
 
-            HasMany(x => x.Zombies).Cascade.All();
+            HasMany(x => x.Zombies).Cascade.All().KeyColumn("Owner_id");
         }
     }
 }

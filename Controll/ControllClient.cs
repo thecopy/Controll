@@ -126,5 +126,10 @@ namespace Controll.Client
         {
             _hubConnection.Stop();
         }
+
+        public Task AddZombie(string zombieName)
+        {
+            return _hubProxy.Invoke("AddZombie", zombieName);
+        }
     }
 }

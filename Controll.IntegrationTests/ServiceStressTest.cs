@@ -9,6 +9,7 @@ using Controll.Client;
 using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Controll.Hosting.NHibernate;
+using Controll.Zombie;
 using NHibernate;
 using NUnit.Framework;
 
@@ -46,17 +47,18 @@ namespace Controll.IntegrationTests
             Assert.True(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
             client.Disconnect();
 
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+            var zombie = new ZombieClient(LocalHostUrl);
 
             int reciveCount = 0;
-            zombie.Pinged += (sender, args) =>
+            zombie.Pinged += (ticket) =>
                 {
-                    var updateResult = tickets.TryUpdate(args.Ticket, true, false);
+                    var updateResult = tickets.TryUpdate(ticket, true, false);
                     Assert.True(updateResult);
                     Interlocked.Increment(ref reciveCount);
+                    zombie.ConfirmMessageDelivery(ticket);
                 };
 
-            zombie.SignIn().Wait();
+            zombie.Connect("username", "password", "zombieName").Wait();
 
             int waited = 0;
             while (reciveCount < range)
@@ -79,15 +81,19 @@ namespace Controll.IntegrationTests
         {
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
             var client = new ControllClient(auth.Connect("username", "password").Result);
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+            var zombie = new ZombieClient(LocalHostUrl);
 
             client.SignIn().Wait();
-            zombie.SignIn().Wait();
+            zombie.Connect("username", "password", "zombieName").Wait();
 
             int reciveCount = 0;
             int reciveCount2 = 0;
 
-            zombie.Pinged += (sender, args) => Interlocked.Increment(ref reciveCount);
+            zombie.Pinged += ticket =>
+                {
+                    Interlocked.Increment(ref reciveCount);
+                    zombie.ConfirmMessageDelivery(ticket);
+                };
 
             client.MessageDelivered += (sender, args) => Interlocked.Increment(ref reciveCount2);
 
@@ -120,8 +126,8 @@ namespace Controll.IntegrationTests
         {
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
 
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
-            zombie.SignOut().Wait();
+            var zombie = new ZombieClient(LocalHostUrl);
+            zombie.Connect("username", "password", "zombieName").Wait();
             zombie.HubConnection.Stop(); // Make _sure_ it is not recieving anything
 
             var client = new ControllClient(auth.Connect("username", "password").Result);
@@ -143,14 +149,14 @@ namespace Controll.IntegrationTests
             client.Disconnect();
 
             int reciveCount = 0;
-            zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
-            zombie.ActivateZombie += (sender, args) =>
+            zombie = new ZombieClient(LocalHostUrl);
+            zombie.InvocationRequest += (info) =>
                 {
-                    var updateResult = tickets.TryUpdate(args.ActivityTicket, true, false);
+                    var updateResult = tickets.TryUpdate(info.ActivityTicket, true, false);
                     Assert.True(updateResult);
                     reciveCount++;
                 };
-            zombie.SignIn().Wait();
+            zombie.Connect("username", "password", "zombieName").Wait();
 
             TimeSpan totalWait = TimeSpan.FromSeconds(0);
 
@@ -177,37 +183,36 @@ namespace Controll.IntegrationTests
         public async Task ShouldBeAbleToHandleMassSimultaneousOnlineInvocationAndRecieveMessagesAndResults()
         {
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
+            var zombie = new ZombieClient(LocalHostUrl);
 
-            zombie.SignIn().Wait();
+            zombie.Connect("username", "password", "zombieName").Wait();
 
             var client = new ControllClient(auth.Connect("username", "password").Result);
             client.SignIn().Wait();
 
-            var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
+            var tickets = new ConcurrentBag<Guid>(); // bool is used to check if the zombie has recieved it
 
             const int range = 50;
 
             int reciveCount = 0;
             int reciveCount2 = 0;
 
-            zombie.ActivateZombie += (sender, args) =>
+            zombie.InvocationRequest += (info) =>
                 {
                     Interlocked.Increment(ref reciveCount);
-                    tickets.TryUpdate(args.ActivityTicket, true, false);
+                    zombie.ConfirmMessageDelivery(info.ActivityTicket);
                 };
 
             client.MessageDelivered += (sender, args) => { Interlocked.Increment(ref reciveCount2); };
             Enumerable.Range(0, range).AsParallel().ForAll(i =>
                 {
                     var ticket = client.StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "command");
+                    tickets.Add(ticket);
                     Assert.AreNotEqual(ticket, Guid.Empty);
-
-                    tickets.AddOrUpdate(ticket, false, (_, __) => false);
                 });
 
             Assert.AreEqual(range, tickets.Count);
-            Assert.True(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
+            Assert.True(tickets.All(kp => kp.Equals(Guid.Empty) == false));
 
             TimeSpan totalWait = TimeSpan.FromSeconds(0);
 
@@ -233,11 +238,7 @@ namespace Controll.IntegrationTests
                                         "\nExpected invocations: " + range + ", gotten: " + reciveCount);
                 }
             }
-
-            Console.Write("Asserting that all invocation tickets have been recieved at zombie... ");
-            Assert.True(tickets.All(kv => kv.Value));
-            Console.WriteLine("OK!\n\n\n\n");
-
+            
             Console.WriteLine("Now sending messages corresponding to all the invocations");
 
             int recieveCount3 = 0;
@@ -245,8 +246,8 @@ namespace Controll.IntegrationTests
             client.ActivityMessageRecieved += (sender, args) => Interlocked.Increment(ref recieveCount3);
             tickets.AsParallel().ForAll(i =>
                 {
-                    zombie.ActivityNotify(i.Key, "notification");
-                    zombie.ActivityCompleted(i.Key, "completed");
+                    zombie.ActivityNotify(i, "notification");
+                    zombie.ActivityCompletedMessage(i, "completed");
                 });
 
             totalWait = TimeSpan.FromSeconds(0);
@@ -268,7 +269,7 @@ namespace Controll.IntegrationTests
             Console.WriteLine("Now testing activity results");
 
             client.ActivityResultRecieved += (sender, args) => Interlocked.Increment(ref recieveCount4);
-            tickets.AsParallel().ForAll(i => zombie.ActivityResult(i.Key, Activity.Commands.First()));
+            tickets.AsParallel().ForAll(i => zombie.ActivityResult(i, Activity.Commands.First()));
 
             totalWait = TimeSpan.FromSeconds(0);
             while (recieveCount4 < range)
@@ -295,8 +296,8 @@ namespace Controll.IntegrationTests
 
             var auth = new DefaultAuthenticationProvider(LocalHostUrl);
 
-            var zombie = new ControllZombieClient(auth.Connect("username", "password", "zombieName").Result);
-            zombie.SignIn();
+            var zombie = new ZombieClient(LocalHostUrl);
+            zombie.Connect("username", "password", "zombieName").Wait();
 
             const int range = 50;
             int reciveCount = 0;
@@ -304,7 +305,7 @@ namespace Controll.IntegrationTests
             var resetEvent = new ManualResetEvent(false);
             var resetEvent2 = new ManualResetEvent(false);
             var loginEvent = new ManualResetEvent(false);
-            zombie.ActivateZombie += (sender, args) => resetEvent.Set();
+            zombie.InvocationRequest += _ => resetEvent.Set();
 
             var connectionIdCollection = new ConcurrentDictionary<String, bool>();
 

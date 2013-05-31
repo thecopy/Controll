@@ -17,6 +17,7 @@ using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR;
 using NHibernate;
+using NHibernate.Proxy;
 
 namespace Controll.Hosting.Hubs
 {
@@ -51,8 +52,10 @@ namespace Controll.Hosting.Hubs
                 Session.Save(client);
                 transaction.Commit();
             }
+            Console.WriteLine("User logged in with connection id" + Context.ConnectionId);
         }
 
+        // ReSharper disable SuspiciousTypeConversion.Global
         public IEnumerable<ZombieViewModel> GetAllZombies()
         {
             using (var tx = Session.BeginTransaction())
@@ -60,14 +63,16 @@ namespace Controll.Hosting.Hubs
                 var user = GetUser();
                 Console.WriteLine(user.UserName + " is fetching all zombies");
 
-                // ToList() -> Enumerate it so that the NHibernate proxy will load in this thread
-                // and not in SignalR's serializer
-                var vms = user.Zombies.Select(ViewModelHelper.CreateViewModel).ToList(); 
-                tx.Commit();
+                if (user.Zombies is INHibernateProxy)
+                    Session.GetSessionImplementation().PersistenceContext.Unproxy(user.Zombies);
 
+                var vms = user.Zombies.Select(ViewModelHelper.CreateViewModel).ToList(); 
+
+                tx.Commit();
                 return vms;
             }
         }
+        // ReSharper restore SuspiciousTypeConversion.Global
 
         public bool RegisterUser(string userName, string password, string email)
         {
@@ -121,6 +126,27 @@ namespace Controll.Hosting.Hubs
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
                 _messageQueueService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
+            }
+        }
+
+        public void AddZombie(string zombieName)
+        {
+            using (var transaction = Session.BeginTransaction())
+            {
+                var user = GetUser();
+
+                 if (user.GetZombieByName(zombieName) != null)
+                    throw new InvalidOperationException(
+                        String.Format("A zombie with name {0} already exists for user {1}", zombieName, user.UserName));
+
+                var zombie = new Zombie
+                {
+                    Owner = user,
+                    Name = zombieName
+                };
+
+                Session.Save(zombie);
+                transaction.Commit();
             }
         }
 

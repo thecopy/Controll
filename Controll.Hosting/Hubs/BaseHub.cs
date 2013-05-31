@@ -25,7 +25,7 @@ namespace Controll.Hosting.Hubs
             var userPrincial = Context.User as ClaimsPrincipal;
             int id = int.Parse(userPrincial.GetClaim(ControllClaimTypes.UserIdentifier));
 
-            var user =  Session.Load<ControllUser>(id);
+            var user =  Session.Get<ControllUser>(id);
             if(user == null)
                 throw new InvalidOperationException("Did not find user with id " + userPrincial.GetClaim(ControllClaimTypes.UserIdentifier));
 
@@ -37,7 +37,7 @@ namespace Controll.Hosting.Hubs
             var userPrincial = Context.User as ClaimsPrincipal;
             int id = int.Parse(userPrincial.GetClaim(ControllClaimTypes.ZombieIdentifier));
 
-            var zombie = Session.Load<Zombie>(id);
+            var zombie = Session.Get<Zombie>(id);
             if (zombie == null)
                 throw new InvalidOperationException("Did not find zombie with id " + userPrincial.GetClaim(ControllClaimTypes.ZombieIdentifier));
 
