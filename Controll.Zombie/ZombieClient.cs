@@ -50,10 +50,17 @@ namespace Controll.Zombie
         private void SetupEvents()
         {
             _hubProxy.On<Guid, Guid, IDictionary<string, string>, string>("InvokeActivity",
-                (activityKey, ticket, parameters, commandName) => 
-                    InvocationRequest(new InvocationInformation(activityKey, ticket, parameters, commandName)));
+                (activityKey, ticket, parameters, commandName) =>
+                    {
+                        if(InvocationRequest != null)
+                            InvocationRequest(new InvocationInformation(activityKey, ticket, parameters, commandName));
+                    });
 
-            _hubProxy.On<Guid>("Ping", ticket => Pinged(ticket));
+            _hubProxy.On<Guid>("Ping", ticket =>
+                {
+                    if(Pinged != null)
+                        Pinged(ticket);
+                });
         }
 
         private Task SignIn()

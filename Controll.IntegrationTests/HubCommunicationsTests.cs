@@ -111,7 +111,7 @@ namespace Controll.IntegrationTests
             zombie.InvocationRequest += (invocationInfo) =>
                 {
                     activityKey = invocationInfo.ActivityKey;
-                    activityTicket = invocationInfo.ActivityTicket;
+                    activityTicket = invocationInfo.Ticket;
                     activityParamters = invocationInfo.Parameter;
                     activityCommandName = invocationInfo.CommandName;
 

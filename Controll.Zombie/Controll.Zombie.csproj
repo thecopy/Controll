@@ -71,7 +71,7 @@
     <Compile Include="IZombieClient.cs" />
     <Compile Include="ZombieClient.cs" />
     <Compile Include="Infrastructure\InvocationInformation.cs" />
-    <Compile Include="Infrastructure\DelegatePluginContext.cs" />
+    <Compile Include="Infrastructure\DelegateActivityContext.cs" />
     <Compile Include="Services\PluginService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

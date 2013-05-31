@@ -7,12 +7,13 @@ using Controll;
 using Controll.Zombie;
 using Controll.Common;
 using Controll.Common.ViewModels;
+using Controll.Zombie.Infrastructure;
 
 namespace SimpleConsoleZombie
 {
     class Program
     {
-        private static ZombieClient _service;
+        private static ZombieClient _client;
         static void Main(string[] args)
         {
             Console.WriteLine("Simple Console Zombie for Controll");
@@ -45,7 +46,9 @@ namespace SimpleConsoleZombie
         private static void Connect(string url)
         {
             Console.WriteLine("Initializing service...");
-            _service = new ZombieClient(url);
+            _client = new ZombieClient(url);
+            _client.Pinged += _client_Pinged;
+            _client.InvocationRequest += _client_InvocationRequest;
             Console.WriteLine("Connecting to " + url);
 
             Console.Write("Provide username('username'): ");
@@ -56,9 +59,9 @@ namespace SimpleConsoleZombie
             if (string.IsNullOrEmpty(password)) password = "password";
             Console.Write("Provide zombie name('zombieName'): ");
             var zombieName = Console.ReadLine();
-            if (string.IsNullOrEmpty(password)) zombieName = "zombieName";
+            if (string.IsNullOrEmpty(zombieName)) zombieName = "zombieName";
 
-            _service.Connect(username, password, zombieName).Wait();
+            _client.Connect(username, password, zombieName).Wait();
 
             Console.WriteLine("Connected!");
             Console.WriteLine("Type h or help for more information");
@@ -103,9 +106,33 @@ namespace SimpleConsoleZombie
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
         }
 
+        static void _client_InvocationRequest(InvocationInformation info)
+        {
+            try
+            {
+                PluginService.Instance.GetActivityInstance(info.ActivityKey)
+                             .Execute(new DelegateActivityContext(info.Ticket, info.Parameter, info.CommandName, _client));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error starting activity: " + ex.Message);
+                _client.ActivityMessage(info.Ticket, ActivityMessageType.Failed, ex.Message);
+            }
+            finally
+            {
+                _client.ConfirmMessageDelivery(info.Ticket);
+            }
+        }
+
+        static void _client_Pinged(Guid ticket)
+        {
+            Console.WriteLine("Ping!");
+            _client.ConfirmMessageDelivery(ticket);
+        }
+
         private static void SignOut()
         {
-            _service.SignOut().Wait();
+            _client.SignOut().Wait();
             Console.WriteLine("Signed out!");
         }
 
@@ -117,7 +144,7 @@ namespace SimpleConsoleZombie
                 (IActivity) Activator.CreateInstance(activity)).Select(activityInstance => 
                     activityInstance.ViewModel));
 
-            _service.Synchronize(activitiyVms).Wait();
+            _client.Synchronize(activitiyVms).Wait();
             Console.WriteLine("Ok. Synchronized!");
         }
 
@@ -140,9 +167,9 @@ namespace SimpleConsoleZombie
 
         private static void PrintStatus()
         {
-            Console.WriteLine("Connected to: {0}", _service.HubConnection.Url);
-            Console.WriteLine("Transport: {0}", _service.HubConnection.Transport.Name);
-            Console.WriteLine("Connection-Id: {0}", _service.HubConnection.ConnectionId);
+            Console.WriteLine("Connected to: {0}", _client.HubConnection.Url);
+            Console.WriteLine("Transport: {0}", _client.HubConnection.Transport.Name);
+            Console.WriteLine("Connection-Id: {0}", _client.HubConnection.ConnectionId);
         }
     }
 }

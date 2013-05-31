@@ -147,8 +147,8 @@ namespace Controll.IntegrationTests
             zombie = new ZombieClient(LocalHostUrl);
             zombie.InvocationRequest += (info) =>
                 {
-                    tickets.TryUpdate(info.ActivityTicket, true, false);
-                    zombie.ConfirmMessageDelivery(info.ActivityTicket);
+                    tickets.TryUpdate(info.Ticket, true, false);
+                    zombie.ConfirmMessageDelivery(info.Ticket);
                     reciveCount++;
                 };
             zombie.Connect("username", "password", "zombieName").Wait();
@@ -195,7 +195,7 @@ namespace Controll.IntegrationTests
             zombie.InvocationRequest += (info) =>
                 {
                     Interlocked.Increment(ref reciveCount);
-                    zombie.ConfirmMessageDelivery(info.ActivityTicket);
+                    zombie.ConfirmMessageDelivery(info.Ticket);
                 };
 
             client.MessageDelivered += (sender, args) => { Interlocked.Increment(ref reciveCount2); };

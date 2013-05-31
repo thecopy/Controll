@@ -61,7 +61,6 @@ namespace SimpleConsoleClient
         }
 
         private static ControllClient _client;
-        private static string _user = "";
         static private void Connect(string host)
         {
             _url = host;
@@ -102,7 +101,7 @@ namespace SimpleConsoleClient
             Console.WriteLine("Type h or help for more information");
 
             Console.ForegroundColor = ConsoleColor.White;
-            Console.Write(_user + "> ");
+            Console.Write("> ");
             string result = Console.ReadLine();
             Console.ForegroundColor = ConsoleColor.Gray;
 
@@ -166,7 +165,7 @@ namespace SimpleConsoleClient
                         break;
                 }
                 Console.ForegroundColor = ConsoleColor.White;
-                Console.Write(_user + "> ");
+                Console.Write("> ");
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
@@ -313,7 +312,7 @@ namespace SimpleConsoleClient
 
         static void _client_ActivityMessageRecieved(object sender, ActivityLogMessageEventArgs e)
         {
-            //Console.WriteLine("Message recieved: " + e.Message);
+            Console.WriteLine("Message recieved: " + e.Message);
         }
 
         private static void RegisterUser()
@@ -335,11 +334,6 @@ namespace SimpleConsoleClient
             Console.WriteLine("Connected to: {0}", _client.HubConnection.Url);
             Console.WriteLine("Using transport: {0}", _client.HubConnection.Transport.Name);
             Console.WriteLine("Connection Id: {0}", _client.HubConnection.ConnectionId);
-            Console.WriteLine("Authenticated: {0}", string.IsNullOrEmpty(_user) ? "No" : "Yes");
-            if (!string.IsNullOrEmpty(_user))
-            {
-                Console.WriteLine("User: {0}", _user);
-            }
         }
 
         private static void Ping(string zombieName)

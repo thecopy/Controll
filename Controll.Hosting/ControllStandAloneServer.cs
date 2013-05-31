@@ -66,8 +66,18 @@ namespace Controll.Hosting
 
                 SetupAuth(app);
                 app.MapHubs(config);
+                Sweep();
+            }
 
-                
+            // Clears all connected clients
+            private static void Sweep()
+            {
+                using(var session = SessionFactory.OpenSession())
+                using (var tx = session.BeginTransaction())
+                {
+                    session.CreateQuery("DELETE FROM ControllClient").ExecuteUpdate();
+                    tx.Commit();
+                }
             }
 
             // Used for auth

@@ -58,7 +58,7 @@ namespace Controll.Hosting.Repositories
                 throw new InvalidOperationException("Cannot take more than 100 queue items. Specify a number of items to skip instead.");
 
             return _session.QueryOver<QueueItem>()
-                          .Where(qi => qi.Reciever.Id == zombieId && !qi.Delivered.HasValue)
+                          .Where(qi => qi.Reciever.Id == zombieId && qi.Delivered == null)
                           .Skip(skip)
                           .Take(take)
                           .List();
