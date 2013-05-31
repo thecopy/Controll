@@ -76,12 +76,12 @@ namespace Controll.Hosting.Tests
 
             var ticket = Guid.NewGuid();
 
-            hub.MockedMessageQueueService.Setup(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND"))).Verifiable();
+            hub.MockedControllService.Setup(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND"))).Verifiable();
 
             hub.SignIn();
             hub.ActivityResult(ticket, new ActivityCommandViewModel{Label = "RESULT COMMAND"});
 
-            hub.MockedMessageQueueService.Verify(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND")), Times.Once());
+            hub.MockedControllService.Verify(x => x.InsertActivityResult(It.Is<Guid>(g => g.Equals(ticket)), It.Is<ActivityCommand>(vm => vm.Label == "RESULT COMMAND")), Times.Once());
         }
 
         [Test]
@@ -106,12 +106,12 @@ namespace Controll.Hosting.Tests
 
             var ticket = Guid.NewGuid();
 
-            hub.MockedMessageQueueService.Setup(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket)))).Verifiable();
+            hub.MockedControllService.Setup(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket)))).Verifiable();
 
             hub.SignIn();
             hub.QueueItemDelivered(ticket);
 
-            hub.MockedMessageQueueService.Verify(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket))));
+            hub.MockedControllService.Verify(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket))));
         }
 
 
@@ -240,15 +240,14 @@ namespace Controll.Hosting.Tests
         
         private TestableZombieHub GetTestableZombieHub()
         {
-            var mockedActivityService = new Mock<IActivityMessageLogService>();
             var mockedControllRepository = new Mock<IControllRepository>();
-            var mockedMessageQueueService = new Mock<IMessageQueueService>();
+            var mockedControllService = new Mock<IControllService>();
             var mockPipeline = new Mock<IHubPipelineInvoker>();
             var mockedConnectionObject = new Mock<IConnection>();
             var mockedSession = new Mock<ISession>();
             mockedSession.Setup(s => s.BeginTransaction()).Returns(new Mock<ITransaction>().Object);
 
-            var hub = new TestableZombieHub(mockedControllRepository, mockedActivityService, mockedMessageQueueService, mockedSession)
+            var hub = new TestableZombieHub(mockedControllRepository, mockedControllService, mockedSession)
                 {
                     Clients = new HubConnectionContext(mockPipeline.Object, mockedConnectionObject.Object, "ZombieHub", "conn-id", new StateChangeTracker())
                 };
@@ -259,21 +258,18 @@ namespace Controll.Hosting.Tests
         private class TestableZombieHub : ZombieHub
         {
             public Mock<IControllRepository> MockedControllRepository { get; private set; }
-            public Mock<IActivityMessageLogService> MockedActivityService { get; set; }
-            public Mock<IMessageQueueService> MockedMessageQueueService { get; private set; }
+            public Mock<IControllService> MockedControllService { get; set; }
             public Mock<ISession> MockedSession { get; private set; }
             public Mock<IRequest> MockedRequest { get; private set; }
 
             public TestableZombieHub(
                 Mock<IControllRepository> mockedUserRepository, 
-                Mock<IActivityMessageLogService> mockedActivityService, 
-                Mock<IMessageQueueService> mockedMessageQueueService,
+                Mock<IControllService> mockedControllService,
                 Mock<ISession> mockedSession)
-                : base(mockedUserRepository.Object, mockedMessageQueueService.Object, mockedActivityService.Object, mockedSession.Object)
+                : base(mockedUserRepository.Object, mockedControllService.Object, mockedSession.Object)
             {
                 MockedControllRepository = mockedUserRepository;
-                MockedActivityService = mockedActivityService;
-                MockedMessageQueueService = mockedMessageQueueService;
+                MockedControllService = mockedControllService;
                 MockedSession = mockedSession;
 
                 MockedRequest = new Mock<IRequest>();

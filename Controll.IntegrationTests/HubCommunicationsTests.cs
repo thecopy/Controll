@@ -210,7 +210,7 @@ namespace Controll.IntegrationTests
                     activityResultRecieved.Set();
                 };
 
-            zombie.ActivityStarted(activityTicket);
+            zombie.ActivityMessage(activityTicket, ActivityMessageType.Started);
 
             Assert.True(activityMessageEvent.WaitOne(6000), "Client did not recieve activity started message");
             Assert.AreEqual(ActivityMessageType.Started, messageType);
@@ -218,7 +218,7 @@ namespace Controll.IntegrationTests
 
             activityMessageEvent.Reset();
             zombie.ActivityResult(activityTicket, mockedActivity.Commands.First());
-            zombie.ActivityCompletedMessage(activityTicket, "result");
+            zombie.ActivityMessage(activityTicket, ActivityMessageType.Completed, "result");
 
             Assert.True(activityMessageEvent.WaitOne(6000), "Client did not recieve activity finished message");
             Assert.AreEqual(ActivityMessageType.Completed, messageType);

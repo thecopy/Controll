@@ -26,10 +26,10 @@ namespace Controll.Hosting.Tests
             var mockedConnectionManager = new Mock<IConnectionManager>();
             var mockedControllRepository = new Mock<IControllRepository>();
 
-            var messageQueueService = new MessageQueueService(
+            var service = new ControllService(
                 mockedSession.Object,
-                mockedConnectionManager.Object,
-                mockedControllRepository.Object);
+                mockedControllRepository.Object,
+                mockedConnectionManager.Object);
 
             var user = new ControllUser
                 {
@@ -64,7 +64,7 @@ namespace Controll.Hosting.Tests
                         )))
                 .Verifiable();
 
-            messageQueueService.InsertActivityInvocation(zombie, activity, paramsDictionary, commandName, "connectionId");
+            service.InsertActivityInvocation(zombie, activity, paramsDictionary, commandName, "connectionId");
 
             mockedSession.Verify(x => x.Save(
                     It.Is<ActivityInvocationQueueItem>(
@@ -87,10 +87,10 @@ namespace Controll.Hosting.Tests
             var mockedConnectionManager = new Mock<IConnectionManager>();
             var mockedControllRepository = new Mock<IControllRepository>();
 
-            var messageQueueService = new MessageQueueService(
+            var service = new ControllService(
                 mockedSession.Object,
-                mockedConnectionManager.Object,
-                mockedControllRepository.Object);
+                mockedControllRepository.Object,
+                mockedConnectionManager.Object);
 
             var user = new ControllUser
             {
@@ -125,7 +125,7 @@ namespace Controll.Hosting.Tests
                                                x.ActivityCommand == activityCommand &&
                                                x.InvocationTicket == ticket))).Verifiable();
 
-            messageQueueService.InsertActivityResult(ticket, activityCommand);
+            service.InsertActivityResult(ticket, activityCommand);
 
             mockedSession.Verify(q => q.Save(
                 It.Is<ActivityResultQueueItem>(x =>
@@ -143,10 +143,10 @@ namespace Controll.Hosting.Tests
             var mockedHubContext = new Mock<IHubContext>();
             var mockedConnectionContext = new Mock<IHubConnectionContext>();
 
-            var messageQueueService = new MessageQueueService(
+            var service = new ControllService(
                 mockedSession.Object,
-                mockedConnectionManager.Object,
-                mockedControllRepository.Object);
+                mockedControllRepository.Object,
+                mockedConnectionManager.Object);
 
 
             var ticket = Guid.NewGuid();
@@ -169,7 +169,7 @@ namespace Controll.Hosting.Tests
             mockedSession.Setup(x => x.Get<QueueItem>(ticket)).Returns(queueItem.Object);
             mockedSession.Setup(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue))).Verifiable();
 
-            messageQueueService.MarkQueueItemAsDelivered(ticket);
+            service.MarkQueueItemAsDelivered(ticket);
 
             mockedSession.Verify(x => x.Update(It.Is<QueueItem>(q => q.Ticket == ticket && q.Delivered.HasValue)), Times.Once());
         }

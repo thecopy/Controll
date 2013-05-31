@@ -120,14 +120,14 @@ namespace Controll.Hosting.Tests
             var hub = GetTestableClientHub(connectionId, clientState, user, null, principal: mockedPrinicipal);
             hub.Clients.Caller.UserName = "Erik";
 
-            hub.MockedMessageQueueService
+            hub.MockedControllService
                 .Setup(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)))
                 .Returns(new PingQueueItem { Ticket = Guid.NewGuid() }).Verifiable("InsertPingMessage was not called by hub");
 
             var ticket = hub.PingZombie("zombie");
 
             Assert.AreNotEqual(Guid.Empty, ticket);
-            hub.MockedMessageQueueService.Verify(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)), Times.Once());
+            hub.MockedControllService.Verify(x => x.InsertPingMessage(It.Is<Zombie>(z => z == user.Zombies[0]), It.Is<String>(s => s == hub.Context.ConnectionId)), Times.Once());
         }
         
         [Test]
@@ -310,7 +310,7 @@ namespace Controll.Hosting.Tests
                     {"param1", "param1value"}
                 };
             
-            hub.MockedMessageQueueService
+            hub.MockedControllService
                 .Setup(x => x.InsertActivityInvocation(
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
@@ -325,7 +325,7 @@ namespace Controll.Hosting.Tests
 
             Assert.AreNotEqual(Guid.Empty, ticket);
 
-            hub.MockedMessageQueueService
+            hub.MockedControllService
                 .Verify(x => x.InsertActivityInvocation(
                     It.Is<Zombie>(z => z.Name == "zombiename"),
                     It.Is<Activity>(a => a.Name == "activityname"),
@@ -351,8 +351,7 @@ namespace Controll.Hosting.Tests
             var hub = new TestableClientHub(
                 controllRepository,
                 connection,
-                new Mock<IMessageQueueService>(),
-                new Mock<IActivityMessageLogService>(),
+                new Mock<IControllService>(),
                 new Mock<IMembershipService>(), 
                 mockedSession);
 
@@ -382,27 +381,22 @@ namespace Controll.Hosting.Tests
             public TestableClientHub(
                 IControllRepository controllRepository,
                 Mock<IConnection> connection,
-                Mock<IMessageQueueService> messageQueueService,
-                Mock<IActivityMessageLogService> activityService,
+                Mock<IControllService> controllService,
                 Mock<IMembershipService> membershipService,
                 Mock<ISession> mockedSession)
                 : base(
-                    controllRepository,
-                    membershipService.Object,
-                    messageQueueService.Object,
+                    controllRepository,controllService.Object,
                     mockedSession.Object)
             {
                 ControllRepository = controllRepository;
                 MockedConnection = connection;
-                MockedMessageQueueService = messageQueueService;
-                MockedActivityService = activityService;
+                MockedControllService = controllService;
                 MembershipService = membershipService;
                 MockedSession = mockedSession;
             }
 
             public Mock<IConnection> MockedConnection { get; set; }
-            public Mock<IMessageQueueService> MockedMessageQueueService { get; set; }
-            public Mock<IActivityMessageLogService> MockedActivityService { get; set; }
+            public Mock<IControllService> MockedControllService { get; set; }
             public Mock<IMembershipService> MembershipService { get; set; }
             public Mock<ISession> MockedSession { get; set; }
             public IControllRepository ControllRepository { get; set; }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Controll.Client;
+using Controll.Common;
 using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Controll.Hosting.NHibernate;
@@ -52,8 +53,6 @@ namespace Controll.IntegrationTests
             int reciveCount = 0;
             zombie.Pinged += (ticket) =>
                 {
-                    var updateResult = tickets.TryUpdate(ticket, true, false);
-                    Assert.True(updateResult);
                     Interlocked.Increment(ref reciveCount);
                     zombie.ConfirmMessageDelivery(ticket);
                 };
@@ -70,7 +69,7 @@ namespace Controll.IntegrationTests
             }
 
             Console.Write("Asserting that all tickets have been recieved at zombie... ");
-            Assert.True(tickets.All(kv => kv.Value), "Expected {0} pings, got {1}", range, reciveCount);
+            Assert.AreEqual(range, reciveCount);
             Console.WriteLine("OK!\n\n\n\n");
 
             zombie.HubConnection.Stop();
@@ -246,8 +245,8 @@ namespace Controll.IntegrationTests
             client.ActivityMessageRecieved += (sender, args) => Interlocked.Increment(ref recieveCount3);
             tickets.AsParallel().ForAll(i =>
                 {
-                    zombie.ActivityNotify(i, "notification");
-                    zombie.ActivityCompletedMessage(i, "completed");
+                    zombie.ActivityMessage(i, ActivityMessageType.Notification, "notification");
+                    zombie.ActivityMessage(i, ActivityMessageType.Completed, "completed");
                 });
 
             totalWait = TimeSpan.FromSeconds(0);
@@ -343,7 +342,7 @@ namespace Controll.IntegrationTests
 
             Assert.True(resetEvent.WaitOne(TimeSpan.FromSeconds(7)));
 
-            zombie.ActivityNotify(ticket, "notify!");
+            zombie.ActivityMessage(ticket, ActivityMessageType.Notification, "notify!");
 
             var hasRecievedCorrectNumberOfMessages = resetEvent2.WaitOne(TimeSpan.FromSeconds(2));
 

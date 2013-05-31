@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
+using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR;
 using NHibernate;
 
@@ -12,11 +13,13 @@ namespace Controll.Hosting.Hubs
     public class BaseHub : Hub
     {
         protected readonly IControllRepository ControllRepository;
-        public ISession Session { get; private set; }
+        protected readonly IControllService ControllService;
+        internal ISession Session { get; private set; }
 
-        public BaseHub(ISession session, IControllRepository controllRepository)
+        public BaseHub(ISession session, IControllRepository controllRepository, IControllService controllService)
         {
             ControllRepository = controllRepository;
+            ControllService = controllService;
             Session = session;
         }
 

@@ -5,7 +5,7 @@ namespace Controll.Common
 {
     public interface IActivityDelegator
     {
-        Task ActivityMessage(Guid ticket, ActivityMessageType type, string message = null);
-        Task ActivityResult(Guid ticket, object result);
+        void ActivityMessage(Guid ticket, ActivityMessageType type, string message);
+        void ActivityResult(Guid ticket, object result);
     }
 }

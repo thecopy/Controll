@@ -76,14 +76,14 @@ namespace Controll.Zombie
             return _hubProxy.Invoke("SignOut");
         }
 
-        public Task ActivityResult(Guid ticket, object result)
+        public void ActivityResult(Guid ticket, object result)
         {
-            return _hubProxy.Invoke("ActivityResult", ticket, result);
+            _hubProxy.Invoke("ActivityResult", ticket, result).Wait();
         }
 
-        public Task ActivityMessage(Guid ticket, ActivityMessageType type, string message = null)
+        public void ActivityMessage(Guid ticket, ActivityMessageType type, string message = "")
         {
-            return _hubProxy.Invoke("ActivityMessage", ticket, type, message);
+            _hubProxy.Invoke("ActivityMessage", ticket, type, message).Wait();
         }
     }
 }

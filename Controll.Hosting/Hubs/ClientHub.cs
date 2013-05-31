@@ -24,18 +24,11 @@ namespace Controll.Hosting.Hubs
     [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
     public class ClientHub : BaseHub
     {
-        private readonly IMembershipService _membershipService;
-        private readonly IMessageQueueService _messageQueueService;
-
         public ClientHub(IControllRepository controllRepository,
-                         IMembershipService membershipService,
-                         IMessageQueueService messageQueueService,
+                         IControllService controllService,
                          ISession session)
-            : base(session, controllRepository)
-        {
-            _membershipService = membershipService;
-            _messageQueueService = messageQueueService;
-        }
+            : base(session, controllRepository, controllService)
+        {}
 
         public void SignIn()
         {
@@ -73,18 +66,7 @@ namespace Controll.Hosting.Hubs
             }
         }
         // ReSharper restore SuspiciousTypeConversion.Global
-
-        public bool RegisterUser(string userName, string password, string email)
-        {
-            using (var transaction = Session.BeginTransaction())
-            {
-                _membershipService.AddUser(userName, password, email);
-                transaction.Commit();
-            }
-            return true;
-        }
-
-
+        
         public bool IsZombieOnline(string zombieName)
         {
             using (var transaction = Session.BeginTransaction())
@@ -120,11 +102,11 @@ namespace Controll.Hosting.Hubs
                 if (activity == null)
                     throw new Exception("Activity not found. Searched for activity with key " + activityKey + ". Zombie has " + zombie.Activities.Count + " installed activities");
 
-                var queueItem = _messageQueueService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                var queueItem = ControllService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
-                _messageQueueService.ProcessQueueItem(queueItem);
+                ControllService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
         }
@@ -159,10 +141,10 @@ namespace Controll.Hosting.Hubs
                 if (zombie == null)
                     throw new Exception("Could not find zombie " + zombieName);
 
-                var queueItem = _messageQueueService.InsertPingMessage(zombie, Context.ConnectionId);
+                var queueItem = ControllService.InsertPingMessage(zombie, Context.ConnectionId);
                 transaction.Commit();
 
-                _messageQueueService.ProcessQueueItem(queueItem);
+                ControllService.ProcessQueueItem(queueItem);
                 return queueItem.Ticket;
             }
         }

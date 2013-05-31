@@ -14,13 +14,11 @@ namespace SimpleSamplePlugin
     {
         public void Execute(IActivityContext context)
         {
-            context.Started();
-
             var command = context.CommandName;
             if (command == "do-nothing")
             {
                 string callerName = context.Parameters["name"];
-                context.Finish("Hello " + callerName);
+                context.Notify("Hello " + callerName);
             }
             else if(command == "intermidiate-command")
             {
@@ -64,12 +62,10 @@ namespace SimpleSamplePlugin
                     };
 
                 context.Result(commandViewModel);
-                context.Finish("OK");
             }else if (command == "intermidiate-command-result")
             {
                 context.Notify("You entered the text '" + context.Parameters["text"] + "'");
                 context.Notify("You chose the value '" + context.Parameters["picked-value"] + "'");
-                context.Finish("OK");
             }
         }
 

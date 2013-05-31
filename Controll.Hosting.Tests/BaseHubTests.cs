@@ -35,12 +35,13 @@ namespace Controll.Hosting.Tests
         private TestableBaseHub GetTestableBaseHub()
         {
             var mockedControllRepository = new Mock<IControllRepository>();
+            var mockedControllService = new Mock<IControllService>();
             var mockPipeline = new Mock<IHubPipelineInvoker>();
             var mockedConnectionObject = new Mock<IConnection>();
             var mockedSession = new Mock<ISession>();
             mockedSession.Setup(s => s.BeginTransaction()).Returns(new Mock<ITransaction>().Object);
 
-            var hub = new TestableBaseHub(mockedControllRepository, mockedSession)
+            var hub = new TestableBaseHub(mockedControllRepository, mockedControllService, mockedSession)
             {
                 Clients = new HubConnectionContext(mockPipeline.Object, mockedConnectionObject.Object, "ZombieHub", "conn-id", new StateChangeTracker())
             };
@@ -51,15 +52,18 @@ namespace Controll.Hosting.Tests
         private class TestableBaseHub : BaseHub
         {
             public Mock<IControllRepository> MockedControllRepository { get; private set; }
+            public Mock<IControllService> MockedControllService { get; set; }
             public Mock<ISession> MockedSession { get; private set; }
             public Mock<IRequest> MockedRequest { get; private set; }
 
             public TestableBaseHub(
                 Mock<IControllRepository> mockedControllRepository,
+                Mock<IControllService> mockedControllService,
                 Mock<ISession> mockedSession)
-                : base(mockedSession.Object, mockedControllRepository.Object)
+                : base(mockedSession.Object, mockedControllRepository.Object, mockedControllService.Object)
             {
                 MockedControllRepository = mockedControllRepository;
+                MockedControllService = mockedControllService;
                 MockedSession = mockedSession;
 
                 MockedRequest = new Mock<IRequest>();

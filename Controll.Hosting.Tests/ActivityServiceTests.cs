@@ -27,7 +27,7 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction(IsolationLevel.ReadUncommitted))
             {
-                var activityService = new ActivityMessageLogService(session);
+                var activityService = new ControllService(session, null, null);
 
                 var user = new ControllUser()
                     {
@@ -125,7 +125,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToInsertActivityLogMessage()
         {
             var mockedSession = new Mock<ISession>();
-            var activityService = new ActivityMessageLogService(mockedSession.Object);
+            var activityService = new ControllService(mockedSession.Object, null, null);
 
 
             var invocationTicket = Guid.NewGuid();
@@ -155,7 +155,7 @@ namespace Controll.Hosting.Tests
             using (var session = SessionFactory.OpenSession())
             using (session.BeginTransaction(IsolationLevel.ReadUncommitted))
             {
-                var activityService = new ActivityMessageLogService(session);
+                var activityService = new ControllService(session, null, null);
 
                 var activity = new Activity
                     {

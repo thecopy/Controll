@@ -67,16 +67,12 @@ namespace Controll.Hosting
                   .To<ControllRepository>()
                   .InTransientScope();
 
-            _kernel.Bind<IMessageQueueService>()
-                  .To<MessageQueueService>()
+            _kernel.Bind<IControllService>()
+                  .To<ControllService>()
                   .InTransientScope();
 
             _kernel.Bind<IMembershipService>()
                   .To<MembershipService>()
-                  .InTransientScope();
-
-            _kernel.Bind<IActivityMessageLogService>()
-                  .To<ActivityMessageLogService>()
                   .InTransientScope();
 
             NinjectDependencyResolver = new NinjectDependencyResolver(_kernel);

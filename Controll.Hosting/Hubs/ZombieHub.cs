@@ -17,17 +17,11 @@ namespace Controll.Hosting.Hubs
     [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
     public class ZombieHub : BaseHub
     {
-        private readonly IMessageQueueService _messageQueueService;
-        private readonly IActivityMessageLogService _activityService;
-
         public ZombieHub(IControllRepository controllRepository,
-                         IMessageQueueService messageQueueService,
-                         IActivityMessageLogService activityService,
-                         ISession session): base(session, controllRepository)
-        {
-            _messageQueueService = messageQueueService;
-            _activityService = activityService;
-        }
+                         IControllService controllService,
+                         ISession session)
+            : base(session, controllRepository, controllService)
+        {}
 
         [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SignIn()
@@ -40,8 +34,8 @@ namespace Controll.Hosting.Hubs
                 zombie.ConnectedClients.Add(new ControllClient {ConnectionId = Context.ConnectionId});
 
                 Session.Update(zombie);
-                _messageQueueService.ProcessUndeliveredMessagesForZombie(zombie);
-
+                ControllService.ProcessUndeliveredMessagesForZombie(zombie);
+                
                 transaction.Commit();
             }
         }
@@ -68,7 +62,7 @@ namespace Controll.Hosting.Hubs
             using (var transaction = Session.BeginTransaction())
             {
                 Console.WriteLine("A Zombie confirms delivery of ticket " + ticket);
-                _messageQueueService.MarkQueueItemAsDelivered(ticket);
+                ControllService.MarkQueueItemAsDelivered(ticket);
                 transaction.Commit();
             }
         }
@@ -113,8 +107,8 @@ namespace Controll.Hosting.Hubs
         {
             using (var transaction = Session.BeginTransaction())
             {
-                _activityService.InsertActivityLogMessage(ticket, type, message);
-                _messageQueueService.InsertActivityMessage(ticket, type, message);
+                ControllService.InsertActivityLogMessage(ticket, type, message);
+                ControllService.InsertActivityMessage(ticket, type, message);
 
                 transaction.Commit();
             }
@@ -127,7 +121,7 @@ namespace Controll.Hosting.Hubs
             Console.WriteLine("Activity result recieved.");
             using (var transaction = Session.BeginTransaction())
             {
-                _messageQueueService.InsertActivityResult(ticket, result.CreateConcreteClass());
+                ControllService.InsertActivityResult(ticket, result.CreateConcreteClass());
                 transaction.Commit();
             }
         }
