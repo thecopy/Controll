@@ -125,6 +125,12 @@ namespace Controll.Hosting.Tests
                             {
                                 InvocationTicket = ticket,
                                 Activity = activity,
+                                CommandName = "command",
+                                Started = date,
+                                Parameters = new Dictionary<string, string>
+                                    {
+                                        {"key", "val"}
+                                    },
                                 LogMessages = new List<LogMessage>
                                     {
                                         new LogMessage
@@ -145,8 +151,12 @@ namespace Controll.Hosting.Tests
 
                 Assert.AreEqual(1, user.LogBooks.Count);
                 var book = user.LogBooks[0];
+
                 Assert.AreEqual(ticket, book.InvocationTicket);
                 Assert.AreEqual(activity.Id, book.Activity.Id);
+                Assert.AreEqual("command", book.CommandName);
+                Assert.AreEqual("key", book.Parameters.ElementAt(0).Key);
+                Assert.AreEqual("val", book.Parameters.ElementAt(0).Value);
 
                 Assert.AreEqual(1, book.LogMessages.Count);
                 var message = book.LogMessages[0];

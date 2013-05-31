@@ -8,6 +8,8 @@ namespace Controll.Common.ViewModels
 {
     public class LogBookViewModel
     {
+        public Guid InvocationTicket { get; set; }
+
         public string ActivityName { get; set; }
         public string CommandLabel { get; set; }
 

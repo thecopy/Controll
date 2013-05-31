@@ -131,5 +131,10 @@ namespace Controll.Client
         {
             return _hubProxy.Invoke("AddZombie", zombieName);
         }
+
+        public Task<IEnumerable<LogBookViewModel>> GetLogBooks(int take, int skip)
+        {
+            return _hubProxy.Invoke<IEnumerable<LogBookViewModel>>("GetLogBooks", take, skip);
+        }
     }
 }

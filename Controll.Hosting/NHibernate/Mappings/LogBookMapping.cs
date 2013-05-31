@@ -17,6 +17,14 @@ namespace Controll.Hosting.NHibernate.Mappings
             HasMany(x => x.LogMessages).Cascade.All();
             Map(x => x.InvocationTicket);
             References(x => x.Activity);
+            Map(x => x.Started);
+            Map(x => x.CommandName);
+
+            HasMany(x => x.Parameters)
+                .AsMap<string>(index => index.Column("InvokedParameterName").Type<string>(),
+                               element => element.Column("InvokedParameterValue").Type<string>())
+                .Table("LoggedParameters")
+                .Cascade.All();
         }
     }
 }

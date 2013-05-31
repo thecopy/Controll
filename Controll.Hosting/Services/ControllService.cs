@@ -40,7 +40,20 @@ namespace Controll.Hosting.Services
                 Sender = zombie.Owner,
                 RecievedAtCloud = DateTime.Now
             };
+
             _session.Save(queueItem);
+
+            var user = (ControllUser)queueItem.Sender;
+            user.LogBooks.Add(new LogBook
+                {
+                    Activity = activity,
+                    Started = DateTime.Now,
+                    CommandName = commandName,
+                    InvocationTicket = queueItem.Ticket,
+                    Parameters = parameters
+                });
+
+            _session.Update(user);
 
             return queueItem;
         }

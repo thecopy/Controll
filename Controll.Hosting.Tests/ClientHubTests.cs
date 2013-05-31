@@ -8,6 +8,7 @@ using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
+using FizzWare.NBuilder;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
 using Moq;
@@ -57,13 +58,53 @@ namespace Controll.Hosting.Tests
 
             var hub = GetTestableClientHub(connectionId, clientState, user, mockedRepository.Object, principal: mockedPrinicipal);
 
-            hub.MockedSession.Setup(x => x.Load<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
+            hub.MockedSession.Setup(x => x.Get<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
             hub.MockedSession.Setup(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user))).Verifiable();
 
             hub.AddZombie("zombieName");
 
             hub.MockedSession.Verify(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user)), Times.Once());
         }
+
+        [Test]
+        public void ShouldBeAbleToGetLogs()
+        {
+            var mockedRepository = new Mock<IControllRepository>();
+            var user = new ControllUser
+                {
+                    UserName = "Erik",
+                    Password = "password",
+                    Id = 1,
+                    LogBooks = new List<LogBook>
+                        {
+                            Builder<LogBook>.CreateNew()
+                                            .With(x => x.Activity = Builder<Activity>.CreateNew().Build())
+                                            .And(x => x.LogMessages = new List<LogMessage>
+                                                {
+                                                    Builder<LogMessage>.CreateNew().Build()
+                                                })
+                                            .Build()
+                        }
+                };
+
+            var clientState = new StateChangeTracker();
+            const string connectionId = "conn-id";
+
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+
+            var hub = GetTestableClientHub(connectionId, clientState, user, mockedRepository.Object, mockedPrinicipal);
+
+            hub.MockedSession.Setup(x => x.Get<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
+
+            var books = hub.GetLogBooks(10, 0).ToList();
+
+            Assert.AreEqual(1, books.Count());
+            Assert.AreEqual(1, books.ElementAt(0).Messages.Count());
+        }
+
         [Test]
         public void ShouldNotBeAbleToAddZombieIfNameAlreadyExists()
         {

@@ -103,10 +103,12 @@ namespace Controll.Hosting.Hubs
                     throw new Exception("Activity not found. Searched for activity with key " + activityKey + ". Zombie has " + zombie.Activities.Count + " installed activities");
 
                 var queueItem = ControllService.InsertActivityInvocation(zombie, activity, parameters, commandName, Context.ConnectionId);
+                
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
                 ControllService.ProcessQueueItem(queueItem);
+
                 return queueItem.Ticket;
             }
         }
@@ -148,5 +150,37 @@ namespace Controll.Hosting.Hubs
                 return queueItem.Ticket;
             }
         }
+
+        public IEnumerable<LogBookViewModel> GetLogBooks(int take, int skip)
+        {
+            if(take > 50)
+                throw new InvalidOperationException("Cannot take more than 50");
+
+            using (var transaction = Session.BeginTransaction())
+            {
+                var user = GetUser();
+
+                if (user.LogBooks is INHibernateProxy)
+                    Session.GetSessionImplementation().PersistenceContext.Unproxy(user.Zombies);
+
+                var books = user.LogBooks.Skip(skip).Take(take).Select(x => new LogBookViewModel
+                    {
+                        ActivityName = x.Activity.Name,
+                        CommandLabel = x.CommandName,
+                        Delivered = x.Started,
+                        InvocationTicket = x.InvocationTicket,
+                        Parameters = x.Parameters,
+                        Messages = x.LogMessages.Select(y => new LogMessageViewModel
+                            {
+                                Date = y.Date,
+                                Message = y.Message,
+                                MessageType = y.Type
+                            })
+                    });
+
+                transaction.Commit();
+                return books;
+            }
+        } 
     }
 }

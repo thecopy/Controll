@@ -87,8 +87,8 @@ namespace Controll.IntegrationTests
             client.HubConnection.Stop();
         }
 
-        // This is a monster test. It tests: Logging in for both zombie and client,
-        // sending and recieving activity messages, invocations and results.
+        // This is a monster test ("smoke test"). It tests: Logging in for both zombie and client,
+        // sending and recieving activity messages, invocations, results and logging.
         [Test]
         public void ShouldBeAbleToActivateActivity()
         {
@@ -210,7 +210,7 @@ namespace Controll.IntegrationTests
                     activityResultRecieved.Set();
                 };
 
-            zombie.ActivityMessage(activityTicket, ActivityMessageType.Started);
+            zombie.ActivityMessage(activityTicket, ActivityMessageType.Started, "start!");
 
             Assert.True(activityMessageEvent.WaitOne(6000), "Client did not recieve activity started message");
             Assert.AreEqual(ActivityMessageType.Started, messageType);
@@ -259,6 +259,29 @@ namespace Controll.IntegrationTests
             Assert.AreEqual(mockedParam.Key, convertedParam.Key);
             Assert.AreEqual(mockedParam.Value, convertedParam.Value);
 
+            #endregion
+
+            #region Logging
+
+            var logging = client.GetLogBooks(10, 0).Result.ToList();
+
+            Assert.AreEqual(1, logging.Count);
+            var book = logging.ElementAt(0);
+
+            Assert.AreEqual("Mocked Activity", book.ActivityName);
+            Assert.AreEqual(ticket, book.InvocationTicket);
+            Assert.AreEqual("commandName", book.CommandLabel);
+            Assert.AreEqual(sentParameters, book.Parameters);
+
+            Assert.AreEqual(2, book.Messages.Count());
+            var message1 = book.Messages.ElementAt(0);
+            var message2 = book.Messages.ElementAt(1);
+
+            Assert.AreEqual("start!", message1.Message);
+            Assert.AreEqual(ActivityMessageType.Started, message1.MessageType);
+
+            Assert.AreEqual("result", message2.Message);
+            Assert.AreEqual(ActivityMessageType.Completed, message2.MessageType);
             #endregion
 
             client.HubConnection.Stop();
