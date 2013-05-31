@@ -16,8 +16,8 @@ namespace Controll.Hosting.NHibernate.Mappings
             Id(x => x.Ticket);
             Map(x => x.Delivered);
             Map(x => x.RecievedAtCloud);
-            References(x => x.Reciever).Not.Nullable();
-            References(x => x.Sender).Not.Nullable();
+            References(x => x.Reciever).Not.Nullable().LazyLoad(Laziness.NoProxy);
+            References(x => x.Sender).Not.Nullable().LazyLoad(Laziness.NoProxy);
         }
     }
 }

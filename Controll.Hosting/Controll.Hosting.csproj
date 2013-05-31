@@ -155,9 +155,10 @@
     <Compile Include="Models\ParameterDescriptor.cs" />
     <Compile Include="Models\PickerValue.cs" />
     <Compile Include="Models\Queue\ActivityResultQueueItem.cs" />
+    <Compile Include="Models\LogBook.cs" />
     <Compile Include="Models\Queue\PingQueueItem.cs" />
     <Compile Include="Models\Queue\ActivityInvocationQueueItem.cs" />
-    <Compile Include="Models\ActivityMessageLogItem.cs" />
+    <Compile Include="Models\LogMessage.cs" />
     <Compile Include="Models\ControllClient.cs" />
     <Compile Include="Models\ControllUser.cs" />
     <Compile Include="Infrastructure\ControllUserExtensions.cs" />
@@ -167,6 +168,8 @@
     <Compile Include="NHibernate\Mappings\ActivityCommandMap.cs" />
     <Compile Include="NHibernate\Mappings\ActivitytResultQueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\ClientCommunicatorMap.cs" />
+    <Compile Include="NHibernate\Mappings\LogBookMapping.cs" />
+    <Compile Include="NHibernate\Mappings\LogMessageMapping.cs" />
     <Compile Include="NHibernate\Mappings\ParameterDescriptorMap.cs" />
     <Compile Include="Models\Zombie.cs" />
     <Compile Include="Infrastructure\ZombieExtensions.cs" />
@@ -181,6 +184,7 @@
     <Compile Include="NinjectDependecyResolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\ControllRepository.cs" />
+    <Compile Include="Repositories\IControllRepository.cs" />
     <Compile Include="Services\ControllService.cs" />
     <Compile Include="Services\IControllService.cs" />
     <Compile Include="Services\IMembershipService.cs" />
@@ -217,6 +221,9 @@
       <Project>{ACD1BF70-B936-4F32-BC70-BE93A4787E41}</Project>
       <Name>Controll.Common</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="NHibernate\Queries\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -9,7 +9,6 @@ namespace Controll.Hosting.Tests
 {
     public class AssertionHelperTests
     {
-
         [Test]
         public void ShouldAssertFailIfTwoListsAreNotEqual()
         {

@@ -399,7 +399,7 @@ namespace Controll.Hosting.Tests
             public Mock<IControllService> MockedControllService { get; set; }
             public Mock<IMembershipService> MembershipService { get; set; }
             public Mock<ISession> MockedSession { get; set; }
-            public IControllRepository ControllRepository { get; set; }
+            public new IControllRepository ControllRepository { get; set; }
         }
     }
 }

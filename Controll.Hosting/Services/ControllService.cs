@@ -90,12 +90,13 @@ namespace Controll.Hosting.Services
 
         public void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
-            var queueItem = _session.Get<QueueItem>(ticket);
+            var queueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
+            
+            var user = (ControllUser) queueItem.Sender;
+            AddLogMessageToLog(user, ticket, queueItem.Activity, type, message);
+
             // We want to send this to the sender aka the invocator
             var connectedClients = queueItem.Sender.ConnectedClients;
-            Console.WriteLine("Will send message to someone which have "
-                + connectedClients.Count() + " clients");
-
             foreach (var connectionId in connectedClients.Select(x => x.ConnectionId))
             {
                 Console.Write("Sending " + type + " to " + connectionId + ": ");
@@ -103,6 +104,31 @@ namespace Controll.Hosting.Services
                 Console.WriteLine(" Done");
             }
         }
+
+        private void AddLogMessageToLog(ControllUser user, Guid ticket, Activity activity, ActivityMessageType type, String message)
+        {
+            var book = user.LogBooks.SingleOrDefault(x => x.InvocationTicket == ticket);
+            if (book == null)
+            {
+                book = new LogBook
+                {
+                    Activity = activity,
+                    InvocationTicket = ticket,
+                    LogMessages = new List<LogMessage>()
+                };
+                user.LogBooks.Add(book);
+            }
+
+            book.LogMessages.Add(new LogMessage
+            {
+                Date = DateTime.Now,
+                Message = message,
+                Type = type
+            });
+
+            _session.Update(user);
+        }
+
 
         public void InsertActivityResult(Guid ticket, ActivityCommand intermidiateCommand)
         {
@@ -146,68 +172,6 @@ namespace Controll.Hosting.Services
                 actions[queueItem.Type](queueItem, connectionId);
                 Console.WriteLine("Sending " + queueItem.Type + " to " + connectionId);
             }
-        }
-
-        public void InsertActivityLogMessage(Guid ticket, ActivityMessageType type, string message)
-        {
-            var invocationQueueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
-
-            var messageLogItem = new ActivityInvocationLogMessage
-            {
-                Date = DateTime.Now,
-                Type = type,
-                Message = message
-            };
-
-            invocationQueueItem.MessageLog.Add(messageLogItem);
-
-            _session.Update(invocationQueueItem);
-        }
-
-        public ICollection<ActivityInvocationLogMessage> GetActivityMessagesForInvocationTicket(Guid ticket)
-        {
-            var invocationQueueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
-
-            return invocationQueueItem.MessageLog;
-        }
-
-        public ActivityInvocationQueueItem GetActivityInvocationFromTicket(Guid ticket)
-        {
-            var invocationQueueItem = _session.Get<ActivityInvocationQueueItem>(ticket);
-
-            return invocationQueueItem;
-        }
-
-        public IList<ActivityInvocationLogBookViewModel> GetActivityLog(Zombie zombie)
-        {
-            var queueItems = _session.CreateCriteria<ActivityInvocationQueueItem>()
-                                     .CreateCriteria("Reciever")
-                                     .Add(Restrictions.Eq("Id", zombie.Id))
-                                     .List<ActivityInvocationQueueItem>();
-
-            var returnList = new List<ActivityInvocationLogBookViewModel>();
-            foreach (var queueItem in queueItems)
-            {
-                var item = new ActivityInvocationLogBookViewModel();
-                var command = queueItem.Activity.Commands.SingleOrDefault(c => c.Name == queueItem.CommandName);
-
-                item.ActivityName = queueItem.Activity.Name;
-                item.CommandLabel = command != null ? command.Label : queueItem.CommandName + " (intermidiate)";
-                item.Parameters = queueItem.Parameters;
-                item.Delivered = queueItem.Delivered;
-
-                item.Messages = queueItem.MessageLog.Select(msg =>
-                                                            new ActivityInvocationLogMessageViewModel
-                                                            {
-                                                                Date = msg.Date,
-                                                                Message = msg.Message,
-                                                                MessageType = msg.Type
-                                                            }).ToList();
-                returnList.Add(item);
-            }
-
-            return returnList;
-
         }
 
         public IList<ActivityIntermidiateCommandViewModel> GetUndeliveredIntermidiates(Zombie zombie)

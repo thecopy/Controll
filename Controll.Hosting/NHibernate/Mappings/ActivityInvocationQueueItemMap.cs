@@ -22,17 +22,6 @@ namespace Controll.Hosting.NHibernate.Mappings
                                element => element.Column("InvokedParameterValue").Type<string>())
                 .Table("InvocationParameters")
                 .Cascade.All();
-
-            HasMany(x => x.MessageLog)
-                .Cascade.AllDeleteOrphan()
-                .KeyColumn("Id")
-                .Component(c =>
-                    {
-                        c.Map(x => x.Date);
-                        c.Map(x => x.Message);
-                        c.Map(x => x.Type);
-                    }
-                );
         }
     }
 }

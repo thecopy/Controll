@@ -96,6 +96,68 @@ namespace Controll.Hosting.Tests
         }
 
         [Test]
+        public void ShouldBeAbleToAddAndPersistControllUserLogs()
+        {
+            using (var session = SessionFactory.OpenSession())
+            using (session.BeginTransaction())
+            {
+                var date = DateTime.Now;
+                var ticket = Guid.NewGuid();
+                var activity = new Activity()
+                    {
+                        Name = "activity",
+                        LastUpdated = date,
+                        Version = new Version(1, 0, 0, 0)
+                    };
+                var user = new ControllUser
+                    {
+                        UserName = "username",
+                        Email = "email",
+                        Password = "password"
+                    };
+
+                session.Save(user);
+                session.Save(activity);
+
+                user.LogBooks = new List<LogBook>
+                    {
+                        new LogBook
+                            {
+                                InvocationTicket = ticket,
+                                Activity = activity,
+                                LogMessages = new List<LogMessage>
+                                    {
+                                        new LogMessage
+                                            {
+                                                Date = date,
+                                                Message = "message",
+                                                Type = ActivityMessageType.Notification
+                                            }
+                                    }
+                            }
+                    };
+
+                session.Update(user);
+
+                int id = user.Id;
+                user = null;
+                user = session.Get<ControllUser>(id);
+
+                Assert.AreEqual(1, user.LogBooks.Count);
+                var book = user.LogBooks[0];
+                Assert.AreEqual(ticket, book.InvocationTicket);
+                Assert.AreEqual(activity.Id, book.Activity.Id);
+
+                Assert.AreEqual(1, book.LogMessages.Count);
+                var message = book.LogMessages[0];
+
+                Assert.AreEqual("message", message.Message);
+                Assert.AreEqual(ActivityMessageType.Notification, message.Type);
+                Assert.AreEqual(date, message.Date);
+            }
+        }
+
+        [Test]
         public void ShouldBeAbleToAddAndPersistZombie()
         {
             using (var session = SessionFactory.OpenSession())

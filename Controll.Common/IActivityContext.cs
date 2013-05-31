@@ -6,7 +6,7 @@ namespace Controll.Common
     {
         IDictionary<string, string> Parameters { get; }
         string CommandName { get; }
-        void Notify(string message);
+        void Message(ActivityMessageType type, string message);
         void Result(object result);
     }
 }

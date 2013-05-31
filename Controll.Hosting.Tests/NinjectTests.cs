@@ -4,7 +4,6 @@ using Controll.Hosting.Hubs;
 using Controll.Hosting.Infrastructure;
 using Microsoft.AspNet.SignalR;
 using NUnit.Framework;
-using NUnit.Framework;
 using NHibernate;
 
 namespace Controll.Hosting.Tests

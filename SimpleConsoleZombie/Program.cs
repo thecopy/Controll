@@ -59,7 +59,6 @@ namespace SimpleConsoleZombie
             if (string.IsNullOrEmpty(password)) zombieName = "zombieName";
 
             _service.Connect(username, password, zombieName).Wait();
-            
 
             Console.WriteLine("Connected!");
             Console.WriteLine("Type h or help for more information");

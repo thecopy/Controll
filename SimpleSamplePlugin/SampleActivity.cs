@@ -18,7 +18,7 @@ namespace SimpleSamplePlugin
             if (command == "do-nothing")
             {
                 string callerName = context.Parameters["name"];
-                context.Notify("Hello " + callerName);
+                context.Message(ActivityMessageType.Notification, "Hello " + callerName);
             }
             else if(command == "intermidiate-command")
             {
@@ -64,8 +64,8 @@ namespace SimpleSamplePlugin
                 context.Result(commandViewModel);
             }else if (command == "intermidiate-command-result")
             {
-                context.Notify("You entered the text '" + context.Parameters["text"] + "'");
-                context.Notify("You chose the value '" + context.Parameters["picked-value"] + "'");
+                context.Message(ActivityMessageType.Notification, "You entered the text '" + context.Parameters["text"] + "'");
+                context.Message(ActivityMessageType.Notification, "You chose the value '" + context.Parameters["picked-value"] + "'");
             }
         }
 

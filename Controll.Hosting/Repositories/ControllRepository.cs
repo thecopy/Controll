@@ -11,17 +11,6 @@ using NHibernate.Linq;
 
 namespace Controll.Hosting.Repositories
 {
-    public interface IControllRepository
-    {
-        ControllClient GetClientByConnectionId(string connectionId);
-        T GetClientByConnectionId<T>(string connectionId) where T:ClientCommunicator;
-
-        ControllUser GetUserFromUserName(string username);
-        ControllUser GetUserFromEmail(string email);
-
-        IList<QueueItem> GetUndeliveredQueueItemsForZombie(int zombieId);
-    }
-
     public class ControllRepository : IControllRepository
     {
         private readonly ISession _session;

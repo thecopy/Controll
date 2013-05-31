@@ -107,7 +107,6 @@ namespace Controll.Hosting.Hubs
         {
             using (var transaction = Session.BeginTransaction())
             {
-                ControllService.InsertActivityLogMessage(ticket, type, message);
                 ControllService.InsertActivityMessage(ticket, type, message);
 
                 transaction.Commit();

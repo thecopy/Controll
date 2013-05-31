@@ -63,8 +63,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModels\ActivityIntermidiateCommandViewModel.cs" />
-    <Compile Include="ViewModels\ActivityInvocationLogBookViewModel.cs" />
-    <Compile Include="ViewModels\ActivityInvocationLogMessageViewModel.cs" />
+    <Compile Include="ViewModels\LogBookViewModel.cs" />
+    <Compile Include="ViewModels\LogMessageViewModel.cs" />
     <Compile Include="ViewModels\ActivityViewModel.cs" />
     <Compile Include="ViewModels\ActivityCommandViewModel.cs" />
     <Compile Include="ViewModels\ParameterDescriptorViewModel.cs" />

@@ -23,10 +23,10 @@ namespace Controll.Zombie.Infrastructure
 
         public IDictionary<string, string> Parameters { get; private set; }
         public string CommandName { get; set; }
-        
-        public void Notify(string message)
+
+        public void Message(ActivityMessageType type, string message)
         {
-            _notify.Invoke(_ticket, ActivityMessageType.Notification, message);
+            _notify.Invoke(_ticket, type, message);
         }
 
         public void Result(object result)
