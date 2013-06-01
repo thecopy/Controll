@@ -10,18 +10,19 @@ using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
+using Microsoft.AspNet.SignalR;
 using NHibernate;
 
 namespace Controll.IntegrationTests
 {
     public class StandAloneServerProvider
     {
-        private static readonly ISessionFactory Factory = NHibernateHelper.GetSessionFactoryForTesting();
+        private ISessionFactory _factory;
         private IDisposable _serverApp;
-
+        
         private void Sweep()
         {
-            using(var session = Factory.OpenSession())
+            using(var session = _factory.OpenSession())
             using (var tx = session.BeginTransaction())
             {
                 var ccs = session.QueryOver<ControllClient>().List<ControllClient>();
@@ -36,25 +37,34 @@ namespace Controll.IntegrationTests
 
         public void Start()
         {
-            using (var session = Factory.OpenSession())
+            _factory = NHibernateHelper.GetSessionFactoryForTesting();
+            var server = new ControllStandAloneServer("http://*:10244/")
+                .UseBootstrapConfiguration(new ControllHostingConfiguration
+                    {
+                        UseCustomSessionFactory = true,
+                        CustomSessionFactory = _factory,
+                        ClearDatabase = true
+                    });
+
+            using (var session = _factory.OpenSession())
             using (var transaction = session.BeginTransaction())
             {
                 var repo = new ControllRepository(session);
 
                 session.Save(new ControllUser
-                    {
-                        Email = "email",
-                        Password = "password",
-                        UserName = "username"
-                    });
+                {
+                    Email = "email",
+                    Password = "password",
+                    UserName = "username"
+                });
 
                 var user = repo.GetUserFromUserName("username");
                 var zombie = new Hosting.Models.Zombie
-                    {
-                        Name = "zombieName",
-                        Owner = user,
-                        Activities = new List<Activity>()
-                    };
+                {
+                    Name = "zombieName",
+                    Owner = user,
+                    Activities = new List<Activity>()
+                };
                 user.Zombies.Add(zombie);
 
                 session.Update(user);
@@ -67,14 +77,6 @@ namespace Controll.IntegrationTests
 
                 transaction.Commit();
             }
-
-            var server = new ControllStandAloneServer("http://*:10244/")
-                .UseBootstrapConfiguration(new BootstrapConfiguration
-                    {
-                        UseCustomSessionFactory = true,
-                        CustomSessionFactory = Factory,
-                        ClearDatabase = true
-                    });
 
             _serverApp = server.Start();
         }

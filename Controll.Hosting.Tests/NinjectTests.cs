@@ -14,7 +14,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToResolveHubs()
         {
             Bootstrapper.Kernel = null;
-            Bootstrapper.ApplyConfiguration(new BootstrapConfiguration
+            Bootstrapper.ApplyConfiguration(new ControllHostingConfiguration
                 {
                     ConnectionStringAlias = "testing"
                 });
@@ -32,7 +32,7 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToInjectNewSessionInstancesIntoNewHubInstances()
         {
             Bootstrapper.Kernel = null;
-            Bootstrapper.ApplyConfiguration(new BootstrapConfiguration
+            Bootstrapper.ApplyConfiguration(new ControllHostingConfiguration
             {
                 ConnectionStringAlias = "testing"
             });

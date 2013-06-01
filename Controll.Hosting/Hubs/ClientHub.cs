@@ -1,21 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Security.Authentication;
-using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
-using Controll.Common;
 using Controll.Common.ViewModels;
 using Controll.Hosting.Helpers;
 using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
-using Microsoft.AspNet.SignalR;
 using NHibernate;
 using NHibernate.Proxy;
 
@@ -113,7 +104,7 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        public void AddZombie(string zombieName)
+        public ZombieViewModel AddZombie(string zombieName)
         {
             using (var transaction = Session.BeginTransaction())
             {
@@ -131,6 +122,8 @@ namespace Controll.Hosting.Hubs
 
                 Session.Save(zombie);
                 transaction.Commit();
+
+                return zombie.CreateViewModel();
             }
         }
 

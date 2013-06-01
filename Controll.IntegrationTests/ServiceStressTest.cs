@@ -20,7 +20,6 @@ namespace Controll.IntegrationTests
     {
         private const string LocalHostUrl = "http://erik-ws:10244/"; // Change this to your hostname (or localhost but machine-name works with Fiddler)
         
-
         [Test]
         public async Task ShouldBeAbleToHandle100SimultaneousOfflinePingMessages()
         {

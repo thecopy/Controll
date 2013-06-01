@@ -15,7 +15,7 @@ namespace Controll.Hosting.Tests
         [Test]
         public void ShouldBeAbleToDecideValidAndNonValidConfiguration()
         {
-            var configuration = new BootstrapConfiguration();
+            var configuration = new ControllHostingConfiguration();
 
             Assert.False(configuration.IsValid); // No Connection String
             configuration.ConnectionStringAlias = "connectionString";

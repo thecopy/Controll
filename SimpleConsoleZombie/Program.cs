@@ -144,8 +144,15 @@ namespace SimpleConsoleZombie
                 (IActivity) Activator.CreateInstance(activity)).Select(activityInstance => 
                     activityInstance.ViewModel));
 
-            _client.Synchronize(activitiyVms).Wait();
-            Console.WriteLine("Ok. Synchronized!");
+            try
+            {
+                _client.Synchronize(activitiyVms).Wait();
+                Console.WriteLine("Ok. Synchronized!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("An Error Occured: " + ex.GetBaseException().Message);
+            }
         }
 
         static private void List(string what, params string[] parameters)

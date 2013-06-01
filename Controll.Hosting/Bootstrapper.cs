@@ -1,13 +1,22 @@
 ﻿using System;
+using System.IO;
+using System.Net;
+using System.Security.Claims;
+using Controll.Hosting.Helpers;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Infrastructure;
 using Controll.Hosting.NHibernate;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR.Infrastructure;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.DataProtection;
+using Microsoft.Owin.Security.Forms;
 using NHibernate;
 using Ninject;
 using Ninject.Extensions.NamedScope;
+using Owin;
+using Owin.Types.Extensions;
 
 namespace Controll.Hosting
 {
@@ -22,7 +31,7 @@ namespace Controll.Hosting
 
         public static NinjectDependencyResolver NinjectDependencyResolver { get; private set; }
         
-        public static void ApplyConfiguration(BootstrapConfiguration configuration)
+        public static void ApplyConfiguration(ControllHostingConfiguration configuration)
         {
             if (!configuration.IsValid)
             {
@@ -77,6 +86,5 @@ namespace Controll.Hosting
 
             NinjectDependencyResolver = new NinjectDependencyResolver(_kernel);
         }
-
     }
 }

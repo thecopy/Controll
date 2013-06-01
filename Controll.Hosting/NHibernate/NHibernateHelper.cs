@@ -31,22 +31,12 @@ namespace Controll.Hosting.NHibernate
             if (mockedConnectionString == null)
                 throw new ConfigurationErrorsException("No ConnectionString named \"" + connectionStringAlias + "\"");
 
-            var schemaExportPath = Path.Combine("D:\\", "Mappings");
-            if (!Directory.Exists(schemaExportPath))
-                Directory.CreateDirectory(schemaExportPath);
-
             Configuration config = Fluently
                 .Configure()
                 .Database(MsSqlConfiguration.MsSql2008
-                                            //.ShowSql()
                                             .ConnectionString(mockedConnectionString.ConnectionString))
-                .Mappings(m =>
-                    {
-                        m.FluentMappings
-                         .AddFromAssemblyOf<ControllUser>();
-                        //m.AutoMappings.ExportTo(schemaExportPath);
-                        m.FluentMappings.ExportTo(schemaExportPath);
-                    })
+                .Mappings(m => m.FluentMappings
+                                .AddFromAssemblyOf<ControllUser>())
                 .Diagnostics(x => x.Enable())
                 .ExposeConfiguration(x => TreatConfiguration(x, cleanDb))
                 .BuildConfiguration();

@@ -38,7 +38,8 @@ namespace Controll.Hosting.Tests
 
             var user = new ControllUser
             {
-                UserName = "username"
+                UserName = "username",
+                LogBooks = new List<LogBook>()
             };
 
             var zombie = new Zombie

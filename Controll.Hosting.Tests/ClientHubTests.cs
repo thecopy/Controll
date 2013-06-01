@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Security.Claims;
+using Controll.Common.ViewModels;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Infrastructure;
 using Controll.Hosting.Models;
@@ -61,9 +62,11 @@ namespace Controll.Hosting.Tests
             hub.MockedSession.Setup(x => x.Get<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
             hub.MockedSession.Setup(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user))).Verifiable();
 
-            hub.AddZombie("zombieName");
+            var zombie = hub.AddZombie("zombieName");
 
             hub.MockedSession.Verify(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user)), Times.Once());
+
+            Assert.AreEqual("zombieName", zombie.Name);
         }
 
         [Test]
