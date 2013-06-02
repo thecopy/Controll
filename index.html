@@ -28,7 +28,7 @@
         <span class="ribbon-outer">
           <span class="ribbon-inner">
             <h1>Controll</h1>
-            <h2>Controll </h2>
+            <h2>Easy Remote Controlling though .NET, iOS, Android and the web</h2>
           </span>
           <span class="left-tail"></span>
           <span class="right-tail"></span>
@@ -49,12 +49,32 @@
         <h3>
 <a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+<p>To host your own stand alone server of Controll:</p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
+<pre><code>NuGet Install-Package Controll.Hosting -pre
 </code></pre>
+
+<pre><code>
+namespace ControllServer
+{
+    using Controll.Hosting;
+
+    public class Program
+    {
+        const string Url = "http://*:10244/";
+        public static void Main(string[] args)
+        {
+            var host = new ControllStandAloneServer(Url);
+            using(host.Start())
+            {
+                System.Console.WriteLine("Listening on {0}", Url);
+                System.Console.ReadLine();
+            }
+        }
+    }
+}
+</code></pre>
+
 
 <p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
 
