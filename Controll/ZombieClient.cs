@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Controll.Common;
 using Controll.Common.Authentication;
@@ -9,21 +7,28 @@ using Controll.Common.ViewModels;
 using Controll.Zombie;
 using Controll.Zombie.Infrastructure;
 using Microsoft.AspNet.SignalR.Client.Hubs;
-using Microsoft.AspNet.SignalR.Client.Transports;
-using Controll.Common;
-namespace Controll.Zombie
+
+namespace Controll.Client
 {
     public class ZombieClient : IZombieClient
     {
         private readonly string _url;
         private readonly IAuthenticationProvider _authentication;
+
         private IHubProxy _hubProxy;
+        private HubConnection _hubConnection;
+        
+        public HubConnection HubConnection
+        {
+            get { return _hubConnection; }
+        }
+        public string Url
+        {
+            get { return _url; }
+        }
 
         public event Action<InvocationInformation> InvocationRequest;
-        public event Action<Guid, string> ActivityCompleted;
         public event Action<Guid> Pinged;
-
-        public HubConnection HubConnection { get; private set; }
 
         public Task Connect(string username, string password, string zombieName)
         {
@@ -31,7 +36,7 @@ namespace Controll.Zombie
                 .Connect(username, password, zombieName)
                 .Then(connection =>
                     {
-                        HubConnection = connection;
+                        _hubConnection = connection;
                         _hubProxy = connection.CreateHubProxy("ZombieHub");
                         
                         SetupEvents();
@@ -44,7 +49,7 @@ namespace Controll.Zombie
         public ZombieClient(string url, IAuthenticationProvider authentication = null)
         {
             _url = url;
-            _authentication = authentication ?? new DefaultAuthenticationProvider(_url);
+            _authentication = authentication ?? new DefaultAuthenticationProvider(Url);
         }
 
         private void SetupEvents()

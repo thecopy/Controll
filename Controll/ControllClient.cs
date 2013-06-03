@@ -19,7 +19,12 @@ namespace Controll.Client
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
         public event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
-        
+
+        public string Url
+        {
+            get { return _url; }
+        }
+
         private void OnMessageDelivered(Guid ticket)
         {
             var handler = MessageDelivered;
@@ -41,6 +46,9 @@ namespace Controll.Client
 
         public ControllClient(string url, IAuthenticationProvider authenticationProvider)
         {
+            if(authenticationProvider == null)
+                throw new ArgumentNullException("authenticationProvider");
+
             _url = url;
             _authenticationProvider = authenticationProvider;
         }

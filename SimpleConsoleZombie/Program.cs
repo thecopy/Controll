@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Controll;
+using Controll.Client;
 using Controll.Zombie;
 using Controll.Common;
 using Controll.Common.ViewModels;
@@ -110,17 +111,17 @@ namespace SimpleConsoleZombie
         {
             try
             {
-                PluginService.Instance.GetActivityInstance(info.ActivityKey)
-                             .Execute(new DelegateActivityContext(info.Ticket, info.Parameter, info.CommandName, _client));
+                _client.ConfirmMessageDelivery(info.Ticket);
+
+                var activity = PluginService.Instance.GetActivityInstance(info.ActivityKey);
+                Console.WriteLine("Starting activity '{0}'.{1}", activity.ViewModel.Name, info.CommandName);
+                activity.Execute(new DelegateActivityContext(info.Ticket, info.Parameter, info.CommandName, _client));
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error starting activity: " + ex.Message);
                 _client.ActivityMessage(info.Ticket, ActivityMessageType.Failed, ex.Message);
-            }
-            finally
-            {
-                _client.ConfirmMessageDelivery(info.Ticket);
             }
         }
 

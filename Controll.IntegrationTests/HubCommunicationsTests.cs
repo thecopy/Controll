@@ -2,15 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Controll.Client;
 using Controll.Common;
-using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
-using Controll.Hosting;
-using Controll.Hosting.Models;
-using Controll.Hosting.NHibernate;
-using Controll.Hosting.Repositories;
 using Controll.Zombie;
-using NHibernate;
 using NUnit.Framework;
 using Newtonsoft.Json;
 using ControllClient = Controll.Client.ControllClient;
