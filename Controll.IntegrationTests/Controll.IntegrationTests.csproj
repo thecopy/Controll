@@ -112,10 +112,6 @@
       <Project>{33FDC200-B69F-4E45-BE7B-1A35D96312E5}</Project>
       <Name>Controll.Hosting</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Controll.Zombie\Controll.Zombie.csproj">
-      <Project>{56A82BCB-F5A7-45B6-9731-F99F415D7864}</Project>
-      <Name>Controll.Zombie</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Controll\Controll.Client.csproj">
       <Project>{f299089c-9b7e-4085-acf4-eb6701fc376a}</Project>
       <Name>Controll.Client</Name>

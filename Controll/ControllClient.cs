@@ -8,7 +8,7 @@ using Microsoft.AspNet.SignalR.Client.Hubs;
 
 namespace Controll.Client
 {
-    public class ControllClient
+    public class ControllClient : IControllClient
     {
         private readonly HubConnection _hubConnection;
         private readonly IHubProxy _hubProxy;
@@ -16,8 +16,6 @@ namespace Controll.Client
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
         public event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
-        
-        public HubConnection HubConnection { get { return _hubConnection; } }
         
         private void OnMessageDelivered(Guid ticket)
         {
@@ -46,27 +44,6 @@ namespace Controll.Client
             SetupEvents();
         }
 
-        public IEnumerable<ActivityViewModel> GetAvaiableActivities()
-        {
-            return _hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetAvaiableActivities").Result;
-        } 
-
-        public ActivityViewModel GetActivityDetails(Guid activityKey)
-        {
-            return _hubProxy.Invoke<ActivityViewModel>("GetActivityDetails", activityKey).Result;
-        }
-
-        public ControllClient(HubConnection connection, IHubProxy proxy)
-        {
-            this._hubProxy = proxy;
-            this._hubConnection = connection;
-        }
-
-        public IEnumerable<ActivityViewModel>GetActivitesInstalledOnZombie(string zombieName)
-        {
-            return _hubProxy.Invoke<IEnumerable<ActivityViewModel>>("GetActivitesInstalledOnZombie", zombieName).Result;
-        } 
-
         private void SetupEvents()
         {
             _hubProxy.On<Guid>("MessageDelivered", OnMessageDelivered);
@@ -74,32 +51,23 @@ namespace Controll.Client
             _hubProxy.On<Guid, object>("ActivityResult", OnActivityResult);
         }
 
-        public IEnumerable<ZombieViewModel> GetAllZombies()
+        public Task<IEnumerable<ZombieViewModel>> GetAllZombies()
         {
-            return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies").Result;
+            return _hubProxy.Invoke<IEnumerable<ZombieViewModel>>("GetAllZombies");
         } 
 
-        public Guid StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName)
+        public Task<Guid> StartActivity(
+            string zombieName, 
+            Guid activityKey, 
+            Dictionary<string, string> parameters, 
+            string commandName)
         {
-            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName).Result;
+            return _hubProxy.Invoke<Guid>("StartActivity", zombieName, activityKey, parameters, commandName);
         }
 
-        public Guid Ping(string zombieName)
+        public Task<Guid> Ping(string zombieName)
         {
-            var ticket = _hubProxy.Invoke<Guid>("PingZombie", zombieName).Result;
-
-            return ticket;
-        }
-
-        public Guid DownloadActivityAtZombie(string zombieName, Guid activityKey)
-        {
-            return _hubProxy.Invoke<Guid>("DownloadActivityAtZombie", zombieName, activityKey).Result;
-        }
-
-        public Task<bool> LogOnAsync(string userName, string password)
-        {
-            _hubProxy["userName"] = userName;
-            return _hubProxy.Invoke<bool>("LogOn", password);
+            return _hubProxy.Invoke<Guid>("PingZombie", zombieName);
         }
 
         public Task SignIn()
@@ -113,18 +81,8 @@ namespace Controll.Client
                         throw new Exception("Could not connect to server");
                     }
 
-                    _hubProxy.Invoke("SignIn");
+                    SignIn();
                 });
-        }
-
-        public bool RegisterUser(string username, string password, string email)
-        {
-            return _hubProxy.Invoke<bool>("RegisterUser", username, password, email).Result;
-        }
-
-        public void Disconnect()
-        {
-            _hubConnection.Stop();
         }
 
         public Task AddZombie(string zombieName)
@@ -135,6 +93,11 @@ namespace Controll.Client
         public Task<IEnumerable<LogBookViewModel>> GetLogBooks(int take, int skip)
         {
             return _hubProxy.Invoke<IEnumerable<LogBookViewModel>>("GetLogBooks", take, skip);
+        }
+
+        public void Disconnect()
+        {
+            _hubConnection.Stop();
         }
     }
 }

@@ -70,7 +70,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Authentication\DefaultAuthenticationProvider.cs" />
+    <Compile Include="Authentication\HttpHelper.cs" />
+    <Compile Include="Authentication\IAuthenticationProvider.cs" />
+    <Compile Include="Authentication\StreamExtensions.cs" />
+    <Compile Include="Authentication\TaskAsyncHelper.cs" />
     <Compile Include="ControllClient.cs" />
+    <Compile Include="Infrastructure\DelegateActivityContext.cs" />
+    <Compile Include="Infrastructure\InvocationInformation.cs" />
+    <Compile Include="IZombieClient.cs" />
     <Compile Include="Models\ActivityDownloadedAtZombieEventArgs.cs" />
     <Compile Include="Models\ActivityLogMessageEventArgs.cs" />
     <Compile Include="Models\ActivityResultEventArgs.cs" />
@@ -78,6 +86,8 @@
     <Compile Include="Models\ZombieActivityStarted.cs" />
     <Compile Include="Models\MessageDeliveredEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\PluginService.cs" />
+    <Compile Include="ZombieClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Controll.Common\Controll.Common.csproj">

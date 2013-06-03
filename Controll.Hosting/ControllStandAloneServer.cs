@@ -1,19 +1,10 @@
 ﻿using System;
-using System.IO;
-using System.Net;
-using System.Security.Claims;
 using Controll.Hosting.Helpers;
 using Controll.Hosting.Infrastructure;
-using Controll.Hosting.Repositories;
-using Controll.Hosting.Services;
 using Microsoft.AspNet.SignalR;
 using Microsoft.Owin.Hosting;
-using Microsoft.Owin.Security;
-using Microsoft.Owin.Security.DataProtection;
-using Microsoft.Owin.Security.Forms;
 using NHibernate;
 using Owin;
-using Owin.Types.Extensions;
 
 namespace Controll.Hosting
 {

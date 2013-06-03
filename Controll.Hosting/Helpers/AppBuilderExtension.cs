@@ -49,7 +49,7 @@ namespace Controll.Hosting.Helpers
                 SlidingExpiration = true,
                 Provider = new FormsAuthenticationProvider()
             };
-            app.SetDataProtectionProvider(app.GetDataProtectionProvider());
+            app.SetDataProtectionProvider(new DpapiDataProtectionProvider((string)app.Properties["host.AppName"]));
             app.UseFormsAuthentication(options);
 
             app.MapPath("/auth", builder => builder.UseHandler((req, res) =>

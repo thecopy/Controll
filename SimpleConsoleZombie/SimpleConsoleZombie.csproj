@@ -61,9 +61,9 @@
       <Project>{ACD1BF70-B936-4F32-BC70-BE93A4787E41}</Project>
       <Name>Controll.Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Controll.Zombie\Controll.Zombie.csproj">
-      <Project>{56a82bcb-f5a7-45b6-9731-f99f415d7864}</Project>
-      <Name>Controll.Zombie</Name>
+    <ProjectReference Include="..\Controll\Controll.Client.csproj">
+      <Project>{f299089c-9b7e-4085-acf4-eb6701fc376a}</Project>
+      <Name>Controll.Client</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
