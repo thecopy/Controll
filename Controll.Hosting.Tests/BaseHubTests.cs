@@ -31,6 +31,18 @@ namespace Controll.Hosting.Tests
 
             hub.MockedSession.Verify(x => x.Delete(It.Is<ControllClient>(cc => cc.ConnectionId == hub.Context.ConnectionId)), Times.Once());
         }
+
+        [Test]
+        public void ShouldRemoveClientFromUserWhenSigningOut()
+        {
+            var hub = GetTestableBaseHub();
+
+            hub.MockedControllRepository.Setup(x => x.GetClientByConnectionId(It.Is<String>(s => s == hub.Context.ConnectionId))).Returns(new ControllClient { ConnectionId = hub.Context.ConnectionId });
+
+            hub.SignOut();
+
+            hub.MockedSession.Verify(x => x.Delete(It.Is<ControllClient>(cc => cc.ConnectionId == hub.Context.ConnectionId)), Times.Once());
+        }
         
         private TestableBaseHub GetTestableBaseHub()
         {

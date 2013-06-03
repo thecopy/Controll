@@ -12,8 +12,8 @@ namespace Controll.Client
         event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
         event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
 
-        Task SignIn();
-        void Disconnect();
+        Task Connect(string username, string password);
+        void Stop();
 
         Task AddZombie(string zombieName);
 

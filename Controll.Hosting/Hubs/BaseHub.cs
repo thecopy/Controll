@@ -62,5 +62,16 @@ namespace Controll.Hosting.Hubs
 
             return null;
         }
+
+        public void SignOut()
+        {
+            using (var transaction = Session.BeginTransaction())
+            {
+                var client = ControllRepository.GetClientByConnectionId(Context.ConnectionId);
+                Session.Delete(client);
+
+                transaction.Commit();
+            }
+        }
     }
 }

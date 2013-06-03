@@ -17,8 +17,6 @@ using ControllClient = Controll.Client.ControllClient;
 
 namespace Controll.IntegrationTests
 {
-    // Since Microsoft.Owin.Host.HttpListener is not explicitly used in any test code 
-    // we must use this attribute to force MSTest.exe to copy it
     public class HubCommunicationsTests : StandAloneFixtureBase
     {
         // Change this to your hostname (or localhost but machine-name works with Fiddler)
@@ -27,18 +25,16 @@ namespace Controll.IntegrationTests
         [Test]
         public void ShouldBeAbleToLoginAsClient()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-            var client = new ControllClient(auth.Connect("username", "password").Result);
+            var client = new ControllClient(LocalHostUrl);
+            
+            client.Connect("username", "password").Wait();
 
-            client.SignIn().Wait();
-
-            client.HubConnection.Stop();
+            client.Stop();
         }
 
         [Test]
         public void ShouldBeAbleToLoginAsZombie()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
             var client = new ZombieClient(LocalHostUrl);
             client.Connect("username", "password", "zombieName").Wait();
             client.HubConnection.Stop();
@@ -47,12 +43,10 @@ namespace Controll.IntegrationTests
         [Test]
         public void ShouldBeAbleToPing()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-
-            var client = new ControllClient(auth.Connect("username", "password").Result);
+            var client = new ControllClient(LocalHostUrl);
             var zombie = new ZombieClient(LocalHostUrl);
 
-            client.SignIn().Wait();
+            client.Connect("username", "password").Wait();
             zombie.Connect("username", "password", "zombieName").Wait();
 
             var pingEvent = new ManualResetEvent(false);
@@ -76,7 +70,7 @@ namespace Controll.IntegrationTests
                     Console.WriteLine("Client Recieved Ping!");
                 };
 
-            Guid messageTicket = client.Ping("zombieName");
+            Guid messageTicket = client.Ping("zombieName").Result;
 
             Assert.True(pingEvent.WaitOne(4000), "Zombie did not recieve ping");
             Assert.True(pongEvent.WaitOne(4000), "Client did not recieve pong");
@@ -84,7 +78,7 @@ namespace Controll.IntegrationTests
             Assert.AreEqual(messageTicket, pingTicket);
             Assert.AreEqual(messageTicket, pongTicket);
 
-            client.HubConnection.Stop();
+            client.Stop();
         }
 
         // This is a monster test ("smoke test"). It tests: Logging in for both zombie and client,
@@ -92,12 +86,11 @@ namespace Controll.IntegrationTests
         [Test]
         public void ShouldBeAbleToActivateActivity()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-            var client = new ControllClient(auth.Connect("username", "password").Result);
+            var client = new ControllClient(LocalHostUrl);
             var zombie = new ZombieClient(LocalHostUrl);
 
             zombie.Connect("username", "password", "zombieName").Wait();
-            client.SignIn().Wait();
+            client.Connect("username", "password").Wait();
 
             var activatedEvent = new ManualResetEvent(false);
 
@@ -172,7 +165,7 @@ namespace Controll.IntegrationTests
             Guid ticket = client.StartActivity("zombieName",
                                                sentActivityKey,
                                                sentParameters,
-                                               sentCommandName);
+                                               sentCommandName).Result;
 
             Assert.AreNotEqual(Guid.Empty, ticket);
             Assert.True(activatedEvent.WaitOne(6000), "Zombie did not recieve activity invocation order");
@@ -284,7 +277,7 @@ namespace Controll.IntegrationTests
             Assert.AreEqual(ActivityMessageType.Completed, message2.MessageType);
             #endregion
 
-            client.HubConnection.Stop();
+            client.Stop();
         }
     }
 }

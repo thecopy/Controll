@@ -76,6 +76,7 @@
     <Compile Include="Authentication\StreamExtensions.cs" />
     <Compile Include="Authentication\TaskAsyncHelper.cs" />
     <Compile Include="ControllClient.cs" />
+    <Compile Include="IControllClient.cs" />
     <Compile Include="Infrastructure\DelegateActivityContext.cs" />
     <Compile Include="Infrastructure\InvocationInformation.cs" />
     <Compile Include="IZombieClient.cs" />

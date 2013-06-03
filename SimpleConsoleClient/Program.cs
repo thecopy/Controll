@@ -89,13 +89,12 @@ namespace SimpleConsoleClient
             var password = Console.ReadLine();
             if (string.IsNullOrEmpty(password)) password = "password";
 
-            var hubConnection = authenticator.Connect(username, password).Result;
-            _client = new ControllClient(hubConnection);
+            _client = new ControllClient(_url);
 
             _client.MessageDelivered += _client_MessageDelivered;
             _client.ActivityMessageRecieved += _client_ActivityMessageRecieved;
             _client.ActivityResultRecieved += _client_ActivityResultRecieved;
-            _client.SignIn();
+            _client.Connect(username, password).Wait();
 
             Console.WriteLine("Connected");
             Console.WriteLine("Type h or help for more information");
@@ -145,9 +144,6 @@ namespace SimpleConsoleClient
                         break;
                     case "ping":
                         Ping(results[1]);
-                        break;
-                    case "status":
-                        PrintStatus();
                         break;
                     case "addzombie":
                         try
@@ -300,7 +296,7 @@ namespace SimpleConsoleClient
             }
 
             Console.WriteLine("OK. Sending invocation message...");
-            var ticket = _client.StartActivity(zombieName, activityKey, parameters, command.Name);
+            var ticket = _client.StartActivity(zombieName, activityKey, parameters, command.Name).Result;
             if (ticket.Equals(Guid.Empty))
             {
                 Console.WriteLine("Unkown error sending invocation message!");
@@ -329,13 +325,6 @@ namespace SimpleConsoleClient
             authenticator.RegisterUser(username, password, email).Wait();
         }
 
-        private static void PrintStatus()
-        {
-            Console.WriteLine("Connected to: {0}", _client.HubConnection.Url);
-            Console.WriteLine("Using transport: {0}", _client.HubConnection.Transport.Name);
-            Console.WriteLine("Connection Id: {0}", _client.HubConnection.ConnectionId);
-        }
-
         private static void Ping(string zombieName)
         {
             var ticket = _client.Ping(zombieName);
@@ -346,27 +335,13 @@ namespace SimpleConsoleClient
         {
             if (what == "zombies")
             {
-                var zombies = _client.GetAllZombies().ToList();
+                var zombies = _client.GetAllZombies().Result.ToList();
                 foreach (var zombie in zombies)
                 {
                     Console.WriteLine(" * " + zombie.Name);
                 }
                 _zombies = zombies;
                 Console.WriteLine("Total: " + zombies.Count() + " zombies");
-            }else if (what == "activities")
-            {
-                if (parameters.Count() != 1)
-                {
-                    Console.WriteLine("Syntax: list activities <zombieName>");
-                    return;
-                }
-
-                var activities = _client.GetActivitesInstalledOnZombie(parameters[0]).ToList();
-                foreach (var activity in activities)
-                {
-                    Console.WriteLine(" * " + activity.Name + " " + activity.Key);
-                }
-                Console.WriteLine("Total: " + activities.Count() + " zombies");
             }else if (what == "intermidiates")
             {
                 Console.WriteLine("Avaiable intermidiates: ");

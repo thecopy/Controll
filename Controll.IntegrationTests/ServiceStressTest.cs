@@ -23,9 +23,8 @@ namespace Controll.IntegrationTests
         [Test]
         public async Task ShouldBeAbleToHandle100SimultaneousOfflinePingMessages()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-            var client = new ControllClient(auth.Connect("username", "password").Result);
-            client.SignIn().Wait();
+            var client = new ControllClient(LocalHostUrl);
+            client.Connect("username", "password").Wait();
             // Now NHibernate is initialized and warm
 
             var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
@@ -33,7 +32,7 @@ namespace Controll.IntegrationTests
             const int range = 100;
             Enumerable.Range(0, range).AsParallel().ForAll(i =>
                 {
-                    var ticket = client.Ping("zombieName");
+                    var ticket = client.Ping("zombieName").Result;
                     Assert.AreNotEqual(ticket, Guid.Empty);
 
                     tickets.AddOrUpdate(ticket, false, (_, __) => false);
@@ -41,7 +40,7 @@ namespace Controll.IntegrationTests
 
             Assert.AreEqual(range, tickets.Count);
             Assert.True(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
-            client.Disconnect();
+            client.Stop();
 
             var zombie = new ZombieClient(LocalHostUrl);
 
@@ -73,11 +72,10 @@ namespace Controll.IntegrationTests
         [Test]
         public async Task ShouldBeAbleToHandle100SimultaneousOnlinePingMessages()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-            var client = new ControllClient(auth.Connect("username", "password").Result);
+            var client = new ControllClient(LocalHostUrl);
             var zombie = new ZombieClient(LocalHostUrl);
 
-            client.SignIn().Wait();
+            client.Connect("username", "password").Wait();
             zombie.Connect("username", "password", "zombieName").Wait();
 
             int reciveCount = 0;
@@ -112,27 +110,25 @@ namespace Controll.IntegrationTests
             Console.WriteLine("OK!\n\n\n\n");
 
             zombie.HubConnection.Stop();
-            client.Disconnect();
+            client.Stop();
         }
 
         [Test]
         public async Task ShouldBeAbleToHandle100SimultaneousOfflineInvocationMessages()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
-
             var zombie = new ZombieClient(LocalHostUrl);
+            var client = new ControllClient(LocalHostUrl);
             zombie.Connect("username", "password", "zombieName").Wait();
             zombie.HubConnection.Stop(); // Make _sure_ it is not recieving anything
 
-            var client = new ControllClient(auth.Connect("username", "password").Result);
-            client.SignIn().Wait();
+            client.Connect("username", "password").Wait();
 
             var tickets = new ConcurrentDictionary<Guid, bool>(); // bool is used to check if the zombie has recieved it
 
             const int range = 100;
             Enumerable.Range(0, range).AsParallel().ForAll(i =>
                 {
-                    var ticket = client.StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "command");
+                    var ticket = client.StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "command").Result;
                     Assert.AreNotEqual(ticket, Guid.Empty);
 
                     tickets.AddOrUpdate(ticket, false, (_, __) => false);
@@ -140,7 +136,7 @@ namespace Controll.IntegrationTests
 
             Assert.AreEqual(range, tickets.Count);
             Assert.True(tickets.All(kp => kp.Key.Equals(Guid.Empty) == false));
-            client.Disconnect();
+            client.Stop();
 
             int reciveCount = 0;
             zombie = new ZombieClient(LocalHostUrl);
@@ -176,13 +172,12 @@ namespace Controll.IntegrationTests
         [Test]
         public async Task ShouldBeAbleToHandleMassSimultaneousOnlineInvocationAndRecieveMessagesAndResults()
         {
-            var auth = new DefaultAuthenticationProvider(LocalHostUrl);
             var zombie = new ZombieClient(LocalHostUrl);
 
             zombie.Connect("username", "password", "zombieName").Wait();
 
-            var client = new ControllClient(auth.Connect("username", "password").Result);
-            client.SignIn().Wait();
+            var client = new ControllClient(LocalHostUrl);
+            client.Connect("username", "password").Wait();
 
             var tickets = new ConcurrentBag<Guid>(); // bool is used to check if the zombie has recieved it
 
@@ -200,7 +195,7 @@ namespace Controll.IntegrationTests
             client.MessageDelivered += (sender, args) => { Interlocked.Increment(ref reciveCount2); };
             Enumerable.Range(0, range).AsParallel().ForAll(i =>
                 {
-                    var ticket = client.StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "command");
+                    var ticket = client.StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "command").Result;
                     tickets.Add(ticket);
                     Assert.AreNotEqual(ticket, Guid.Empty);
                 });
@@ -279,7 +274,7 @@ namespace Controll.IntegrationTests
                                     "\nExpected activity results: " + range + ", gotten: " + recieveCount3);
             }
             zombie.HubConnection.Stop();
-            client.Disconnect();
+            client.Stop();
         }
 
         [Test]
@@ -295,13 +290,12 @@ namespace Controll.IntegrationTests
 
             const int range = 50;
             int reciveCount = 0;
+            int connectedCount = 0;
 
             var resetEvent = new ManualResetEvent(false);
             var resetEvent2 = new ManualResetEvent(false);
             var loginEvent = new ManualResetEvent(false);
             zombie.InvocationRequest += _ => resetEvent.Set();
-
-            var connectionIdCollection = new ConcurrentDictionary<String, bool>();
 
             var clients = new ControllClient[range];
             var watch = new Stopwatch();
@@ -309,31 +303,27 @@ namespace Controll.IntegrationTests
             Console.Write("Logging in all clients...");
             Enumerable.Range(0, range).AsParallel().ForAll(i =>
                 {
-                    clients[i] = new ControllClient(auth.Connect("username", "password").Result);
+                    clients[i] = new ControllClient(LocalHostUrl);
                     clients[i].ActivityMessageRecieved += (sender, args) =>
                         {
                             Interlocked.Increment(ref reciveCount);
-                            if (!connectionIdCollection.TryUpdate(clients[i].HubConnection.ConnectionId, true, false))
-                                throw new AssertionFailure("Could not update ConcurrentDictionary");
 
                             if (reciveCount == range)
                                 resetEvent2.Set();
                         };
-                    clients[i].SignIn().Wait();
-                    
-                    if (!connectionIdCollection.TryAdd(clients[i].HubConnection.ConnectionId, false))
-                        throw new AssertionFailure("Could not insert into ConcurrentDictionary");
 
-                    if (connectionIdCollection.Count() == range)
+                    clients[i].Connect("username", "password").Wait();
+
+                    Interlocked.Increment(ref connectedCount);
+
+                    if (connectedCount == range)
                     {
                         loginEvent.Set();
                         Console.WriteLine(" Every one is logged in at " + watch.ElapsedMilliseconds + " ms");
                     }
                 });
-            Assert.True(loginEvent.WaitOne(TimeSpan.FromSeconds(5)),
-                        "Did not login all clients. Expected " + range + " but got " + connectionIdCollection.Count()); // log in all
 
-            var ticket = clients[0].StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "commandName");
+            var ticket = clients[0].StartActivity("zombieName", Activity.Id, new Dictionary<string, string>(), "commandName").Result;
 
             Assert.True(resetEvent.WaitOne(TimeSpan.FromSeconds(7)));
 
@@ -348,7 +338,7 @@ namespace Controll.IntegrationTests
             }
 
             foreach(var client in clients)
-                client.Disconnect();
+                client.Stop();
             zombie.HubConnection.Stop();
         }
 

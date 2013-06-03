@@ -41,22 +41,6 @@ namespace Controll.Hosting.Hubs
         }
 
         [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
-        public void SignOut()
-        {
-            using (var transaction = Session.BeginTransaction())
-            {
-                var zombie = GetZombie();
-
-                zombie.ConnectedClients
-                      .Where(x => x.ConnectionId == Context.ConnectionId).ToList()
-                      .ForEach(x => zombie.ConnectedClients.Remove(x));
-
-                Session.Update(zombie);
-                transaction.Commit();
-            }
-        }
-
-        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void QueueItemDelivered(Guid ticket)
         {
             using (var transaction = Session.BeginTransaction())

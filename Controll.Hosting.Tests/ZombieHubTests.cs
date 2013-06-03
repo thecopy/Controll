@@ -215,28 +215,6 @@ namespace Controll.Hosting.Tests
 
             hub.MockedSession.Verify(x => x.Update(It.Is<Zombie>(z => z.Activities.Count == 1 && z.Activities[0].Id.Equals(activityKey2))), Times.Exactly(1));
         }
-
-        
-        [Test]
-        public void ShouldBeAbleToSignOut()
-        {
-            var zombie = new Zombie
-            {
-                Name = "zombie",
-                Id = 1
-            };
-
-            var hub = GetTestableZombieHub();
-            hub.MockedRequest.SetupGet(x => x.User).Returns(GetPrincial(1, 1));
-            hub.MockedSession.Setup(x => x.Get<Zombie>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => zombie);
-            zombie.ConnectedClients.Add(new ControllClient { ConnectionId = hub.Context.ConnectionId }); // Have something to clean up
-
-            hub.MockedSession.Setup(r => r.Update(It.Is<Zombie>(x => x.ConnectedClients.Count == 0)));
-
-            hub.SignOut();
-            
-            hub.MockedSession.Verify(r => r.Update(It.Is<Zombie>(x => x.ConnectedClients.Count == 0)), Times.Once());
-        }
         
         private TestableZombieHub GetTestableZombieHub()
         {

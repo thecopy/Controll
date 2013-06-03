@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Controll.Client.Models;
 using Controll.Common;
+using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
@@ -10,8 +11,10 @@ namespace Controll.Client
 {
     public class ControllClient : IControllClient
     {
-        private readonly HubConnection _hubConnection;
-        private readonly IHubProxy _hubProxy;
+        private readonly string _url;
+        private readonly IAuthenticationProvider _authenticationProvider;
+        private HubConnection _hubConnection;
+        private IHubProxy _hubProxy;
 
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
@@ -36,12 +39,34 @@ namespace Controll.Client
             if (handler != null) handler(this, new ActivityResultEventArgs(ticket, result));
         }
 
-        public ControllClient(HubConnection hubConnection)
+        public ControllClient(string url, IAuthenticationProvider authenticationProvider)
         {
-            _hubConnection = hubConnection;
-            _hubProxy = _hubConnection.CreateHubProxy("clientHub");
+            _url = url;
+            _authenticationProvider = authenticationProvider;
+        }
 
-            SetupEvents();
+        public ControllClient(string url) 
+            : this(url, new DefaultAuthenticationProvider(url)) {}
+        
+        public Task Connect(string username, string password)
+        {
+              return _authenticationProvider
+                .Connect(username, password, null)
+                .Then(connection =>
+                    {
+                        _hubConnection = connection;
+                        _hubProxy = connection.CreateHubProxy("ClientHub");
+                        
+                        SetupEvents();
+
+                        return _hubConnection.Start();
+                    })
+                .Then(() => SignIn());
+        }
+
+        private Task SignIn()
+        {
+            return _hubProxy.Invoke("SignIn");
         }
 
         private void SetupEvents()
@@ -70,21 +95,6 @@ namespace Controll.Client
             return _hubProxy.Invoke<Guid>("PingZombie", zombieName);
         }
 
-        public Task SignIn()
-        {
-            return _hubConnection.Start().ContinueWith(_ =>
-                {
-                    if (_.IsFaulted)
-                    {
-                        if (_.Exception != null)
-                            throw _.Exception;
-                        throw new Exception("Could not connect to server");
-                    }
-
-                    SignIn();
-                });
-        }
-
         public Task AddZombie(string zombieName)
         {
             return _hubProxy.Invoke("AddZombie", zombieName);
@@ -95,8 +105,9 @@ namespace Controll.Client
             return _hubProxy.Invoke<IEnumerable<LogBookViewModel>>("GetLogBooks", take, skip);
         }
 
-        public void Disconnect()
+        public void Stop()
         {
+            _hubProxy.Invoke("SignOut").Wait();
             _hubConnection.Stop();
         }
     }
