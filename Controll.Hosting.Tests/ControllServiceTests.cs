@@ -21,13 +21,13 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToInsertActivityInvocationQueueItem()
         {
             var mockedSession = new Mock<ISession>();
-            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedDispatcher = new Mock<IDispatcher>();
             var mockedControllRepository = new Mock<IControllRepository>();
 
             var service = new ControllService(
                 mockedSession.Object,
                 mockedControllRepository.Object,
-                mockedConnectionManager.Object);
+                mockedDispatcher.Object);
 
             var user = new ControllUser
             {
@@ -85,13 +85,13 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToInsertActivityMessage()
         {
             var mockedSession = new Mock<ISession>();
-            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedDispatcher = new Mock<IDispatcher>();
             var mockedControllRepository = new Mock<IControllRepository>();
-
+            
             var service = new ControllService(
                 mockedSession.Object,
                 mockedControllRepository.Object,
-                mockedConnectionManager.Object);
+                mockedDispatcher.Object);
 
             var ticket = Guid.NewGuid();
 
@@ -142,13 +142,13 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToInsertDownloadActivityMessage()
         {
             var mockedSession = new Mock<ISession>();
-            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedDispatcher = new Mock<IDispatcher>();
             var mockedControllRepository = new Mock<IControllRepository>();
 
             var service = new ControllService(
                 mockedSession.Object,
                 mockedControllRepository.Object,
-                mockedConnectionManager.Object);
+                mockedDispatcher.Object);
 
             var ticket = Guid.NewGuid();
 
@@ -183,13 +183,13 @@ namespace Controll.Hosting.Tests
         public void ShouldBeAbleToInsertActivityResultQueueItem()
         {
             var mockedSession = new Mock<ISession>();
-            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedDispatcher = new Mock<IDispatcher>();
             var mockedControllRepository = new Mock<IControllRepository>();
 
             var service = new ControllService(
                 mockedSession.Object,
                 mockedControllRepository.Object,
-                mockedConnectionManager.Object);
+                mockedDispatcher.Object);
 
             var user = new ControllUser
             {
@@ -238,14 +238,16 @@ namespace Controll.Hosting.Tests
             var mockedConnectionManager = new Mock<IConnectionManager>();
             var mockedSession = new Mock<ISession>();
             var mockedControllRepository = new Mock<IControllRepository>();
+            var mockedDispatcher = new Mock<IDispatcher>();
 
             var mockedHubContext = new Mock<IHubContext>();
             var mockedConnectionContext = new Mock<IHubConnectionContext>();
 
+
             var service = new ControllService(
                 mockedSession.Object,
                 mockedControllRepository.Object,
-                mockedConnectionManager.Object);
+                mockedDispatcher.Object);
 
 
             var ticket = Guid.NewGuid();

@@ -18,9 +18,11 @@ namespace Controll.Hosting.Hubs
     {
         public ClientHub(IControllRepository controllRepository,
                          IControllService controllService,
+                         IDispatcher dispatcher,
                          ISession session)
-            : base(session, controllRepository, controllService)
-        {}
+            : base(session, controllRepository, controllService, dispatcher)
+        {
+        }
 
         public void SignIn()
         {
@@ -99,7 +101,7 @@ namespace Controll.Hosting.Hubs
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
-                ControllService.ProcessQueueItem(queueItem);
+                Dispatcher.Dispatch(queueItem);
 
                 return queueItem.Ticket;
             }
@@ -121,7 +123,7 @@ namespace Controll.Hosting.Hubs
                 var queueItem = ControllService.InsertActivityDownload(zombie, url);
                 transaction.Commit();
 
-                ControllService.ProcessQueueItem(queueItem);
+                Dispatcher.Dispatch(queueItem);
 
                 return queueItem.Ticket;
             }
@@ -162,7 +164,7 @@ namespace Controll.Hosting.Hubs
                 var queueItem = ControllService.InsertPingMessage(zombie, Context.ConnectionId);
                 transaction.Commit();
 
-                ControllService.ProcessQueueItem(queueItem);
+                Dispatcher.Dispatch(queueItem);
                 return queueItem.Ticket;
             }
         }

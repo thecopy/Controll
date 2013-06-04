@@ -1,4 +1,5 @@
-﻿using Controll.Hosting.NHibernate;using NHibernate;
+﻿using Controll.Hosting.NHibernate;
+using NHibernate;
 
 namespace Controll.IntegrationTests
 {

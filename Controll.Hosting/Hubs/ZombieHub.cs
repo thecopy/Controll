@@ -19,8 +19,9 @@ namespace Controll.Hosting.Hubs
     {
         public ZombieHub(IControllRepository controllRepository,
                          IControllService controllService,
+                         IDispatcher dispatcher,
                          ISession session)
-            : base(session, controllRepository, controllService)
+            : base(session, controllRepository, controllService, dispatcher)
         {}
 
         public void SignIn()
@@ -80,7 +81,12 @@ namespace Controll.Hosting.Hubs
 
                 Session.Update(zombie);
 
-                ControllService.InsertActivitiesSynchronizedMessage(zombie);
+                foreach (var connectionId in zombie.Owner.ConnectedClients.Select(x => x.ConnectionId))
+                {
+                    var id = connectionId;
+                    Dispatcher.ManualClientMessage(clients =>
+                                                    clients.Client(id).ZombieSynchronized(zombie.Name, zombie.Activities.Select(x => x.CreateViewModel())));
+                }
 
                 transaction.Commit();
             }

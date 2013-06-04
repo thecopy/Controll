@@ -21,19 +21,13 @@ namespace Controll.Hosting.Services
     {
         private readonly ISession _session;
         private readonly IControllRepository _controllRepository;
-        private readonly IConnectionManager _connectionManager;
+        private readonly IDispatcher _dispatcher;
 
-        private readonly IHubContext _zombieHubContext;
-        private readonly IHubContext _clientHubContext;
-
-        public ControllService(ISession session, IControllRepository controllRepository, IConnectionManager connectionManager)
+        public ControllService(ISession session, IControllRepository controllRepository, IDispatcher dispatcher)
         {
             _session = session;
             _controllRepository = controllRepository;
-            _connectionManager = connectionManager;
-
-            _zombieHubContext = _connectionManager.GetHubContext<ZombieHub>();
-            _clientHubContext = _connectionManager.GetHubContext<ClientHub>();
+            _dispatcher = dispatcher;
         }
 
         public QueueItem InsertActivityInvocation(Zombie zombie, Activity activity, IDictionary<string, string> parameters, string commandName, string connectionId)
@@ -81,7 +75,11 @@ namespace Controll.Hosting.Services
             // The message will be marked as delivered in the log here on server side anyway.
 
             foreach (var connectionId in queueItem.Sender.ConnectedClients.Select(x => x.ConnectionId))
-                SendDeliveryAcknowledgement(ticket, connectionId);
+            {
+                var id = connectionId;
+                _dispatcher.ManualClientMessage(clients =>
+                                                clients.Client(id).MessageDelivered(ticket));
+            }
         }
 
         public QueueItem InsertPingMessage(Zombie zombie, string senderConnectionId)
@@ -119,7 +117,7 @@ namespace Controll.Hosting.Services
 
             foreach (var queueItem in queueItems)
             {
-                ProcessQueueItem(queueItem);
+                _dispatcher.Dispatch(queueItem);
             }
         }
 
@@ -135,7 +133,10 @@ namespace Controll.Hosting.Services
             foreach (var connectionId in connectedClients.Select(x => x.ConnectionId))
             {
                 Console.Write("Sending " + type + " to " + connectionId + ": ");
-                SendActivityMessage(connectionId, ticket, type, message);
+
+                var id = connectionId;
+                _dispatcher.ManualClientMessage(clients => clients.Client(id).ActivityMessage(ticket, type, message));
+
                 Console.WriteLine(" Done");
             }
         }
@@ -181,78 +182,9 @@ namespace Controll.Hosting.Services
 
             _session.Save(activityResultQueueItem);
 
-            ProcessQueueItem(activityResultQueueItem);
+            _dispatcher.Dispatch(activityResultQueueItem);
         }
 
-        public void ProcessQueueItem<T>(T queueItem)
-            where T : QueueItem
-        {
-            if (!queueItem.Reciever.ConnectedClients.Any())
-                return;
-
-            var actions = new Dictionary<QueueItemType, Action<QueueItem, string>>
-                {
-                    {QueueItemType.ActivityInvocation, (qi, s) => SendActivityInvocation((ActivityInvocationQueueItem) qi, s)},
-                    {QueueItemType.Ping, (qi, s) => SendPing((PingQueueItem) qi, s)},
-                    {QueueItemType.ActivityResult, (qi, s) => SendActivityResult((ActivityResultQueueItem) qi, s)},
-                    {QueueItemType.DownloadActivity, (qi, s) => SendDownloadActivity((DownloadActivityQueueItem)qi, s)}
-                };
-
-            if (!actions.ContainsKey(queueItem.Type))
-            {
-                throw new InvalidOperationException("Unkown queue item type: " + queueItem.Type);
-            }
-
-            foreach (var connectionId in queueItem.Reciever.ConnectedClients.Select(x => x.ConnectionId))
-            {
-                actions[queueItem.Type](queueItem, connectionId);
-                Console.WriteLine("Sending " + queueItem.Type + " to " + connectionId);
-            }
-        }
-
-        public void InsertActivitiesSynchronizedMessage(Zombie zombie)
-        {
-            foreach (var connectionId in zombie.Owner.ConnectedClients.Select(x => x.ConnectionId))
-            {
-                _clientHubContext.Clients.Client(connectionId)
-                    .ZombieSynchronized(zombie.Name, zombie.Activities.Select(x => x.CreateViewModel()));
-            }
-        }
-
-        private void SendDownloadActivity(DownloadActivityQueueItem qi, string connectionId)
-        {
-            _zombieHubContext.Clients.Client(connectionId)
-                              .DownloadActivity(qi.Ticket, qi.Url);
-        }
-
-        private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
-        {
-            _clientHubContext.Clients.Client(connectionId)
-                              .ActivityMessage(ticket, type, message);
-        }
-
-        private void SendDeliveryAcknowledgement(Guid deliveredTicked, string connectionId)
-        {
-            _clientHubContext.Clients.Client(connectionId)
-                              .MessageDelivered(deliveredTicked);
-        }
-
-        private void SendActivityResult(ActivityResultQueueItem queueItem, string connectionId)
-        {
-            _clientHubContext.Clients.Client(connectionId)
-                              .ActivityResult(queueItem.InvocationTicket, queueItem.ActivityCommand.CreateViewModel());
-        }
-
-        private void SendPing(PingQueueItem item, string connectionId)
-        {
-            _zombieHubContext.Clients.Client(connectionId)
-                              .Ping(item.Ticket);
-        }
-
-        private void SendActivityInvocation(ActivityInvocationQueueItem item, string connectionId)
-        {
-            _zombieHubContext.Clients.Client(connectionId)
-                              .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters, item.CommandName);
-        }
+        
     }
 }

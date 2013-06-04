@@ -173,6 +173,7 @@
     <Compile Include="Services\ControllService.cs" />
     <Compile Include="Services\IControllService.cs" />
     <Compile Include="Services\IMembershipService.cs" />
+    <Compile Include="Services\IQueueItemDispatcher.cs" />
     <Compile Include="Services\MembershipService.cs" />
   </ItemGroup>
   <ItemGroup>

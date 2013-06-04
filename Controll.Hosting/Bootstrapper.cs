@@ -80,6 +80,11 @@ namespace Controll.Hosting
                   .To<ControllService>()
                   .InTransientScope();
 
+            _kernel.Bind<IDispatcher>()
+                  .To<Dispatcher>()
+                  .InTransientScope();
+
+
             _kernel.Bind<IMembershipService>()
                   .To<MembershipService>()
                   .InTransientScope();

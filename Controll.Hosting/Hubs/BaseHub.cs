@@ -14,12 +14,14 @@ namespace Controll.Hosting.Hubs
     {
         protected readonly IControllRepository ControllRepository;
         protected readonly IControllService ControllService;
+        protected readonly IDispatcher Dispatcher;
         internal ISession Session { get; private set; }
 
-        public BaseHub(ISession session, IControllRepository controllRepository, IControllService controllService)
+        public BaseHub(ISession session, IControllRepository controllRepository, IControllService controllService, IDispatcher dispatcher)
         {
             ControllRepository = controllRepository;
             ControllService = controllService;
+            Dispatcher = dispatcher;
             Session = session;
         }
 

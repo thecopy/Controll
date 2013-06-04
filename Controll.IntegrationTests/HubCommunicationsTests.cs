@@ -5,7 +5,6 @@ using System.Threading;
 using Controll.Client;
 using Controll.Common;
 using Controll.Common.ViewModels;
-using Controll.Zombie;
 using NUnit.Framework;
 using Newtonsoft.Json;
 using ControllClient = Controll.Client.ControllClient;

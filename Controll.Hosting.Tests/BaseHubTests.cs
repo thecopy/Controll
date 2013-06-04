@@ -48,12 +48,14 @@ namespace Controll.Hosting.Tests
         {
             var mockedControllRepository = new Mock<IControllRepository>();
             var mockedControllService = new Mock<IControllService>();
+            var mockedDispatcher = new Mock<IDispatcher>();
+
             var mockPipeline = new Mock<IHubPipelineInvoker>();
             var mockedConnectionObject = new Mock<IConnection>();
             var mockedSession = new Mock<ISession>();
             mockedSession.Setup(s => s.BeginTransaction()).Returns(new Mock<ITransaction>().Object);
 
-            var hub = new TestableBaseHub(mockedControllRepository, mockedControllService, mockedSession)
+            var hub = new TestableBaseHub(mockedControllRepository, mockedControllService, mockedSession, mockedDispatcher)
             {
                 Clients = new HubConnectionContext(mockPipeline.Object, mockedConnectionObject.Object, "ZombieHub", "conn-id", new StateChangeTracker())
             };
@@ -66,17 +68,20 @@ namespace Controll.Hosting.Tests
             public Mock<IControllRepository> MockedControllRepository { get; private set; }
             public Mock<IControllService> MockedControllService { get; set; }
             public Mock<ISession> MockedSession { get; private set; }
+            public Mock<IDispatcher> MockedDispatcher { get; set; }
             public Mock<IRequest> MockedRequest { get; private set; }
 
             public TestableBaseHub(
                 Mock<IControllRepository> mockedControllRepository,
                 Mock<IControllService> mockedControllService,
-                Mock<ISession> mockedSession)
-                : base(mockedSession.Object, mockedControllRepository.Object, mockedControllService.Object)
+                Mock<ISession> mockedSession,
+                Mock<IDispatcher> mockedDispatcher)
+                : base(mockedSession.Object, mockedControllRepository.Object, mockedControllService.Object, mockedDispatcher.Object)
             {
                 MockedControllRepository = mockedControllRepository;
                 MockedControllService = mockedControllService;
                 MockedSession = mockedSession;
+                MockedDispatcher = mockedDispatcher;
 
                 MockedRequest = new Mock<IRequest>();
                 Context = new HubCallerContext(MockedRequest.Object, "conn-id");

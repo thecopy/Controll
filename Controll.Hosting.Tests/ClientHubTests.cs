@@ -445,7 +445,8 @@ namespace Controll.Hosting.Tests
                 connection,
                 new Mock<IControllService>(),
                 new Mock<IMembershipService>(), 
-                mockedSession);
+                mockedSession,
+                new Mock<IDispatcher>());
 
             var mockedConnectionObject = hub.MockedConnection.Object;
 
@@ -475,9 +476,11 @@ namespace Controll.Hosting.Tests
                 Mock<IConnection> connection,
                 Mock<IControllService> controllService,
                 Mock<IMembershipService> membershipService,
-                Mock<ISession> mockedSession)
+                Mock<ISession> mockedSession,
+                Mock<IDispatcher> mockedDispatcher)
                 : base(
-                    controllRepository,controllService.Object,
+                    controllRepository, controllService.Object,
+                    mockedDispatcher.Object,
                     mockedSession.Object)
             {
                 ControllRepository = controllRepository;
@@ -485,12 +488,14 @@ namespace Controll.Hosting.Tests
                 MockedControllService = controllService;
                 MembershipService = membershipService;
                 MockedSession = mockedSession;
+                MockedDispatcher = mockedDispatcher;
             }
 
             public Mock<IConnection> MockedConnection { get; set; }
             public Mock<IControllService> MockedControllService { get; set; }
             public Mock<IMembershipService> MembershipService { get; set; }
             public Mock<ISession> MockedSession { get; set; }
+            public Mock<IDispatcher> MockedDispatcher { get; set; }
             public new IControllRepository ControllRepository { get; set; }
         }
     }
