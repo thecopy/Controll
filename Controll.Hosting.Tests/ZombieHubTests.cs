@@ -114,6 +114,44 @@ namespace Controll.Hosting.Tests
             hub.MockedControllService.Verify(x => x.MarkQueueItemAsDelivered(It.Is<Guid>(guid => guid.Equals(ticket))));
         }
 
+        [Test]
+        public void ShouldBeAbleToNotifyOwnerWhenSynchronizingActivityList()
+        {
+            var zombie = new Zombie
+            {
+                Name = "zombie",
+                Id = 1,
+                Activities = new List<Activity>()
+            };
+            var user = new ControllUser
+            {
+                UserName = "username",
+                Password = "password",
+                Zombies = new List<Zombie> { zombie }
+            };
+            zombie.Owner = user;
+
+            var hub = GetTestableZombieHub();
+            hub.MockedRequest.SetupGet(x => x.User).Returns(GetPrincial(1, 1));
+            hub.MockedSession.Setup(x => x.Get<Zombie>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => zombie);
+
+            var activityKey = Guid.NewGuid();
+            var activities = new List<ActivityViewModel>
+                {
+                    new ActivityViewModel
+                        {
+                            Name = "TestActivity",
+                            Key = activityKey,
+                            Commands = new List<ActivityCommandViewModel>()
+                        }
+                };
+
+            hub.MockedControllService.Setup(x => x.InsertActivitiesSynchronizedMessage(It.Is<Zombie>(z => z == zombie))).Verifiable();
+            
+            hub.SynchronizeActivities(activities);
+
+            hub.MockedControllService.Verify(x => x.InsertActivitiesSynchronizedMessage(It.Is<Zombie>(z => z == zombie)), Times.Once());
+        }
 
 
         [Test]
@@ -153,7 +191,6 @@ namespace Controll.Hosting.Tests
                 .Verifiable();
 
             hub.SynchronizeActivities(activities);
-
 
             hub.MockedSession.Verify(x => x.Update(It.Is<Zombie>(z => z.Activities.Count == 1 && z.Activities[0].Id.Equals(activityKey))), Times.Once());
         }
