@@ -1,17 +1,16 @@
 Controll
 ========
 Note: Controll is under heavy developement and is prone to undergo major architecture rehauls
-http://controll.apphb.com
-
 
 Controll is a framework for remote controlling devices built on plugins.
-=======
-Controll is a framework for remote controlling devices with support for plugins.
 
-
-Developement
+How To Use
 ========
-See Documents/developement-plan.pdf for more information
+See wiki:
+https://github.com/thecopy/Controll/wiki/Creating-and-Running-Your-First-Plugin
+
+Public Controll Service:
+http://controll.apphb.com
 
 License
 ========
