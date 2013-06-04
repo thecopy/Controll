@@ -15,7 +15,7 @@ namespace Controll.Hosting.Hubs
         protected readonly IControllRepository ControllRepository;
         protected readonly IControllService ControllService;
         protected readonly IDispatcher Dispatcher;
-        internal ISession Session { get; private set; }
+        internal readonly ISession Session;
 
         public BaseHub(ISession session, IControllRepository controllRepository, IControllService controllService, IDispatcher dispatcher)
         {
