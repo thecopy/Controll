@@ -89,6 +89,8 @@ namespace SimpleConsoleClient
             _client.MessageDelivered += _client_MessageDelivered;
             _client.ActivityMessageRecieved += _client_ActivityMessageRecieved;
             _client.ActivityResultRecieved += _client_ActivityResultRecieved;
+            _client.ZombieSynchronized += ClientOnZombieSynchronized;
+
             _client.Connect(username, password).Wait();
 
             Console.WriteLine("Connected");
@@ -174,6 +176,23 @@ namespace SimpleConsoleClient
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        private static void ClientOnZombieSynchronized(string zombieName, IEnumerable<ActivityViewModel> activityViewModels)
+        {
+            Console.WriteLine("Zombie '{0}' synchronized it's activities.", zombieName);
+            var zombie = _zombies.SingleOrDefault(x => x.Name == zombieName);
+
+            if (zombie == null)
+            {
+                Console.WriteLine("(NOTE: You do not have this zombie. Refetching all zombies instead...)");
+                _zombies = _client.GetAllZombies().Result.ToList();
+                Console.WriteLine("OK!");
+            }
+            else
+            {
+                zombie.Activities = activityViewModels;
+            }
         }
 
         private static void RunIntermidiate()

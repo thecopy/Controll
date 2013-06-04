@@ -23,5 +23,7 @@ namespace Controll.Hosting.Services
         
         void ProcessUndeliveredMessagesForZombie(Zombie zombie);
         void ProcessQueueItem<T>(T queueItem) where T : QueueItem;
+
+        void InsertActivitiesSynchronizedMessage(Zombie zombie);
     }
 }

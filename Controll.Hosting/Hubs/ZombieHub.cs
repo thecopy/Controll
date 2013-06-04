@@ -14,7 +14,7 @@ using NHibernate.Criterion;
 
 namespace Controll.Hosting.Hubs
 {
-    [AuthorizeClaim(ControllClaimTypes.UserIdentifier)]
+    [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
     public class ZombieHub : BaseHub
     {
         public ZombieHub(IControllRepository controllRepository,
@@ -23,7 +23,6 @@ namespace Controll.Hosting.Hubs
             : base(session, controllRepository, controllService)
         {}
 
-        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SignIn()
         {
             using (var transaction = Session.BeginTransaction())
@@ -40,7 +39,6 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void QueueItemDelivered(Guid ticket)
         {
             using (var transaction = Session.BeginTransaction())
@@ -51,7 +49,6 @@ namespace Controll.Hosting.Hubs
             }
         }
 
-        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void SynchronizeActivities(ICollection<ActivityViewModel> activities)
         {
             var zombie = GetZombie();
@@ -82,11 +79,13 @@ namespace Controll.Hosting.Hubs
                 }
 
                 Session.Update(zombie);
+
+                ControllService.InsertActivitiesSynchronizedMessage(zombie);
+
                 transaction.Commit();
             }
         }
 
-        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void ActivityMessage(Guid ticket, ActivityMessageType type, string message)
         {
             using (var transaction = Session.BeginTransaction())
@@ -98,7 +97,6 @@ namespace Controll.Hosting.Hubs
             
         }
 
-        [AuthorizeClaim(ControllClaimTypes.ZombieIdentifier)]
         public void ActivityResult(Guid ticket, ActivityCommandViewModel result)
         {
             Console.WriteLine("Activity result recieved.");

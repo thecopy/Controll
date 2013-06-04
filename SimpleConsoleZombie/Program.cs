@@ -104,7 +104,6 @@ namespace SimpleConsoleZombie
             _client.ConfirmMessageDelivery(ticket);
 
             Console.WriteLine("Downloading activity from '{0}'...", url);
-            
 
             var fileName = (Path.GetFileNameWithoutExtension(url) ?? Guid.NewGuid().ToString("N")) + ".plugin.dll";
             var savePath = Path.Combine(Environment.CurrentDirectory, fileName);

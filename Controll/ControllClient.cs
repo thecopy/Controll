@@ -21,6 +21,7 @@ namespace Controll.Client
         public event EventHandler<MessageDeliveredEventArgs> MessageDelivered;
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
         public event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
+        public event Action<String, IEnumerable<ActivityViewModel>> ZombieSynchronized;
 
         public string Url
         {
@@ -84,6 +85,12 @@ namespace Controll.Client
             _hubProxy.On<Guid>("MessageDelivered", OnMessageDelivered);
             _hubProxy.On<Guid, ActivityMessageType, string>("ActivityMessage", OnActivityMessage);
             _hubProxy.On<Guid, object>("ActivityResult", OnActivityResult);
+
+            _hubProxy.On<String, IEnumerable<ActivityViewModel>>("ZombieSynchronized", (name, activities) =>
+                {
+                    if (ZombieSynchronized != null)
+                        ZombieSynchronized(name, activities);
+                });
         }
 
         public Task<IEnumerable<ZombieViewModel>> GetAllZombies()

@@ -10,6 +10,7 @@ using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
+using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using NHibernate;
 using NHibernate.Criterion;
@@ -22,11 +23,17 @@ namespace Controll.Hosting.Services
         private readonly IControllRepository _controllRepository;
         private readonly IConnectionManager _connectionManager;
 
+        private readonly IHubContext _zombieHubContext;
+        private readonly IHubContext _clientHubContext;
+
         public ControllService(ISession session, IControllRepository controllRepository, IConnectionManager connectionManager)
         {
             _session = session;
             _controllRepository = controllRepository;
             _connectionManager = connectionManager;
+
+            _zombieHubContext = _connectionManager.GetHubContext<ZombieHub>();
+            _clientHubContext = _connectionManager.GetHubContext<ClientHub>();
         }
 
         public QueueItem InsertActivityInvocation(Zombie zombie, Activity activity, IDictionary<string, string> parameters, string commandName, string connectionId)
@@ -203,39 +210,48 @@ namespace Controll.Hosting.Services
             }
         }
 
+        public void InsertActivitiesSynchronizedMessage(Zombie zombie)
+        {
+            foreach (var connectionId in zombie.Owner.ConnectedClients.Select(x => x.ConnectionId))
+            {
+                _clientHubContext.Clients.Client(connectionId)
+                    .ZombieSynchronized(zombie.Name, zombie.Activities.Select(x => x.CreateViewModel()));
+            }
+        }
+
         private void SendDownloadActivity(DownloadActivityQueueItem qi, string connectionId)
         {
-            _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+            _zombieHubContext.Clients.Client(connectionId)
                               .DownloadActivity(qi.Ticket, qi.Url);
         }
 
         private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
         {
-            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+            _clientHubContext.Clients.Client(connectionId)
                               .ActivityMessage(ticket, type, message);
         }
 
         private void SendDeliveryAcknowledgement(Guid deliveredTicked, string connectionId)
         {
-            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+            _clientHubContext.Clients.Client(connectionId)
                               .MessageDelivered(deliveredTicked);
         }
 
         private void SendActivityResult(ActivityResultQueueItem queueItem, string connectionId)
         {
-            _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)
+            _clientHubContext.Clients.Client(connectionId)
                               .ActivityResult(queueItem.InvocationTicket, queueItem.ActivityCommand.CreateViewModel());
         }
 
         private void SendPing(PingQueueItem item, string connectionId)
         {
-            _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+            _zombieHubContext.Clients.Client(connectionId)
                               .Ping(item.Ticket);
         }
 
         private void SendActivityInvocation(ActivityInvocationQueueItem item, string connectionId)
         {
-            _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+            _zombieHubContext.Clients.Client(connectionId)
                               .InvokeActivity(item.Activity.Id, item.Ticket, item.Parameters, item.CommandName);
         }
     }
