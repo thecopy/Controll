@@ -5,9 +5,9 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Controll.Common
+namespace Controll.Common.Helpers
 {
-    internal static class HttpHelper
+    public static class HttpHelper
     {
         public static WebResponse BetterEndGetResponse(this WebRequest request, IAsyncResult asyncResult)
         {

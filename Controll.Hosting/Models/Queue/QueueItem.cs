@@ -7,7 +7,8 @@ namespace Controll.Hosting.Models.Queue
         ActivityInvocation,
         Ping,
         DeliveryAcknowledgement,
-        ActivityResult
+        ActivityResult,
+        DownloadActivity
     }
 
     public abstract class QueueItem

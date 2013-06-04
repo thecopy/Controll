@@ -3,9 +3,11 @@ using System.Net;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using Controll.Common.Helpers;
+using Controll.Common.Authentication;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
-namespace Controll.Common.Authentication
+namespace Controll.Client.Authentication
 {
     public class DefaultAuthenticationProvider : IAuthenticationProvider
     {
@@ -37,7 +39,7 @@ namespace Controll.Common.Authentication
             request.ContentLength = contentBytes.Length;
 
             return request.GetHttpRequestStreamAsync()
-                .Then(stream => stream.WriteAsync(contentBytes).Then(() => stream.Dispose()))
+                .Then(stream => StreamExtensions.WriteAsync(stream, contentBytes).Then(() => stream.Dispose()))
                 .Then(() => request.GetHttpResponseAsync())
                 .Then(response =>
                 {

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Net;
 using System.Threading.Tasks;
 using Controll;
 using Controll.Client;
-using Controll.Zombie;
 using Controll.Common;
+using Controll.Common.Helpers;
 using Controll.Common.ViewModels;
 using Controll.Zombie.Infrastructure;
 
@@ -47,9 +48,12 @@ namespace SimpleConsoleZombie
         private static void Connect(string url)
         {
             Console.WriteLine("Initializing service...");
+
             _client = new ZombieClient(url);
             _client.Pinged += _client_Pinged;
             _client.InvocationRequest += _client_InvocationRequest;
+            _client.DownloadActivityRequest += _client_DownloadActivityRequest;
+
             Console.WriteLine("Connecting to " + url);
 
             Console.Write("Provide username('username'): ");
@@ -80,24 +84,10 @@ namespace SimpleConsoleZombie
                 {
                     case "help":
                     case "h":
-                        Console.WriteLine("status\t\tPrint status");
-                        Console.WriteLine("auth\t\tAuthenticate");
-                        Console.WriteLine("list\t\tDisplay list of different types");
-                        Console.WriteLine("register\t\tRegister as zombie to user");
                         Console.WriteLine("sync\t\tSync server activity list for this zombie");
-                        break;
-                    case "signout":
-                        SignOut();
-                        break;
-                    case "list":
-                        if(results.Count() >= 2)
-                        List(results[1], results.Skip(2).ToArray());
                         break;
                     case "sync":
                         Sync();
-                        break;
-                    case "status":
-                        PrintStatus();
                         break;
                 }
                 Console.ForegroundColor = ConsoleColor.White;
@@ -105,6 +95,25 @@ namespace SimpleConsoleZombie
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+
+            SignOut();
+        }
+
+        private static void _client_DownloadActivityRequest(Guid ticket, string url)
+        {
+            _client.ConfirmMessageDelivery(ticket);
+
+            Console.WriteLine("Downloading activity from '{0}'...", url);
+            
+
+            var fileName = (Path.GetFileNameWithoutExtension(url) ?? Guid.NewGuid().ToString("N")) + ".plugin.dll";
+            var savePath = Path.Combine(Environment.CurrentDirectory, fileName);
+            Console.WriteLine("Saving activity to {0}...", savePath);
+
+            new WebClient().DownloadFile(url, savePath);
+
+            Console.WriteLine("OK! Syncing...");
+            Sync();
         }
 
         static void _client_InvocationRequest(InvocationInformation info)
@@ -154,30 +163,6 @@ namespace SimpleConsoleZombie
             {
                 Console.WriteLine("An Error Occured: " + ex.GetBaseException().Message);
             }
-        }
-
-        static private void List(string what, params string[] parameters)
-        {
-            if (what == "activities")
-            {
-                var activities = PluginService.Instance.GetAllActivityTypes().ToList();
-                foreach (var activity in activities)
-                {
-                    Console.WriteLine(activity.FullName);
-                }
-                Console.WriteLine("Total: {0} activities avaiable.", activities.Count);
-            }
-            else
-            {
-                Console.WriteLine("Avaiable enumerables: activities");
-            }
-        }
-
-        private static void PrintStatus()
-        {
-            Console.WriteLine("Connected to: {0}", _client.HubConnection.Url);
-            Console.WriteLine("Transport: {0}", _client.HubConnection.Transport.Name);
-            Console.WriteLine("Connection-Id: {0}", _client.HubConnection.ConnectionId);
         }
     }
 }

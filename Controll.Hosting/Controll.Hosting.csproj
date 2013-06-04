@@ -66,7 +66,7 @@
     </Reference>
     <Reference Include="Microsoft.Owin, Version=1.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.1.1.0-beta1-20601-357\lib\net45\Microsoft.Owin.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Owin.1.1.0-beta2-20604-365\lib\net45\Microsoft.Owin.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Owin.Auth">
       <HintPath>..\packages\Microsoft.Owin.Auth.0.22.0-pre-20518-314\lib\net40\Microsoft.Owin.Auth.dll</HintPath>
@@ -80,7 +80,7 @@
     </Reference>
     <Reference Include="Microsoft.Owin.Security, Version=1.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.Security.1.1.0-beta1-20601-357\lib\net45\Microsoft.Owin.Security.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Owin.Security.1.1.0-beta2-20604-365\lib\net45\Microsoft.Owin.Security.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Owin.Security.Forms, Version=1.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -126,6 +126,7 @@
     <Compile Include="Hubs\BaseHub.cs" />
     <Compile Include="Hubs\ClientHub.cs" />
     <Compile Include="Hubs\ZombieHub.cs" />
+    <Compile Include="Infrastructure\ApplicationSettings.cs" />
     <Compile Include="Infrastructure\ControllHostingConfiguration.cs" />
     <Compile Include="Infrastructure\ControllAuthentication.cs" />
     <Compile Include="Infrastructure\ClaimsPrincipalExtensions.cs" />
@@ -138,8 +139,9 @@
     <Compile Include="Models\PickerValue.cs" />
     <Compile Include="Models\Queue\ActivityResultQueueItem.cs" />
     <Compile Include="Models\LogBook.cs" />
+    <Compile Include="Models\Queue\Copy of ActivityInvocationQueueItem.cs" />
+    <Compile Include="Models\Queue\DownloadActivityQueueItem.cs" />
     <Compile Include="Models\Queue\PingQueueItem.cs" />
-    <Compile Include="Models\Queue\ActivityInvocationQueueItem.cs" />
     <Compile Include="Models\LogMessage.cs" />
     <Compile Include="Models\ControllClient.cs" />
     <Compile Include="Models\ControllUser.cs" />
@@ -150,6 +152,7 @@
     <Compile Include="NHibernate\Mappings\ActivityCommandMap.cs" />
     <Compile Include="NHibernate\Mappings\ActivitytResultQueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\ClientCommunicatorMap.cs" />
+    <Compile Include="NHibernate\Mappings\DownloadActivityQueueItemMap.cs" />
     <Compile Include="NHibernate\Mappings\LogBookMapping.cs" />
     <Compile Include="NHibernate\Mappings\LogMessageMapping.cs" />
     <Compile Include="NHibernate\Mappings\ParameterDescriptorMap.cs" />

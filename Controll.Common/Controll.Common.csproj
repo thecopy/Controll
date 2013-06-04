@@ -43,6 +43,9 @@
   <ItemGroup>
     <Compile Include="ActivityAttribute.cs" />
     <Compile Include="ActivityMessageType.cs" />
+    <Compile Include="Helpers\HttpHelper.cs" />
+    <Compile Include="Helpers\StreamExtensions.cs" />
+    <Compile Include="Helpers\TaskAsyncHelper.cs" />
     <Compile Include="IActivityDelegator.cs" />
     <Compile Include="IActivity.cs" />
     <Compile Include="IActivityContext.cs" />

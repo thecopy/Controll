@@ -62,7 +62,7 @@
       <Name>Controll.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Controll\Controll.Client.csproj">
-      <Project>{f299089c-9b7e-4085-acf4-eb6701fc376a}</Project>
+      <Project>{F299089C-9B7E-4085-ACF4-EB6701FC376A}</Project>
       <Name>Controll.Client</Name>
     </ProjectReference>
   </ItemGroup>

@@ -91,6 +91,21 @@ namespace Controll.Hosting.Services
             return queueItem;
         }
 
+        public QueueItem InsertActivityDownload(Zombie zombie, string url)
+        {
+            var queueItem = new DownloadActivityQueueItem
+                {
+                    Reciever = zombie,
+                    Sender = zombie.Owner,
+                    RecievedAtCloud = DateTime.Now,
+                    Url = url
+                };
+
+            _session.Save(queueItem);
+
+            return queueItem;
+        }
+
         public void ProcessUndeliveredMessagesForZombie(Zombie zombie)
         {
             var queueItems = _controllRepository.GetUndeliveredQueueItemsForZombie(zombie.Id, 100, 0);
@@ -173,6 +188,7 @@ namespace Controll.Hosting.Services
                     {QueueItemType.ActivityInvocation, (qi, s) => SendActivityInvocation((ActivityInvocationQueueItem) qi, s)},
                     {QueueItemType.Ping, (qi, s) => SendPing((PingQueueItem) qi, s)},
                     {QueueItemType.ActivityResult, (qi, s) => SendActivityResult((ActivityResultQueueItem) qi, s)},
+                    {QueueItemType.DownloadActivity, (qi, s) => SendDownloadActivity((DownloadActivityQueueItem)qi, s)}
                 };
 
             if (!actions.ContainsKey(queueItem.Type))
@@ -186,7 +202,13 @@ namespace Controll.Hosting.Services
                 Console.WriteLine("Sending " + queueItem.Type + " to " + connectionId);
             }
         }
-        
+
+        private void SendDownloadActivity(DownloadActivityQueueItem qi, string connectionId)
+        {
+            _connectionManager.GetHubContext<ZombieHub>().Clients.Client(connectionId)
+                              .DownloadActivity(qi.Ticket, qi.Url);
+        }
+
         private void SendActivityMessage(string connectionId, Guid ticket, ActivityMessageType type, string message)
         {
             _connectionManager.GetHubContext<ClientHub>().Clients.Client(connectionId)

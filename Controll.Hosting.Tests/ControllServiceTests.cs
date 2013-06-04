@@ -1,28 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Threading;
 using Controll.Common;
 using Controll.Hosting.Hubs;
 using Controll.Hosting.Models;
 using Controll.Hosting.Models.Queue;
 using Controll.Hosting.Repositories;
 using Controll.Hosting.Services;
-using FizzWare.NBuilder;
-using HibernatingRhinos.Profiler.Appender.NHibernate;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.AspNet.SignalR.Infrastructure;
 using NUnit.Framework;
 using Moq;
 using NHibernate;
-using NHibernate.Linq;
-using ParameterDescriptor = Controll.Hosting.Models.ParameterDescriptor;
 
 namespace Controll.Hosting.Tests
 {
-    public class ControllServiceTests : TestBase
+    public class ControllServiceTests
     {
         [Test]
         public void ShouldBeAbleToInsertActivityInvocationQueueItem()
@@ -142,6 +135,47 @@ namespace Controll.Hosting.Tests
 
             Assert.AreEqual("msg", logMessage.Message);
             Assert.AreEqual(ActivityMessageType.Notification, logMessage.Type);
+
+        }
+
+        [Test]
+        public void ShouldBeAbleToInsertDownloadActivityMessage()
+        {
+            var mockedSession = new Mock<ISession>();
+            var mockedConnectionManager = new Mock<IConnectionManager>();
+            var mockedControllRepository = new Mock<IControllRepository>();
+
+            var service = new ControllService(
+                mockedSession.Object,
+                mockedControllRepository.Object,
+                mockedConnectionManager.Object);
+
+            var ticket = Guid.NewGuid();
+
+            var user = new ControllUser
+                {
+                    UserName = "username",
+                    LogBooks = new List<LogBook>()
+                };
+
+            var zombie = new Zombie
+                {
+                    Name = "zombiename",
+                    Owner = user
+                };
+
+            const string downloadUrl = @"http://download";
+
+            mockedSession.Setup(x => x.Save(It.IsAny<DownloadActivityQueueItem>()))
+                .Callback((object q) => ((QueueItem)q).Ticket = ticket);
+
+            var queueItem = (DownloadActivityQueueItem)service.InsertActivityDownload(zombie, downloadUrl);
+            
+            Assert.NotNull(queueItem);
+            Assert.AreNotEqual(Guid.Empty, queueItem.Ticket);
+            Assert.AreEqual(downloadUrl, queueItem.Url);
+            Assert.AreEqual(user, queueItem.Sender);
+            Assert.AreEqual(zombie, queueItem.Reciever);
 
         }
 

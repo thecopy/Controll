@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Controll.Client.Authentication;
 using Controll.Client.Models;
 using Controll.Common;
 using Controll.Common.Authentication;
+using Controll.Common.Helpers;
 using Controll.Common.ViewModels;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
@@ -101,6 +103,11 @@ namespace Controll.Client
         public Task<Guid> Ping(string zombieName)
         {
             return _hubProxy.Invoke<Guid>("PingZombie", zombieName);
+        }
+
+        public Task<Guid> DownloadActivity(string zombieName, string url)
+        {
+            return _hubProxy.Invoke<Guid>("DownloadActivity", zombieName, url);
         }
 
         public Task AddZombie(string zombieName)

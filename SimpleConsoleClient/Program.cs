@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Authentication;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Controll;
 using Controll.Client;
+using Controll.Client.Authentication;
 using Controll.Client.Models;
-using Controll.Common.Authentication;
 using Controll.Common.ViewModels;
 using Newtonsoft.Json;
 
@@ -120,6 +115,7 @@ namespace SimpleConsoleClient
                         Console.WriteLine("* ping [zombieName]\t\tSend a ping to the zombie name <zombieName>");
                         Console.WriteLine("* status\t\t\tDispays session status");
                         Console.WriteLine("* addzombie <zombieName>\t\t\tAdds a zombie to use currently authenticated user");
+                        Console.WriteLine("* download <zombieName> <url>\t\t\tTells zombie to download activity from url");
                         break;
                     case "intermidiate":
                         if(_waitningIntermidiates.Count > 0)
@@ -150,6 +146,19 @@ namespace SimpleConsoleClient
                         {
                             _client.AddZombie(results[1]).Wait();
                             Console.WriteLine("Zombie '{0}' added.", results[1]);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                        }
+                        break;
+                    case "download":
+                        try
+                        {
+                            var zombieName = results[1];
+                            var url = results[2];
+                            _client.DownloadActivity(zombieName, url).Wait();
+                            Console.WriteLine("Zombie '{0}' requested to download activity from '{1}'", zombieName, url);
                         }
                         catch (Exception ex)
                         {

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Controll.Client.Authentication;
 using Controll.Common;
 using Controll.Common.Authentication;
+using Controll.Common.Helpers;
 using Controll.Common.ViewModels;
-using Controll.Zombie;
 using Controll.Zombie.Infrastructure;
 using Microsoft.AspNet.SignalR.Client.Hubs;
 
@@ -27,6 +28,7 @@ namespace Controll.Client
             get { return _url; }
         }
 
+        public event Action<Guid, string> DownloadActivityRequest;
         public event Action<InvocationInformation> InvocationRequest;
         public event Action<Guid> Pinged;
 
@@ -66,6 +68,12 @@ namespace Controll.Client
                     if(Pinged != null)
                         Pinged(ticket);
                 });
+
+            _hubProxy.On<Guid, String>("DownloadActivity", (ticket, url) =>
+            {
+                if (DownloadActivityRequest != null)
+                    DownloadActivityRequest(ticket, url);
+            });
         }
 
         private Task SignIn()

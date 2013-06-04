@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Controll.Common
+namespace Controll.Common.Helpers
 {
     public static class TaskAsyncHelper
     {

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Controll.Client;
+using Controll.Client.Authentication;
 using Controll.Common;
 using Controll.Common.Authentication;
 using Controll.Common.ViewModels;

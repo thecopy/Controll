@@ -3,9 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Controll.Common.Authentication
+namespace Controll.Common.Helpers
 {
-    internal static class StreamExtensions
+    public static class StreamExtensions
     {
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "Exceptions are flowed back to the caller.")]
         public static Task<int> ReadAsync(this Stream stream, byte[] buffer)

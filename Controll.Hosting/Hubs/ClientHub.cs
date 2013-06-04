@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Controll.Common.ViewModels;
 using Controll.Hosting.Helpers;
@@ -56,8 +57,8 @@ namespace Controll.Hosting.Hubs
                 return vms;
             }
         }
+
         // ReSharper restore SuspiciousTypeConversion.Global
-        
         public bool IsZombieOnline(string zombieName)
         {
             using (var transaction = Session.BeginTransaction())
@@ -98,6 +99,28 @@ namespace Controll.Hosting.Hubs
                 transaction.Commit();
 
                 Console.WriteLine("Queueing activity " + activity.Name + " on zombie " + zombie.Name);
+                ControllService.ProcessQueueItem(queueItem);
+
+                return queueItem.Ticket;
+            }
+        }
+
+        public Guid DownloadActivity(string zombieName, string url)
+        {
+            using (var transaction = Session.BeginTransaction())
+            {
+                var user = GetUser();
+
+                Console.WriteLine("User '{0}' is telling zombie '{1}' to download activity from {2}.", user.UserName, zombieName, url);
+
+                var zombie = user.GetZombieByName(zombieName);
+
+                if(zombie == null)
+                    throw new InvalidOperationException("Zombie " + zombieName + " not found");
+
+                var queueItem = ControllService.InsertActivityDownload(zombie, url);
+                transaction.Commit();
+
                 ControllService.ProcessQueueItem(queueItem);
 
                 return queueItem.Ticket;

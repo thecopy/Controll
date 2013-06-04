@@ -14,6 +14,7 @@ namespace Controll.Hosting.Services
     {
         QueueItem InsertActivityInvocation(Zombie zombie, Activity activity, IDictionary<string, string> parameters, string commandName, string connectionId);
         QueueItem InsertPingMessage(Zombie zombie, string senderConnectionId);
+        QueueItem InsertActivityDownload(Zombie zombie, string url);
 
         void InsertActivityMessage(Guid ticket, ActivityMessageType type, string message);
         void InsertActivityResult(Guid ticket, ActivityCommand result);

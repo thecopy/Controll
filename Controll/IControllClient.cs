@@ -24,5 +24,6 @@ namespace Controll.Client
         
         Task<Guid> StartActivity(string zombieName, Guid activityKey, Dictionary<string, string> parameters, string commandName);
         Task<Guid> Ping(string zombieName);
+        Task<Guid> DownloadActivity(string zombieName, string url);
     }
 }

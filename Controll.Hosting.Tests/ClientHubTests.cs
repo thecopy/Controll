@@ -379,6 +379,54 @@ namespace Controll.Hosting.Tests
                     Times.Once());
         }
 
+        [Test]
+        public void ShouldBeAbleToSendDownloadAcitivityMessage()
+        {
+            var user = new ControllUser
+            {
+                Id = 1,
+                UserName = "Erik",
+                Password = "password",
+                Zombies = new List<Zombie>
+                        {
+                            new Zombie
+                                {
+                                    Name = "zombiename"
+                                }
+                        }
+            };
+
+            var clientState = new StateChangeTracker();
+            const string connectionId = "conn-id";
+            var mockedPrinicipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ControllClaimTypes.UserIdentifier, "1"),
+                }, Constants.ControllAuthType));
+            var hub = GetTestableClientHub(connectionId, clientState, user, null, principal: mockedPrinicipal);
+            hub.Clients.Caller.UserName = "Erik";
+            hub.SignIn();
+
+            const string downloadUrl = @"http://download";
+
+            hub.MockedControllService
+                .Setup(x => x.InsertActivityDownload(
+                    It.Is<Zombie>(z => z.Name == "zombiename"),
+                    It.Is<string>(s => s == downloadUrl)))
+                .Returns(new ActivityInvocationQueueItem { Ticket = Guid.NewGuid() })
+                .Verifiable();
+
+
+            var ticket = hub.DownloadActivity(user.Zombies.ElementAt(0).Name, downloadUrl);
+
+            Assert.AreNotEqual(Guid.Empty, ticket);
+
+            hub.MockedControllService
+                .Verify(x => x.InsertActivityDownload(
+                    It.Is<Zombie>(z => z.Name == "zombiename"),
+                    It.Is<string>(s => s == downloadUrl)),
+                    Times.Once());
+        }
+
         private TestableClientHub GetTestableClientHub(string connectionId, StateChangeTracker clientState, ControllUser user = null, IControllRepository controllRepository = null, ClaimsPrincipal principal = null)
         {
             // setup things needed for chat

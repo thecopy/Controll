@@ -10,6 +10,7 @@ namespace Controll.Client
 {
     public interface IZombieClient: IActivityDelegator
     {
+        event Action<Guid, string> DownloadActivityRequest;
         event Action<InvocationInformation> InvocationRequest;
         event Action<Guid> Pinged;
 
