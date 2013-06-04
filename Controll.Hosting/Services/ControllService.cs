@@ -77,7 +77,7 @@ namespace Controll.Hosting.Services
             foreach (var connectionId in queueItem.Sender.ConnectedClients.Select(x => x.ConnectionId))
             {
                 var id = connectionId;
-                _dispatcher.ManualClientMessage(clients =>
+                _dispatcher.ClientMessage(clients =>
                                                 clients.Client(id).MessageDelivered(ticket));
             }
         }
@@ -135,7 +135,7 @@ namespace Controll.Hosting.Services
                 Console.Write("Sending " + type + " to " + connectionId + ": ");
 
                 var id = connectionId;
-                _dispatcher.ManualClientMessage(clients => clients.Client(id).ActivityMessage(ticket, type, message));
+                _dispatcher.ClientMessage(clients => clients.Client(id).ActivityMessage(ticket, type, message));
 
                 Console.WriteLine(" Done");
             }

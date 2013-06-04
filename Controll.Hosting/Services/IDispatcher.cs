@@ -7,7 +7,7 @@ namespace Controll.Hosting.Services
     public interface IDispatcher
     {
         void Dispatch(QueueItem queueItem);
-        void ManualClientMessage(Action<IHubConnectionContext> action);
-        void ManualZombieMessage(Action<IHubConnectionContext> action);
+        void ClientMessage(Action<IHubConnectionContext> action);
+        void ZombieMessage(Action<IHubConnectionContext> action);
     }
 }

@@ -12,6 +12,7 @@ namespace Controll.Client
         event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
         event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
         event Action<String, IEnumerable<ActivityViewModel>> ZombieSynchronized;
+        event Action<ZombieViewModel> ZombieAdded;
 
         string Url { get; }
 

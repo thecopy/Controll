@@ -84,7 +84,7 @@ namespace Controll.Hosting.Hubs
                 foreach (var connectionId in zombie.Owner.ConnectedClients.Select(x => x.ConnectionId))
                 {
                     var id = connectionId;
-                    Dispatcher.ManualClientMessage(clients =>
+                    Dispatcher.ClientMessage(clients =>
                                                     clients.Client(id).ZombieSynchronized(zombie.Name, zombie.Activities.Select(x => x.CreateViewModel())));
                 }
 

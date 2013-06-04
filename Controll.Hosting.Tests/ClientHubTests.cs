@@ -60,11 +60,13 @@ namespace Controll.Hosting.Tests
             var hub = GetTestableClientHub(connectionId, clientState, user, mockedRepository.Object, principal: mockedPrinicipal);
 
             hub.MockedSession.Setup(x => x.Get<ControllUser>(It.Is<Int32>(i => i == 1))).Returns((Int32 id) => user);
-            hub.MockedSession.Setup(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user))).Verifiable();
+            hub.MockedSession.Setup(x => x.Save(It.Is<Zombie>(z => z.Name == "zombieName" && z.Owner == user))).Verifiable();
+            hub.MockedDispatcher.Setup(x => x.ClientMessage(It.IsAny<Action<IHubConnectionContext>>())).Verifiable();
 
             var zombie = hub.AddZombie("zombieName");
 
-            hub.MockedSession.Verify(r => r.Save(It.Is<Zombie>(x => x.Name == "zombieName" && x.Owner == user)), Times.Once());
+            hub.MockedSession.Verify(x => x.Save(It.Is<Zombie>(z => z.Name == "zombieName" && z.Owner == user)), Times.Once());
+            hub.MockedDispatcher.Verify(x => x.ClientMessage(It.IsAny<Action<IHubConnectionContext>>()), Times.Exactly(1));
 
             Assert.AreEqual("zombieName", zombie.Name);
         }

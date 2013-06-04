@@ -148,6 +148,9 @@ namespace Controll.Hosting.Hubs
                 Session.Save(zombie);
                 transaction.Commit();
 
+                Dispatcher.ClientMessage(clients => 
+                    clients.AllExcept(Context.ConnectionId).ZombieAdded(zombie.CreateViewModel()));
+
                 return zombie.CreateViewModel();
             }
         }

@@ -147,11 +147,11 @@ namespace Controll.Hosting.Tests
                         }
                 };
 
-            hub.MockedDispatcher.Setup(x => x.ManualClientMessage(It.IsAny<Action<IHubConnectionContext>>())).Verifiable();
+            hub.MockedDispatcher.Setup(x => x.ClientMessage(It.IsAny<Action<IHubConnectionContext>>())).Verifiable();
             
             hub.SynchronizeActivities(activities);
 
-            hub.MockedDispatcher.Verify(x => x.ManualClientMessage(It.IsAny<Action<IHubConnectionContext>>()), Times.Once());
+            hub.MockedDispatcher.Verify(x => x.ClientMessage(It.IsAny<Action<IHubConnectionContext>>()), Times.Once());
         }
 
 

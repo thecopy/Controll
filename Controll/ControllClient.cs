@@ -22,6 +22,7 @@ namespace Controll.Client
         public event EventHandler<ActivityLogMessageEventArgs> ActivityMessageRecieved;
         public event EventHandler<ActivityResultEventArgs> ActivityResultRecieved;
         public event Action<String, IEnumerable<ActivityViewModel>> ZombieSynchronized;
+        public event Action<ZombieViewModel> ZombieAdded;
 
         public string Url
         {
@@ -91,6 +92,12 @@ namespace Controll.Client
                     if (ZombieSynchronized != null)
                         ZombieSynchronized(name, activities);
                 });
+
+            _hubProxy.On<ZombieViewModel>("ZombieAdded", zombieVm =>
+            {
+                if (ZombieAdded != null)
+                    ZombieAdded(zombieVm);
+            });
         }
 
         public Task<IEnumerable<ZombieViewModel>> GetAllZombies()

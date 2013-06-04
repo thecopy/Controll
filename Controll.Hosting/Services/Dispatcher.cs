@@ -26,12 +26,12 @@ namespace Controll.Hosting.Services
             _connectionManager = connectionManager;
         }
 
-        public void ManualClientMessage(Action<IHubConnectionContext> action)
+        public void ClientMessage(Action<IHubConnectionContext> action)
         {
             action.Invoke(ClientHub);
         }
 
-        public void ManualZombieMessage(Action<IHubConnectionContext> action)
+        public void ZombieMessage(Action<IHubConnectionContext> action)
         {
             action.Invoke(ZombieHub);
         }

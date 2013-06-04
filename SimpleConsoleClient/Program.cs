@@ -90,6 +90,7 @@ namespace SimpleConsoleClient
             _client.ActivityMessageRecieved += _client_ActivityMessageRecieved;
             _client.ActivityResultRecieved += _client_ActivityResultRecieved;
             _client.ZombieSynchronized += ClientOnZombieSynchronized;
+            _client.ZombieAdded += _client_ZombieAdded;
 
             _client.Connect(username, password).Wait();
 
@@ -176,6 +177,12 @@ namespace SimpleConsoleClient
                 result = Console.ReadLine();
                 Console.ForegroundColor = ConsoleColor.Gray;
             } while (string.IsNullOrEmpty(result) || result.ToLower() != "q" || result.ToLower() != "quit");
+        }
+
+        static void _client_ZombieAdded(ZombieViewModel zombieViewModel)
+        {
+            Console.WriteLine("Another client added a zombie: {0}", zombieViewModel.Name);
+            _zombies.Add(zombieViewModel);
         }
 
         private static void ClientOnZombieSynchronized(string zombieName, IEnumerable<ActivityViewModel> activityViewModels)
